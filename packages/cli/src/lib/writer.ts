@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { sha256 } from "./checksum.js";
 import type { Lockfile, OwnershipClass } from "./lockfile.js";
@@ -7,6 +7,8 @@ export interface FileSpec {
   relPath: string;
   content: string;
   ownership: OwnershipClass;
+  /** Mark scripts executable after writing (no-op on Windows). */
+  executable?: boolean;
 }
 
 export type ActionKind =
@@ -59,6 +61,7 @@ export function applyPlan(root: string, actions: PlannedAction[], lockfile: Lock
       const abs = join(root, spec.relPath);
       mkdirSync(dirname(abs), { recursive: true });
       writeFileSync(abs, spec.content, "utf8");
+      if (spec.executable && process.platform !== "win32") chmodSync(abs, 0o755);
       written.push(spec.relPath);
     }
     if (kind === "create" || kind === "update" || kind === "skip-unchanged") {

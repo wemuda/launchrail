@@ -8,8 +8,9 @@ Skills, commands, agents, and hooks that consuming projects subscribe to via the
 |---|---|
 | [`vision-creation`](skills/vision-creation/SKILL.md) | Turn an idea into broad product intent, assumptions, and non-goals (`docs/vision.md`) |
 | [`design-validation`](skills/design-validation/SKILL.md) | Coordinate spec → Claude Design → revised spec → handoff |
+| [`browser-smoke`](skills/browser-smoke/SKILL.md) | Drive the app through defined smoke journeys and capture a traceable evidence bundle (pairs with `launchrail add browser-testing`) |
 
-Planned (see repository roadmap): `browser-smoke` (evidence-producing journey testing) and `ralph-release` (bounded release implementation campaign, integrating the Wemuda-provided skill and workflow script).
+Planned (see repository roadmap): `ralph-release` (bounded release implementation campaign, integrating the Wemuda-provided skill and workflow script).
 
 ## Workflow
 

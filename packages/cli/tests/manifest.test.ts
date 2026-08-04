@@ -1,12 +1,18 @@
 import { describe, expect, test } from "vitest";
-import { parseManifest, serializeManifest, type Manifest } from "../src/lib/manifest.js";
+import { parseManifest, serializeManifest, setModuleEnabled, type Manifest } from "../src/lib/manifest.js";
 
 const manifest: Manifest = {
   schemaVersion: 1,
   mode: "standard-mvp",
   issueTracker: "github",
   conventions: { conventionalCommits: true },
-  testing: { unitCommand: "pnpm test" },
+  testing: {
+    unitCommand: "pnpm test",
+    devCommand: "pnpm dev",
+    e2eCommand: "npx playwright test",
+    smokeCommand: "node scripts/smoke.mjs",
+    appUrl: "http://localhost:3000",
+  },
   modules: { core: true },
 };
 
@@ -38,14 +44,56 @@ describe("manifest", () => {
     expect(parsed.manifest).toMatchObject({
       issueTracker: "none",
       conventions: { conventionalCommits: true },
-      testing: { unitCommand: null },
+      testing: {
+        unitCommand: null,
+        devCommand: null,
+        e2eCommand: null,
+        smokeCommand: null,
+        appUrl: null,
+      },
       modules: { core: true },
     });
+  });
+
+  test("accepts a manifest written before the testing fields existed", () => {
+    const parsed = parseManifest(
+      "schemaVersion: 1\nmode: standard-mvp\ntesting:\n  unitCommand: pnpm test\n",
+    );
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.manifest?.testing.unitCommand).toBe("pnpm test");
+    expect(parsed.manifest?.testing.e2eCommand).toBeNull();
   });
 
   test("rejects invalid YAML", () => {
     const parsed = parseManifest("schemaVersion: [1\n");
     expect(parsed.manifest).toBeNull();
     expect(parsed.errors[0]).toContain("invalid YAML");
+  });
+});
+
+describe("setModuleEnabled", () => {
+  const source =
+    "# my precious comment\nschemaVersion: 1\nmode: standard-mvp\ntesting:\n  unitCommand: pnpm test # keep this\nmodules:\n  core: true\n";
+
+  test("enables the module and fills testing commands, preserving comments", () => {
+    const result = setModuleEnabled(source, "browser-testing", {
+      appUrl: "http://localhost:3000",
+      e2eCommand: "npx playwright test",
+    });
+    expect(result.changed).toBe(true);
+    expect(result.source).toContain("# my precious comment");
+    expect(result.source).toContain("# keep this");
+    const parsed = parseManifest(result.source);
+    expect(parsed.manifest?.modules["browser-testing"]).toBe(true);
+    expect(parsed.manifest?.testing.unitCommand).toBe("pnpm test");
+    expect(parsed.manifest?.testing.appUrl).toBe("http://localhost:3000");
+    expect(parsed.manifest?.testing.e2eCommand).toBe("npx playwright test");
+  });
+
+  test("is a no-op when everything already matches", () => {
+    const first = setModuleEnabled(source, "browser-testing", { appUrl: "http://localhost:3000" });
+    const second = setModuleEnabled(first.source, "browser-testing", { appUrl: "http://localhost:3000" });
+    expect(second.changed).toBe(false);
+    expect(second.source).toBe(first.source);
   });
 });

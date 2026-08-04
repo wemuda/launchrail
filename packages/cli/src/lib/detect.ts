@@ -14,6 +14,11 @@ export interface RepoDetection {
   hasPackageJson: boolean;
   packageName: string | null;
   testScript: string | null;
+  devScript: string | null;
+  /** `@playwright/test` (or `playwright`) declared in dependencies/devDependencies. */
+  hasPlaywrightDep: boolean;
+  /** First `playwright.config.*` found at the repo root, if any. */
+  playwrightConfigFile: string | null;
   projectName: string;
   hasAgentsMd: boolean;
   hasClaudeMd: boolean;
@@ -52,6 +57,8 @@ export function detectRepo(root: string): RepoDetection {
   const hasPackageJson = existsSync(join(root, "package.json"));
   let packageName: string | null = null;
   let testScript: string | null = null;
+  let devScript: string | null = null;
+  let hasPlaywrightDep = false;
   let packageManagerField: string | null = null;
   if (hasPackageJson) {
     try {
@@ -59,14 +66,24 @@ export function detectRepo(root: string): RepoDetection {
         name?: unknown;
         scripts?: Record<string, unknown>;
         packageManager?: unknown;
+        dependencies?: Record<string, unknown>;
+        devDependencies?: Record<string, unknown>;
       };
       if (typeof pkg.name === "string") packageName = pkg.name;
       if (typeof pkg.scripts?.test === "string") testScript = pkg.scripts.test;
+      if (typeof pkg.scripts?.dev === "string") devScript = pkg.scripts.dev;
       if (typeof pkg.packageManager === "string") packageManagerField = pkg.packageManager;
+      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+      hasPlaywrightDep = "@playwright/test" in deps || "playwright" in deps;
     } catch {
       // Malformed package.json is doctor's problem, not detection's.
     }
   }
+
+  const playwrightConfigFile =
+    ["ts", "js", "mjs", "cjs", "mts", "cts"]
+      .map((ext) => `playwright.config.${ext}`)
+      .find((file) => existsSync(join(root, file))) ?? null;
 
   let packageManager: PackageManager | null = null;
   if (existsSync(join(root, "pnpm-lock.yaml"))) packageManager = "pnpm";
@@ -86,6 +103,9 @@ export function detectRepo(root: string): RepoDetection {
     hasPackageJson,
     packageName,
     testScript,
+    devScript,
+    hasPlaywrightDep,
+    playwrightConfigFile,
     projectName: packageName ?? basename(root),
     hasAgentsMd: existsSync(join(root, "AGENTS.md")),
     hasClaudeMd: existsSync(join(root, "CLAUDE.md")),

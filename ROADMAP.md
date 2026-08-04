@@ -4,7 +4,7 @@
 
 ## Current status
 
-Phases 1 and 2 are implemented: `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile), and the Claude plugin now carries the core workflow — `vision-creation` and `design-validation` skills, a stage-by-stage workflow doc composing Matt Pocock's grill/research/spec skills, and plugin subscription via a project-scoped `.claude/settings.json` declaration (ADR-0003) that init merges and doctor verifies. 31 tests, including integration tests against temporary git repositories. Nothing is published to npm.
+Phases 1–3 are implemented. `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile). The Claude plugin carries the core workflow — `vision-creation` and `design-validation` skills, a stage-by-stage workflow doc composing Matt Pocock's grill/research/spec skills, and plugin subscription via a project-scoped `.claude/settings.json` declaration (ADR-0003) — plus `browser-smoke`. `launchrail add browser-testing` seeds the browser-testing module (Playwright baseline, semantic scripts, smoke-journey contract, ADR-0004) with `launchrail verify` and `launchrail smoke` as the verification surface. 61 tests, including integration tests against temporary git repositories. Nothing is published to npm.
 
 ## Phase 1 — `init` + `doctor`
 
@@ -35,11 +35,11 @@ Phases 1 and 2 are implemented: `launchrail init` and `launchrail doctor` work o
 
 **Goal:** an agent can start an example app in a fresh environment, complete a defined journey, and produce a traceable evidence bundle.
 
-- [ ] Playwright detection/installation and E2E baseline
-- [ ] Standard semantic commands: setup / dev / verify / smoke / doctor
-- [ ] Agentic `browser-smoke` skill and smoke-journey contract
-- [ ] Evidence bundle format (summary, traces, screenshots, console/network logs)
-- [ ] Local, CI, and cloud (fresh clone) support
+- [x] Playwright detection/installation and E2E baseline ([ADR-0004](docs/adr/0004-browser-testing-module.md))
+- [x] Standard semantic commands: setup / dev / verify / smoke / doctor
+- [x] Agentic `browser-smoke` skill and smoke-journey contract
+- [x] Evidence bundle format (summary, traces, screenshots, console/network logs)
+- [x] Local, CI, and cloud (fresh clone) support
 
 ## Phase 4 — Ralph release orchestration
 
@@ -77,3 +77,4 @@ Phases 1 and 2 are implemented: `launchrail init` and `launchrail doctor` work o
 - [x] 2026-08-04 — Phase 1 complete: `init` (interview/defaults, dry-run, idempotent, never overwrites seeded files) and `doctor` (manifest/lockfile validation, managed-file drift detection, Matt Pocock setup detection) with fixture + temp-git-repo integration tests
 - [x] 2026-08-04 — Roadmap refined: compose Matt Pocock's `grill-with-docs` and research skills instead of custom ones; dropped `release-verification` and `launchrail-status`; Ralph phase (Wemuda-provided skill + workflow) moved ahead of the sync engine
 - [x] 2026-08-04 — Phase 2 complete: `vision-creation` and `design-validation` skills, `docs/workflow.md` stage contract composing upstream skills (grill fed by vision, research fed by grill constraints), and plugin subscription via an additive, idempotent `.claude/settings.json` merge in `init` with a matching `doctor` check (ADR-0003)
+- [x] 2026-08-04 — Phase 3 complete: `add browser-testing` (Playwright config + E2E baseline + smoke-journey contract + `scripts/{setup,dev,verify,smoke,doctor}.mjs`, comment-preserving manifest update), `verify` (deterministic gate, empty contract fails), `smoke` (evidence bundle scaffolding under `artifacts/verification/<run-id>/`), doctor module checks, and the `browser-smoke` skill (ADR-0004)

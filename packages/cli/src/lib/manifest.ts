@@ -1,4 +1,4 @@
-import { parse, stringify } from "yaml";
+import { parse, parseDocument, stringify } from "yaml";
 
 export const MANIFEST_FILENAME = ".launchrail.yml";
 
@@ -8,6 +8,9 @@ export type Mode = (typeof MODES)[number];
 export const ISSUE_TRACKERS = ["github", "linear", "none"] as const;
 export type IssueTracker = (typeof ISSUE_TRACKERS)[number];
 
+export const TESTING_KEYS = ["unitCommand", "devCommand", "e2eCommand", "smokeCommand", "appUrl"] as const;
+export type TestingKey = (typeof TESTING_KEYS)[number];
+
 export interface Manifest {
   schemaVersion: 1;
   mode: Mode;
@@ -15,9 +18,7 @@ export interface Manifest {
   conventions: {
     conventionalCommits: boolean;
   };
-  testing: {
-    unitCommand: string | null;
-  };
+  testing: Record<TestingKey, string | null>;
   modules: Record<string, boolean>;
 }
 
@@ -65,12 +66,23 @@ export function validateManifest(data: unknown): ManifestParseResult {
     }
   }
 
-  let unitCommand: string | null = null;
+  const testing: Record<TestingKey, string | null> = {
+    unitCommand: null,
+    devCommand: null,
+    e2eCommand: null,
+    smokeCommand: null,
+    appUrl: null,
+  };
   if (data.testing !== undefined) {
-    if (isRecord(data.testing) && (data.testing.unitCommand === null || typeof data.testing.unitCommand === "string")) {
-      unitCommand = data.testing.unitCommand;
+    if (isRecord(data.testing)) {
+      for (const key of TESTING_KEYS) {
+        const value = data.testing[key];
+        if (value === undefined || value === null) continue;
+        if (typeof value === "string") testing[key] = value;
+        else errors.push(`testing.${key} must be a string or null`);
+      }
     } else {
-      errors.push("testing.unitCommand must be a string or null");
+      errors.push("testing must be a mapping");
     }
   }
 
@@ -90,7 +102,7 @@ export function validateManifest(data: unknown): ManifestParseResult {
       mode: data.mode as Mode,
       issueTracker,
       conventions: { conventionalCommits },
-      testing: { unitCommand },
+      testing,
       modules,
     },
     errors: [],
@@ -112,4 +124,38 @@ export function serializeManifest(manifest: Manifest): string {
     "# Launchrail project manifest — https://github.com/wemuda/launchrail\n" +
     "# This file is yours to edit; Launchrail reads it and never force-overwrites it.\n";
   return header + stringify(manifest);
+}
+
+export interface ModuleEnableResult {
+  source: string;
+  changed: boolean;
+}
+
+/**
+ * Enable a module and record testing commands in an existing manifest source.
+ *
+ * The manifest is seeded (project-owned once created), so this is the one
+ * deliberate exception to "never rewrite seeded files": a user-requested
+ * configuration change, applied via a YAML document round-trip that preserves
+ * the user's comments and formatting.
+ */
+export function setModuleEnabled(
+  source: string,
+  module: string,
+  testing: Partial<Record<TestingKey, string | null>>,
+): ModuleEnableResult {
+  const doc = parseDocument(source);
+  let changed = false;
+  if (doc.getIn(["modules", module]) !== true) {
+    doc.setIn(["modules", module], true);
+    changed = true;
+  }
+  for (const [key, value] of Object.entries(testing)) {
+    const current = doc.getIn(["testing", key]);
+    if ((current ?? null) !== (value ?? null)) {
+      doc.setIn(["testing", key], value);
+      changed = true;
+    }
+  }
+  return { source: doc.toString(), changed };
 }

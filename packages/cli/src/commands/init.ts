@@ -40,6 +40,16 @@ function suggestedTestCommand(detection: RepoDetection): string | null {
   return `${detection.packageManager ?? "npm"} test`;
 }
 
+function defaultTesting(detection: RepoDetection): Manifest["testing"] {
+  return {
+    unitCommand: suggestedTestCommand(detection),
+    devCommand: detection.devScript ? `${detection.packageManager ?? "npm"} run dev` : null,
+    e2eCommand: null,
+    smokeCommand: null,
+    appUrl: null,
+  };
+}
+
 function defaultManifestFor(detection: RepoDetection): Manifest {
   return {
     schemaVersion: 1,
@@ -49,7 +59,7 @@ function defaultManifestFor(detection: RepoDetection): Manifest {
       conventionalCommits:
         detection.conventionalCommitRatio === null ? true : detection.conventionalCommitRatio >= 0.5,
     },
-    testing: { unitCommand: suggestedTestCommand(detection) },
+    testing: defaultTesting(detection),
     modules: { core: true },
   };
 }
@@ -104,7 +114,10 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
     mode: answers.mode as Mode,
     issueTracker: answers.issueTracker as IssueTracker,
     conventions: { conventionalCommits: answers.conventionalCommits },
-    testing: { unitCommand: answers.unitCommand.trim() === "" ? null : answers.unitCommand.trim() },
+    testing: {
+      ...defaultTesting(detection),
+      unitCommand: answers.unitCommand.trim() === "" ? null : answers.unitCommand.trim(),
+    },
     modules: { core: true },
   };
 }

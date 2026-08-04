@@ -1,10 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
 import { CLAUDE_SETTINGS_PATH, declarationState } from "../lib/claudeSettings.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
-import { MANIFEST_FILENAME, parseManifest } from "../lib/manifest.js";
+import { MANIFEST_FILENAME, parseManifest, type Manifest } from "../lib/manifest.js";
 
 export type CheckStatus = "pass" | "warn" | "fail";
 
@@ -37,12 +38,17 @@ export function runDoctor(cwd: string): DoctorOutcome {
   if (detection.packageManager) add("pass", "package manager", detection.packageManager);
   else add("warn", "package manager", "none detected (no lockfile or packageManager field)");
 
+  let manifest: Manifest | null = null;
   if (!existsSync(join(cwd, MANIFEST_FILENAME))) {
     add("fail", "manifest", `${MANIFEST_FILENAME} missing — run \`launchrail init\``);
   } else {
     const parsed = parseManifest(readFileSync(join(cwd, MANIFEST_FILENAME), "utf8"));
-    if (parsed.manifest) add("pass", "manifest", `valid (mode: ${parsed.manifest.mode})`);
-    else add("fail", "manifest", `invalid: ${parsed.errors.join("; ")}`);
+    if (parsed.manifest) {
+      manifest = parsed.manifest;
+      add("pass", "manifest", `valid (mode: ${parsed.manifest.mode})`);
+    } else {
+      add("fail", "manifest", `invalid: ${parsed.errors.join("; ")}`);
+    }
   }
 
   const { lockfile, error: lockError } = readLockfile(cwd);
@@ -92,6 +98,35 @@ export function runDoctor(cwd: string): DoctorOutcome {
     add("warn", "plugin declaration", `${CLAUDE_SETTINGS_PATH} is not valid JSON`);
   } else {
     add("warn", "plugin declaration", `Launchrail plugin not declared in ${CLAUDE_SETTINGS_PATH} — run \`launchrail init\``);
+  }
+
+  if (manifest?.modules[BROWSER_TESTING_MODULE]) {
+    if (detection.hasPlaywrightDep) {
+      add("pass", "playwright dependency", "@playwright/test declared");
+    } else {
+      add("fail", "playwright dependency", "@playwright/test not declared — run `node scripts/setup.mjs`");
+    }
+    if (detection.playwrightConfigFile) {
+      add("pass", "playwright config", detection.playwrightConfigFile);
+    } else {
+      add("fail", "playwright config", "no playwright.config.* found — re-run `launchrail add browser-testing`");
+    }
+    if (existsSync(join(cwd, SMOKE_JOURNEYS_PATH))) {
+      add("pass", "smoke journeys", SMOKE_JOURNEYS_PATH);
+    } else {
+      add("warn", "smoke journeys", `${SMOKE_JOURNEYS_PATH} missing — smoke runs will have no defined journeys`);
+    }
+    const missingScripts = SEMANTIC_SCRIPTS.filter((name) => !existsSync(join(cwd, "scripts", `${name}.mjs`)));
+    if (missingScripts.length === 0) {
+      add("pass", "semantic scripts", "scripts/{setup,dev,verify,smoke,doctor}.mjs");
+    } else {
+      add("warn", "semantic scripts", `missing: ${missingScripts.map((name) => `scripts/${name}.mjs`).join(", ")}`);
+    }
+    if (manifest.testing.e2eCommand && manifest.testing.smokeCommand) {
+      add("pass", "testing commands", "e2e and smoke commands configured");
+    } else {
+      add("warn", "testing commands", `set testing.e2eCommand and testing.smokeCommand in ${MANIFEST_FILENAME}`);
+    }
   }
 
   return { code: checks.some((c) => c.status === "fail") ? 1 : 0, checks };

@@ -64,6 +64,17 @@ Add project-specific Claude behavior here. This file is yours — Launchrail nev
 }
 
 function claudeGeneratedMd(ctx: SeedContext): string {
+  const browserTesting = ctx.manifest.modules["browser-testing"]
+    ? `
+## Browser testing
+
+- User-facing changes are verified twice: deterministic checks (\`node scripts/verify.mjs\`) and agentic smoke journeys from \`docs/testing/smoke-journeys.md\` (browser-smoke skill).
+- Start the app with \`node scripts/dev.mjs\` (\`--background\` in cloud or CI sessions); prepare an evidence bundle with \`npx @wemuda/launchrail smoke\`.
+- Smoke evidence lives in \`artifacts/verification/<run-id>/\` — fill in \`summary.md\`; only summary, deviations, and meta are meant to be committed.
+- When a smoke run finds a real bug: reproduce it, add a failing deterministic test, fix, prove the test passes, re-run the journey.
+`
+    : "";
+
   return `<!-- Managed by Launchrail v${ctx.launchrailVersion}. Do not edit: \`launchrail sync\` may replace this file. Project-specific instructions belong in CLAUDE.md. -->
 
 # Launchrail workflow instructions
@@ -73,7 +84,7 @@ function claudeGeneratedMd(ctx: SeedContext): string {
 - \`.launchrail.yml\` is project configuration; \`.launchrail-lock.json\` is machine-managed — do not hand-edit it.
 - Before claiming completion, run the project's deterministic checks. Completion requires evidence, not assertion.
 - Run \`npx @wemuda/launchrail doctor\` when repository state seems inconsistent.
-`;
+${browserTesting}`;
 }
 
 function adrTemplate(): string {
@@ -99,12 +110,17 @@ What change would justify reconsidering this decision?
 `;
 }
 
+/** The managed Claude instructions file — regenerated whenever module configuration changes. */
+export function claudeGeneratedFile(ctx: SeedContext): FileSpec {
+  return { relPath: ".launchrail/CLAUDE.generated.md", content: claudeGeneratedMd(ctx), ownership: "managed" };
+}
+
 /** Everything init seeds beyond the manifest and lockfile. */
 export function seedFiles(ctx: SeedContext): FileSpec[] {
   return [
     { relPath: "AGENTS.md", content: agentsMd(ctx), ownership: "seeded" },
     { relPath: "CLAUDE.md", content: claudeMd(), ownership: "seeded" },
     { relPath: "docs/adr/0000-template.md", content: adrTemplate(), ownership: "seeded" },
-    { relPath: ".launchrail/CLAUDE.generated.md", content: claudeGeneratedMd(ctx), ownership: "managed" },
+    claudeGeneratedFile(ctx),
   ];
 }
