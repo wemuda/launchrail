@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-const VERSION = "0.0.0";
+import { runDoctor, printDoctor } from "./commands/doctor.js";
+import { runInit } from "./commands/init.js";
+import { VERSION } from "./version.js";
 
 const HELP = `launchrail ${VERSION} — an updatable development system for AI-assisted projects
 
@@ -7,11 +9,11 @@ Usage: launchrail <command> [options]
 
 Commands:
   init      Initialize Launchrail in a new or existing repository
+  doctor    Validate the repository and environment
   status    Inspect versions, enabled modules, drift, and missing requirements
   diff      Preview upstream changes
   sync      Synchronize managed capabilities and run migrations
   add       Add a module to the project
-  doctor    Validate the repository and environment
   verify    Run the complete verification contract
   eject     Stop managing a selected module or file
   promote   Inspect potential reusable local improvements
@@ -20,43 +22,46 @@ Options:
   -h, --help       Show this help
   -v, --version    Show version
 
-All commands that write files will support --dry-run.`;
+init options:
+  --dry-run        Show what would be written without writing
+  -y, --yes        Accept defaults; no interactive questions`;
 
-const COMMANDS = [
-  "init",
-  "status",
-  "diff",
-  "sync",
-  "add",
-  "doctor",
-  "verify",
-  "eject",
-  "promote",
-] as const;
+const NOT_IMPLEMENTED = ["status", "diff", "sync", "add", "verify", "eject", "promote"];
 
-type Command = (typeof COMMANDS)[number];
+const args = process.argv.slice(2);
+const command = args[0];
+const flags = new Set(args.slice(1));
 
-function isCommand(value: string): value is Command {
-  return (COMMANDS as readonly string[]).includes(value);
-}
-
-const arg = process.argv[2];
-
-if (arg === undefined || arg === "-h" || arg === "--help" || arg === "help") {
+if (command === undefined || command === "-h" || command === "--help" || command === "help") {
   console.log(HELP);
   process.exit(0);
 }
 
-if (arg === "-v" || arg === "--version" || arg === "version") {
+if (command === "-v" || command === "--version" || command === "version") {
   console.log(VERSION);
   process.exit(0);
 }
 
-if (!isCommand(arg)) {
-  console.error(`launchrail: unknown command "${arg}"\n`);
-  console.error(HELP);
+if (command === "init") {
+  const outcome = await runInit({
+    cwd: process.cwd(),
+    dryRun: flags.has("--dry-run"),
+    yes: flags.has("--yes") || flags.has("-y"),
+  });
+  process.exit(outcome.code);
+}
+
+if (command === "doctor") {
+  const outcome = runDoctor(process.cwd());
+  printDoctor(outcome);
+  process.exit(outcome.code);
+}
+
+if (NOT_IMPLEMENTED.includes(command)) {
+  console.error(`launchrail: "${command}" is not implemented yet.`);
   process.exit(1);
 }
 
-console.error(`launchrail: "${arg}" is not implemented yet.`);
+console.error(`launchrail: unknown command "${command}"\n`);
+console.error(HELP);
 process.exit(1);

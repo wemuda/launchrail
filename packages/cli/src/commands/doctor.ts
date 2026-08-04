@@ -1,0 +1,101 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { sha256 } from "../lib/checksum.js";
+import { detectRepo } from "../lib/detect.js";
+import { readLockfile } from "../lib/lockfile.js";
+import { MANIFEST_FILENAME, parseManifest } from "../lib/manifest.js";
+
+export type CheckStatus = "pass" | "warn" | "fail";
+
+export interface DoctorCheck {
+  status: CheckStatus;
+  name: string;
+  message: string;
+}
+
+export interface DoctorOutcome {
+  code: number;
+  checks: DoctorCheck[];
+}
+
+export function runDoctor(cwd: string): DoctorOutcome {
+  const checks: DoctorCheck[] = [];
+  const add = (status: CheckStatus, name: string, message = ""): void => {
+    checks.push({ status, name, message });
+  };
+
+  const detection = detectRepo(cwd);
+
+  if (detection.isGitRepo) add("pass", "git repository");
+  else add("warn", "git repository", "not a git repo — Launchrail relies on git history for safe writes");
+
+  const nodeMajor = Number(process.versions.node.split(".")[0]);
+  if (nodeMajor >= 22) add("pass", "node version", `v${process.versions.node}`);
+  else add("warn", "node version", `v${process.versions.node} — Launchrail targets Node >= 22`);
+
+  if (detection.packageManager) add("pass", "package manager", detection.packageManager);
+  else add("warn", "package manager", "none detected (no lockfile or packageManager field)");
+
+  if (!existsSync(join(cwd, MANIFEST_FILENAME))) {
+    add("fail", "manifest", `${MANIFEST_FILENAME} missing — run \`launchrail init\``);
+  } else {
+    const parsed = parseManifest(readFileSync(join(cwd, MANIFEST_FILENAME), "utf8"));
+    if (parsed.manifest) add("pass", "manifest", `valid (mode: ${parsed.manifest.mode})`);
+    else add("fail", "manifest", `invalid: ${parsed.errors.join("; ")}`);
+  }
+
+  const { lockfile, error: lockError } = readLockfile(cwd);
+  if (lockError) {
+    add("fail", "lockfile", lockError);
+  } else if (!lockfile) {
+    add("fail", "lockfile", "missing — run `launchrail init`");
+  } else {
+    add("pass", "lockfile", `${Object.keys(lockfile.files).length} tracked file(s)`);
+    const managed = Object.entries(lockfile.files).filter(([, f]) => f.class === "managed");
+    const drifted: string[] = [];
+    let missing = 0;
+    for (const [relPath, locked] of managed) {
+      const abs = join(cwd, relPath);
+      if (!existsSync(abs)) {
+        add("fail", "managed file", `${relPath} is tracked but missing`);
+        missing += 1;
+      } else if (sha256(readFileSync(abs, "utf8")) !== locked.checksum) {
+        drifted.push(relPath);
+      }
+    }
+    if (drifted.length > 0) {
+      add("warn", "managed drift", `${drifted.join(", ")} locally modified — sync will ask before replacing`);
+    } else if (missing === 0 && managed.length > 0) {
+      add("pass", "managed files", "match lockfile checksums");
+    }
+  }
+
+  if (detection.hasAgentsMd) add("pass", "AGENTS.md");
+  else add("fail", "AGENTS.md", "missing — run `launchrail init`");
+
+  if (!detection.hasClaudeMd) {
+    add("fail", "CLAUDE.md", "missing — run `launchrail init`");
+  } else if (readFileSync(join(cwd, "CLAUDE.md"), "utf8").includes("@AGENTS.md")) {
+    add("pass", "CLAUDE.md", "imports @AGENTS.md");
+  } else {
+    add("warn", "CLAUDE.md", "does not import @AGENTS.md — Claude will not see the shared agent contract");
+  }
+
+  if (detection.hasMattPocockSetup) add("pass", "Matt Pocock setup", "docs/agents/ present");
+  else add("warn", "Matt Pocock setup", "docs/agents/ not found — install the skills and run /setup-matt-pocock-skills");
+
+  return { code: checks.some((c) => c.status === "fail") ? 1 : 0, checks };
+}
+
+const SYMBOL: Record<CheckStatus, string> = { pass: "✓", warn: "!", fail: "✗" };
+
+export function printDoctor(outcome: DoctorOutcome): void {
+  for (const check of outcome.checks) {
+    console.log(`  ${SYMBOL[check.status]} ${check.name}${check.message ? ` — ${check.message}` : ""}`);
+  }
+  const failed = outcome.checks.filter((c) => c.status === "fail").length;
+  const warned = outcome.checks.filter((c) => c.status === "warn").length;
+  console.log(
+    `\n${failed === 0 ? "Healthy" : "Unhealthy"}: ${outcome.checks.length} checks, ${failed} failed, ${warned} warning(s).`,
+  );
+}

@@ -4,22 +4,22 @@
 
 ## Current status
 
-Freshly scaffolded monorepo. The `launchrail` CLI runs (help/version, all commands registered) but no command is implemented yet; the Claude plugin contains no skills yet. Nothing is published to npm.
+Phase 1 is implemented: `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile), backed by 23 tests including integration tests against temporary git repositories. The Claude plugin contains no skills yet. Nothing is published to npm.
 
 ## Phase 1 — `init` + `doctor`
 
 **Goal:** `npx @wemuda/launchrail init && npx @wemuda/launchrail doctor` works on a blank repo and a realistic existing repo without destroying local files.
 
-- [ ] `.launchrail.yml` manifest schema and the ownership model (managed / seeded / project-owned)
-- [ ] `.launchrail-lock.json` lockfile (versions, checksums, applied migrations)
-- [ ] Safe file writer: dry-run, checksum tracking, idempotent re-runs
-- [ ] New/existing repository detection (package manager, stack, git remote, existing agent files)
-- [ ] Init interview: project mode (spike / standard MVP / high-rigor), issue tracker, Conventional Commits (ADR-0002), test commands
-- [ ] Seed `AGENTS.md` + `CLAUDE.md` arrangement without overwriting existing content; chosen conventions (commit format, commands, definition of done) are written into the seeded `AGENTS.md`
-- [ ] Seed ADR conventions (`docs/adr/` + template)
-- [ ] Matt Pocock skills installation guidance and setup detection
-- [ ] `doctor`: baseline repository and environment checks
-- [ ] Fixture and integration tests against temporary git repositories
+- [x] `.launchrail.yml` manifest schema and the ownership model (managed / seeded / project-owned)
+- [x] `.launchrail-lock.json` lockfile (versions, checksums, applied migrations)
+- [x] Safe file writer: dry-run, checksum tracking, idempotent re-runs
+- [x] New/existing repository detection (package manager, stack, git remote, existing agent files)
+- [x] Init interview: project mode (spike / standard MVP / high-rigor), issue tracker, Conventional Commits (ADR-0002), test commands
+- [x] Seed `AGENTS.md` + `CLAUDE.md` arrangement without overwriting existing content; chosen conventions (commit format, commands, definition of done) are written into the seeded `AGENTS.md`
+- [x] Seed ADR conventions (`docs/adr/` + template)
+- [x] Matt Pocock skills installation guidance and setup detection
+- [x] `doctor`: baseline repository and environment checks
+- [x] Fixture and integration tests against temporary git repositories
 
 ## Phase 2 — Core workflow plugin
 
@@ -74,4 +74,5 @@ Freshly scaffolded monorepo. The `launchrail` CLI runs (help/version, all comman
 
 - [x] 2026-08-04 — Monorepo scaffold: pnpm workspace, `@wemuda/launchrail` CLI stub (full command surface registered), Claude plugin skeleton + marketplace manifest, ADR template, ADR-0001 (provisional stack)
 - [x] 2026-08-04 — Conventional Commits adopted for this repo and planned as an init interview question (ADR-0002)
+- [x] 2026-08-04 — Phase 1 complete: `init` (interview/defaults, dry-run, idempotent, never overwrites seeded files) and `doctor` (manifest/lockfile validation, managed-file drift detection, Matt Pocock setup detection) with fixture + temp-git-repo integration tests
 - [x] 2026-08-04 — Roadmap refined: compose Matt Pocock's `grill-with-docs` and research skills instead of custom ones; dropped `release-verification` and `launchrail-status`; Ralph phase (Wemuda-provided skill + workflow) moved ahead of the sync engine

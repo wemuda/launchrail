@@ -15,7 +15,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -24,6 +25,11 @@
   },
   "devDependencies": {
     "@types/node": "^22",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "yaml": "^2.9.0"
   }
 }
