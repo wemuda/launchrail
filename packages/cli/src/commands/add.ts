@@ -7,7 +7,7 @@ import { emptyLockfile, readLockfile, writeLockfile, type Lockfile } from "../li
 import { MANIFEST_FILENAME, parseManifest, setModuleEnabled, type Manifest, type TestingKey } from "../lib/manifest.js";
 import { RALPH_MODULE, RALPH_WORKFLOW_PATH, ralphFiles } from "../lib/ralph.js";
 import { claudeGeneratedFile } from "../lib/seeds.js";
-import { applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
+import { ACTION_LABEL, applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
 import { VERSION } from "../version.js";
 
 export interface AddOptions {
@@ -81,14 +81,6 @@ async function interview(defaults: BrowserTestingAnswers): Promise<BrowserTestin
     smokeCommand: answers.smokeCommand.trim() || defaults.smokeCommand,
   };
 }
-
-const ACTION_LABEL: Record<PlannedAction["kind"], string> = {
-  create: "create  ",
-  update: "update  ",
-  "skip-unchanged": "ok      ",
-  "skip-seeded-exists": "keep    ",
-  conflict: "conflict",
-};
 
 interface ModulePlan {
   /** The manifest object the written files are rendered from. */
@@ -248,7 +240,7 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
     console.log(
       `\nNot overwritten (locally modified managed file${conflicts.length > 1 ? "s" : ""}): ${conflicts
         .map((a) => a.spec.relPath)
-        .join(", ")} — revert local edits or wait for \`launchrail sync\` to offer a merge.`,
+        .join(", ")} — revert local edits to receive updates, or run \`launchrail eject <file>\` to own them permanently.`,
     );
   }
 

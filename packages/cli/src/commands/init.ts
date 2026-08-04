@@ -9,6 +9,7 @@ import {
 } from "../lib/claudeSettings.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
 import { emptyLockfile, readLockfile, writeLockfile } from "../lib/lockfile.js";
+import { migrationIds } from "../lib/migrations.js";
 import {
   ISSUE_TRACKERS,
   MANIFEST_FILENAME,
@@ -20,7 +21,7 @@ import {
   type Mode,
 } from "../lib/manifest.js";
 import { seedFiles } from "../lib/seeds.js";
-import { applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
+import { ACTION_LABEL, applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
 import { VERSION } from "../version.js";
 
 export interface InitOptions {
@@ -122,14 +123,6 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
   };
 }
 
-const ACTION_LABEL: Record<PlannedAction["kind"], string> = {
-  create: "create  ",
-  update: "update  ",
-  "skip-unchanged": "ok      ",
-  "skip-seeded-exists": "keep    ",
-  conflict: "conflict",
-};
-
 const SETTINGS_LABEL: Record<SettingsPlan["kind"], string> = {
   create: "create  ",
   merge: "update  ",
@@ -172,6 +165,11 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     return { code: 1, actions: [], settings };
   }
   const lockfile = existing.lockfile ?? emptyLockfile(VERSION);
+  if (!existing.lockfile) {
+    // A fresh init produces the current structure, so every shipped migration
+    // is satisfied by definition. Existing lockfiles are left to `sync`.
+    lockfile.migrations = migrationIds().sort();
+  }
   const lockBefore = JSON.stringify(lockfile);
 
   const actions = planWrites(opts.cwd, specs, lockfile);

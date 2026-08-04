@@ -5,8 +5,14 @@ export const LOCKFILE_FILENAME = ".launchrail-lock.json";
 
 export type OwnershipClass = "managed" | "seeded";
 
+/**
+ * Tracked files carry an ownership class, or "ejected": a path Launchrail once
+ * wrote and — after `launchrail eject` — will never write again.
+ */
+export type LockedClass = OwnershipClass | "ejected";
+
 export interface LockedFile {
-  class: OwnershipClass;
+  class: LockedClass;
   checksum: string;
 }
 

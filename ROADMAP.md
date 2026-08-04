@@ -4,7 +4,7 @@
 
 ## Current status
 
-Phases 1–4 are implemented. `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile). The Claude plugin carries the core workflow — `vision-creation` and `design-validation` skills, a stage-by-stage workflow doc composing Matt Pocock's grill/research/spec skills, and plugin subscription via a project-scoped `.claude/settings.json` declaration (ADR-0003) — plus `browser-smoke`. `launchrail add browser-testing` seeds the browser-testing module (Playwright baseline, semantic scripts, smoke-journey contract, ADR-0004) with `launchrail verify` and `launchrail smoke` as the verification surface. `launchrail add ralph` installs the Ralph campaign: the `ralph`/`ralph-implement`/`resolving-merge-conflicts` skills in the plugin plus a managed `.claude/workflows/ralph.js` workflow, verification-gated end to end (ADR-0005). 74 tests, including integration tests against temporary git repositories. Nothing is published to npm.
+Phases 1–5 are implemented (phase 4's end-to-end dogfood run is still open). `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile). The Claude plugin carries the core workflow — `vision-creation` and `design-validation` skills, a stage-by-stage workflow doc composing Matt Pocock's grill/research/spec skills, and plugin subscription via a project-scoped `.claude/settings.json` declaration (ADR-0003) — plus `browser-smoke`. `launchrail add browser-testing` seeds the browser-testing module (Playwright baseline, semantic scripts, smoke-journey contract, ADR-0004) with `launchrail verify` and `launchrail smoke` as the verification surface. `launchrail add ralph` installs the Ralph campaign: the `ralph`/`ralph-implement`/`resolving-merge-conflicts` skills in the plugin plus a managed `.claude/workflows/ralph.js` workflow, verification-gated end to end (ADR-0005). The sync engine (ADR-0006) keeps older projects current: `status`, `diff`, and `sync` share the safe writer's plan, migrations are ordered and idempotent, and `eject` provides vendor mode — the managed Ralph workflow receives updates through it. 118 tests, including integration tests against temporary git repositories. Nothing is published to npm.
 
 ## Phase 1 — `init` + `doctor`
 
@@ -55,12 +55,12 @@ Phases 1–4 are implemented. `launchrail init` and `launchrail doctor` work on 
 
 **Goal:** an older project receives new skills and renamed capabilities without losing local product knowledge.
 
-- [ ] `status` — drift and available updates
-- [ ] `diff` — preview upstream changes
-- [ ] `sync` — three-way merge (or safe initial subset) and generated-section updates
-- [ ] Versioned, ordered, idempotent, dry-runnable migrations
-- [ ] Upstream dependency compatibility tracking (e.g. Matt Pocock skills rename map)
-- [ ] `eject` / vendor mode
+- [x] `status` — drift, available updates, pending migrations, upstream advisories
+- [x] `diff` — preview upstream changes as unified diffs
+- [x] `sync` — safe initial subset ([ADR-0006](docs/adr/0006-sync-engine.md)): checksum-gated managed updates, conflicts keep local edits; generated content updates whole-file via `.launchrail/CLAUDE.generated.md` (true three-way merge deferred until base content is stored)
+- [x] Versioned, ordered, idempotent, dry-runnable migrations (in-CLI registry, recorded in the lockfile, failure leaves the repo recoverable)
+- [x] Upstream dependency compatibility tracking — advisory rename registry scanned against project docs (registry empty until the first real upstream rename)
+- [x] `eject` / vendor mode (`eject <file|module>`, `eject --all`; ejected paths are never written again)
 
 ## Phase 6 — Open-source readiness
 
@@ -80,3 +80,4 @@ Phases 1–4 are implemented. `launchrail init` and `launchrail doctor` work on 
 - [x] 2026-08-04 — Phase 2 complete: `vision-creation` and `design-validation` skills, `docs/workflow.md` stage contract composing upstream skills (grill fed by vision, research fed by grill constraints), and plugin subscription via an additive, idempotent `.claude/settings.json` merge in `init` with a matching `doctor` check (ADR-0003)
 - [x] 2026-08-04 — Phase 3 complete: `add browser-testing` (Playwright config + E2E baseline + smoke-journey contract + `scripts/{setup,dev,verify,smoke,doctor}.mjs`, comment-preserving manifest update), `verify` (deterministic gate, empty contract fails), `smoke` (evidence bundle scaffolding under `artifacts/verification/<run-id>/`), doctor module checks, and the `browser-smoke` skill (ADR-0004)
 - [x] 2026-08-04 — Phase 4 complete: Ralph release orchestration integrated from the Wemuda handoff as two frontends over one policy (ADR-0005) — `ralph`, `ralph-implement`, and `resolving-merge-conflicts` skills in the plugin; `launchrail add ralph` installing a managed, environment-agnostic `.claude/workflows/ralph.js`; doctor checks; verification-gated completion with release evidence summary
+- [x] 2026-08-04 — Phase 5 complete: sync engine (ADR-0006) — `status`/`diff`/`sync` sharing the safe writer's plan, in-CLI migration registry (first migration: `2026-08-plugin-declaration`) with recovery on failure and init stamping, upstream rename advisories, `eject`/vendor mode via an `ejected` lockfile class, and a `doctor` pending-migrations check

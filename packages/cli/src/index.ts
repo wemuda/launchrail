@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import { AVAILABLE_MODULES, runAdd } from "./commands/add.js";
+import { printDiff, runDiff } from "./commands/diff.js";
 import { runDoctor, printDoctor } from "./commands/doctor.js";
+import { runEject } from "./commands/eject.js";
 import { runInit } from "./commands/init.js";
 import { runSmoke } from "./commands/smoke.js";
+import { printStatus, runStatus } from "./commands/status.js";
+import { runSync } from "./commands/sync.js";
 import { runVerify } from "./commands/verify.js";
 import { VERSION } from "./version.js";
 
@@ -32,9 +36,16 @@ init / add options:
 
 smoke options:
   --url <url>      Test a specific URL (e.g. a preview environment)
-  --dry-run        Show what would be scaffolded without writing`;
+  --dry-run        Show what would be scaffolded without writing
 
-const NOT_IMPLEMENTED = ["status", "diff", "sync", "eject", "promote"];
+sync options:
+  --dry-run        Preview migrations and file updates without writing
+
+eject usage:
+  launchrail eject <module|file> [--dry-run]   Stop managing a module's files or one file
+  launchrail eject --all [--dry-run]           Vendor mode: eject everything`;
+
+const NOT_IMPLEMENTED = ["promote"];
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -82,6 +93,33 @@ if (command === "add") {
 
 if (command === "verify") {
   process.exit(runVerify(process.cwd()).code);
+}
+
+if (command === "status") {
+  const report = runStatus(process.cwd());
+  printStatus(report);
+  process.exit(report.code);
+}
+
+if (command === "diff") {
+  const outcome = runDiff(process.cwd());
+  printDiff(outcome);
+  process.exit(outcome.code);
+}
+
+if (command === "sync") {
+  process.exit(runSync({ cwd: process.cwd(), dryRun: flags.has("--dry-run") }).code);
+}
+
+if (command === "eject") {
+  const target = args[1] !== undefined && !args[1].startsWith("-") ? args[1] : null;
+  const outcome = runEject({
+    cwd: process.cwd(),
+    target,
+    all: flags.has("--all"),
+    dryRun: flags.has("--dry-run"),
+  });
+  process.exit(outcome.code);
 }
 
 if (command === "smoke") {

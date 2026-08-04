@@ -81,6 +81,9 @@ npx @wemuda/launchrail verify
 
 # Scaffold an evidence bundle for an agentic browser smoke run
 npx @wemuda/launchrail smoke
+
+# Stop managing a file or module (vendor mode: --all)
+npx @wemuda/launchrail eject <module|file>
 ```
 
 Initialized projects carry two files: `.launchrail.yml` (configuration) and `.launchrail-lock.json` (versions, checksums, applied migrations; committed to the repo).
@@ -95,7 +98,7 @@ Every file Launchrail touches in a consuming project belongs to exactly one clas
 | **Seeded** | The project, after creation | Create it once, then never touch it |
 | **Project-owned** | The project, always | Nothing |
 
-Every write supports dry-run, is checksum-aware, and is idempotent: re-running `init` or `sync` never duplicates blocks or destroys local work.
+Every write supports dry-run, is checksum-aware, and is idempotent: re-running `init` or `sync` never duplicates blocks or destroys local work. A managed file you edit locally keeps your edits — `sync` reports the conflict instead of overwriting — and `launchrail eject` permanently opts a file or module out of management ([ADR-0006](docs/adr/0006-sync-engine.md)).
 
 ## Repository layout
 
@@ -109,7 +112,6 @@ launchrail/
 ├── .claude-plugin/
 │   └── marketplace.json     # Claude Code plugin marketplace manifest
 ├── templates/               # Files seeded into consuming projects (added as built)
-├── migrations/              # Versioned, idempotent upgrade steps (added as built)
 ├── examples/                # Example consuming projects for integration tests (added as built)
 └── docs/
     └── adr/                 # Architecture decision records
