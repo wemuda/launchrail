@@ -137,9 +137,12 @@ See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progr
 
 ## Contributing
 
-- Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`type(scope): summary`); see [ADR-0002](docs/adr/0002-conventional-commits.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). The short version:
+
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`type(scope): summary`); see [ADR-0002](docs/adr/0002-conventional-commits.md). Releases and the changelog are generated from them ([docs/releasing.md](docs/releasing.md)).
 - Meaningful decisions are recorded as ADRs in [docs/adr/](docs/adr/).
 - The agent operating contract lives in [AGENTS.md](AGENTS.md).
+- Security issues go through [SECURITY.md](SECURITY.md), not public issues.
 
 ## License
 
