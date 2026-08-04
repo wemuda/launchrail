@@ -4,7 +4,7 @@
 
 ## Current status
 
-Phase 1 is implemented: `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile), backed by 23 tests including integration tests against temporary git repositories. The Claude plugin contains no skills yet. Nothing is published to npm.
+Phases 1 and 2 are implemented: `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile), and the Claude plugin now carries the core workflow — `vision-creation` and `design-validation` skills, a stage-by-stage workflow doc composing Matt Pocock's grill/research/spec skills, and plugin subscription via a project-scoped `.claude/settings.json` declaration (ADR-0003) that init merges and doctor verifies. 31 tests, including integration tests against temporary git repositories. Nothing is published to npm.
 
 ## Phase 1 — `init` + `doctor`
 
@@ -25,11 +25,11 @@ Phase 1 is implemented: `launchrail init` and `launchrail doctor` work on blank 
 
 **Goal:** a fresh project can move from idea to an approved MVP spec through committed artifacts. Launchrail composes Matt Pocock's skills wherever one already covers a stage — no duplicate skills.
 
-- [ ] `vision-creation` skill
-- [ ] Complexity grill: reference and integrate Matt Pocock's `grill-with-docs` (setup guidance + workflow docs, no custom skill)
-- [ ] Technical research: reference and integrate Matt Pocock's research skill, fed by the project's grill constraints
-- [ ] `design-validation` skill (spec → Claude Design → revised spec → handoff)
-- [ ] Plugin installation through a project-scoped declaration
+- [x] `vision-creation` skill
+- [x] Complexity grill: reference and integrate Matt Pocock's `grill-with-docs` (setup guidance + workflow docs, no custom skill)
+- [x] Technical research: reference and integrate Matt Pocock's research skill, fed by the project's grill constraints
+- [x] `design-validation` skill (spec → Claude Design → revised spec → handoff)
+- [x] Plugin installation through a project-scoped declaration (`.claude/settings.json`, ADR-0003)
 
 ## Phase 3 — Browser-testing module
 
@@ -76,3 +76,4 @@ Phase 1 is implemented: `launchrail init` and `launchrail doctor` work on blank 
 - [x] 2026-08-04 — Conventional Commits adopted for this repo and planned as an init interview question (ADR-0002)
 - [x] 2026-08-04 — Phase 1 complete: `init` (interview/defaults, dry-run, idempotent, never overwrites seeded files) and `doctor` (manifest/lockfile validation, managed-file drift detection, Matt Pocock setup detection) with fixture + temp-git-repo integration tests
 - [x] 2026-08-04 — Roadmap refined: compose Matt Pocock's `grill-with-docs` and research skills instead of custom ones; dropped `release-verification` and `launchrail-status`; Ralph phase (Wemuda-provided skill + workflow) moved ahead of the sync engine
+- [x] 2026-08-04 — Phase 2 complete: `vision-creation` and `design-validation` skills, `docs/workflow.md` stage contract composing upstream skills (grill fed by vision, research fed by grill constraints), and plugin subscription via an additive, idempotent `.claude/settings.json` merge in `init` with a matching `doctor` check (ADR-0003)

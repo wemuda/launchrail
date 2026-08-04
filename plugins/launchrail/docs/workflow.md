@@ -1,0 +1,39 @@
+# The Launchrail core workflow
+
+How a fresh project moves from idea to an approved, validated MVP spec through committed artifacts. Launchrail composes upstream skills wherever one already covers a stage — the table below is the contract for which tool owns which stage and what artifact it must leave behind.
+
+## Prerequisites
+
+- The repository is initialized (`npx @wemuda/launchrail init`) and healthy (`npx @wemuda/launchrail doctor`).
+- Matt Pocock's skills are installed and set up: run `/setup-matt-pocock-skills` once per repository (expected output: `docs/agents/`). `doctor` checks for this.
+- The Launchrail plugin is declared in `.claude/settings.json` (init does this), so every collaborator's Claude Code session offers the same skills.
+
+## Stages
+
+| # | Stage | Tool | Input | Committed artifact |
+|---|---|---|---|---|
+| 1 | Vision | Launchrail `vision-creation` skill | The idea, the user | `docs/vision.md` |
+| 2 | Visual exploration | Claude Design | Vision | Exploration artifacts (linked from the vision) |
+| 3 | Complexity grill | Matt Pocock's `grill-with-docs` | Vision + exploration | Grill transcript/constraints in `docs/research/` |
+| 4 | Technical research | Matt Pocock's research skill | **Grill constraints** | Research notes in `docs/research/` |
+| 5 | Architecture decisions | ADRs (seeded template) | Research | `docs/adr/NNNN-*.md` |
+| 6 | MVP specification | Matt Pocock's `wayfinder` / `to-spec` | Vision, ADRs, research | `docs/specs/` |
+| 7 | Design validation | Launchrail `design-validation` skill | Spec + Claude Design | Revised spec with `## Design validation` section |
+| 8 | Tickets | Matt Pocock's `to-tickets` | Validated spec | Tickets in the project's tracker |
+
+Later stages — bounded implementation (Ralph), browser smoke testing, and release verification — ship with their own Launchrail modules; see the repository roadmap.
+
+## Composition rules
+
+- **No duplicate skills.** Where the table names an upstream skill, use it. Launchrail does not wrap, fork, or re-prompt `grill-with-docs`, the research skill, `wayfinder`, `to-spec`, or `to-tickets`.
+- **The grill feeds research.** Run the grill before technical research and hand the research skill the grill's surviving constraints as its brief — research without grill constraints answers questions nobody asked.
+- **Artifacts gate stages.** Each stage starts from the previous stage's committed artifact, not from chat memory. If the artifact is missing, go back one stage instead of improvising.
+- **Everything the workflow produces is project-owned.** Vision, research notes, ADRs, specs, and tickets belong to the project; Launchrail tooling never overwrites them.
+
+## Stage-skipping by project mode
+
+The manifest's `mode` (`.launchrail.yml`) calibrates rigor, not the stage order:
+
+- `spike` — stages 2–4 and 7 may be skipped deliberately; record the skip in the vision's non-goals.
+- `standard-mvp` — the default path above.
+- `high-rigor` — no skips; ADRs required for every stage-5 decision, and design validation covers error and edge states, not just happy paths.

@@ -11,6 +11,7 @@ const EXPECTED_FILES = [
   "CLAUDE.md",
   "docs/adr/0000-template.md",
   ".launchrail/CLAUDE.generated.md",
+  ".claude/settings.json",
 ];
 
 let tmp: TmpRepo;
@@ -39,6 +40,7 @@ describe("launchrail init", () => {
     const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(second.code).toBe(0);
     expect(second.actions.every((a) => a.kind === "skip-unchanged")).toBe(true);
+    expect(second.settings.kind).toBe("skip-declared");
     expect(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8")).toBe(lockBefore);
   });
 

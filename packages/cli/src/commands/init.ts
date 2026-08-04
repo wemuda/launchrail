@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
+import {
+  applyPluginDeclaration,
+  CLAUDE_SETTINGS_PATH,
+  planPluginDeclaration,
+  type SettingsPlan,
+} from "../lib/claudeSettings.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
 import { emptyLockfile, readLockfile, writeLockfile } from "../lib/lockfile.js";
 import {
@@ -26,6 +32,7 @@ export interface InitOptions {
 export interface InitOutcome {
   code: number;
   actions: PlannedAction[];
+  settings: SettingsPlan;
 }
 
 function suggestedTestCommand(detection: RepoDetection): string | null {
@@ -110,8 +117,16 @@ const ACTION_LABEL: Record<PlannedAction["kind"], string> = {
   conflict: "conflict",
 };
 
+const SETTINGS_LABEL: Record<SettingsPlan["kind"], string> = {
+  create: "create  ",
+  merge: "update  ",
+  "skip-declared": "ok      ",
+  "skip-invalid": "conflict",
+};
+
 export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const detection = detectRepo(opts.cwd);
+  const settings = planPluginDeclaration(opts.cwd);
   const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
 
   let manifest: Manifest;
@@ -120,7 +135,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     if (!parsed.manifest) {
       console.error(`launchrail: existing ${MANIFEST_FILENAME} is invalid:`);
       for (const error of parsed.errors) console.error(`  - ${error}`);
-      return { code: 1, actions: [] };
+      return { code: 1, actions: [], settings };
     }
     manifest = parsed.manifest;
     console.log(`Found existing ${MANIFEST_FILENAME} — using its configuration (init is idempotent).`);
@@ -130,7 +145,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     manifest = defaultManifestFor(detection);
   } else {
     console.error("launchrail: non-interactive session — re-run with --yes to accept defaults.");
-    return { code: 1, actions: [] };
+    return { code: 1, actions: [], settings };
   }
 
   const specs: FileSpec[] = [
@@ -141,7 +156,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const existing = readLockfile(opts.cwd);
   if (existing.error) {
     console.error(`launchrail: ${existing.error} — refusing to continue. Fix or remove the lockfile first.`);
-    return { code: 1, actions: [] };
+    return { code: 1, actions: [], settings };
   }
   const lockfile = existing.lockfile ?? emptyLockfile(VERSION);
   const lockBefore = JSON.stringify(lockfile);
@@ -151,13 +166,15 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   for (const action of actions) {
     console.log(`  ${ACTION_LABEL[action.kind]}  ${action.spec.relPath}  (${action.detail})`);
   }
+  console.log(`  ${SETTINGS_LABEL[settings.kind]}  ${CLAUDE_SETTINGS_PATH}  (${settings.detail})`);
 
   if (opts.dryRun) {
     console.log("\nDry run — nothing was written.");
-    return { code: 0, actions };
+    return { code: 0, actions, settings };
   }
 
   const written = applyPlan(opts.cwd, actions, lockfile);
+  if (applyPluginDeclaration(opts.cwd, settings)) written.push(CLAUDE_SETTINGS_PATH);
   lockfile.launchrailVersion = VERSION;
   lockfile.decisions = {
     ...lockfile.decisions,
@@ -186,5 +203,5 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   }
   console.log(`  ${detection.hasMattPocockSetup ? "2" : "3"}. Run \`npx @wemuda/launchrail doctor\` to validate the setup.`);
   console.log(`  ${detection.hasMattPocockSetup ? "3" : "4"}. Commit the result.`);
-  return { code: 0, actions };
+  return { code: 0, actions, settings };
 }

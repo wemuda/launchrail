@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sha256 } from "../lib/checksum.js";
+import { CLAUDE_SETTINGS_PATH, declarationState } from "../lib/claudeSettings.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { MANIFEST_FILENAME, parseManifest } from "../lib/manifest.js";
@@ -83,6 +84,15 @@ export function runDoctor(cwd: string): DoctorOutcome {
 
   if (detection.hasMattPocockSetup) add("pass", "Matt Pocock setup", "docs/agents/ present");
   else add("warn", "Matt Pocock setup", "docs/agents/ not found — install the skills and run /setup-matt-pocock-skills");
+
+  const declaration = declarationState(cwd);
+  if (declaration === "declared") {
+    add("pass", "plugin declaration", `${CLAUDE_SETTINGS_PATH} declares the Launchrail plugin`);
+  } else if (declaration === "invalid-json") {
+    add("warn", "plugin declaration", `${CLAUDE_SETTINGS_PATH} is not valid JSON`);
+  } else {
+    add("warn", "plugin declaration", `Launchrail plugin not declared in ${CLAUDE_SETTINGS_PATH} — run \`launchrail init\``);
+  }
 
   return { code: checks.some((c) => c.status === "fail") ? 1 : 0, checks };
 }

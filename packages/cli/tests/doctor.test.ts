@@ -52,4 +52,14 @@ describe("launchrail doctor", () => {
     const check = outcome.checks.find((c) => c.name === "CLAUDE.md");
     expect(check?.status).toBe("warn");
   });
+
+  test("passes the plugin declaration check after init, warns without it", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(runDoctor(tmp.root).checks.find((c) => c.name === "plugin declaration")?.status).toBe("pass");
+    rmSync(join(tmp.root, ".claude"), { recursive: true });
+    const outcome = runDoctor(tmp.root);
+    const check = outcome.checks.find((c) => c.name === "plugin declaration");
+    expect(check?.status).toBe("warn");
+    expect(outcome.code).toBe(0);
+  });
 });
