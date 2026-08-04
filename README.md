@@ -85,12 +85,13 @@ pnpm --filter @wemuda/launchrail exec launchrail --help
 
 ## Roadmap
 
-1. **`init` + `doctor`** — repo detection, manifest/lockfile, `AGENTS.md`/`CLAUDE.md` setup, dry-run mode
-2. **Core workflow plugin** — vision, complexity grill, research, design validation, release verification skills
-3. **Browser-testing module** — Playwright setup, agentic smoke journeys, evidence bundles
-4. **Sync engine** — status/diff/sync, three-way merge, versioned migrations
-5. **Ralph release orchestration** — bounded autonomous implementation campaigns
-6. **Open-source readiness** — license, docs, examples, release automation
+See [ROADMAP.md](ROADMAP.md) — a living checklist of what exists, what's in progress, and what's missing. The phases in one line:
+
+`init` + `doctor` → core workflow plugin → browser testing → sync engine → Ralph orchestration → open-source readiness
+
+## Contributing
+
+This repo uses [Conventional Commits](https://www.conventionalcommits.org/) (`type(scope): summary`) — see [ADR-0002](docs/adr/0002-conventional-commits.md). Meaningful decisions are recorded in [docs/adr/](docs/adr/).
 
 ## License
 
