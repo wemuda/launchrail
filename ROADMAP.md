@@ -67,7 +67,7 @@ Phases 1–5 are implemented (phase 4's end-to-end dogfood run is still open). `
 - [x] License selection — MIT, generated output unencumbered ([ADR-0007](docs/adr/0007-mit-license.md))
 - [ ] Public docs, installation guide, example project
 - [ ] Contribution guide and security policy
-- [ ] Release automation and changelog (enabled by Conventional Commits)
+- [x] Release automation and changelog (enabled by Conventional Commits) — CI + release-please, one toolchain version, provenance-attested npm publish ([ADR-0008](docs/adr/0008-release-automation.md), [docs/releasing.md](docs/releasing.md))
 - [x] Brand due diligence (GitHub/npm/domain/trademark checks on the name) — findings and pre-launch actions in [docs/brand-due-diligence.md](docs/brand-due-diligence.md)
 - [ ] Dogfood case study on a real Wemuda project
 
