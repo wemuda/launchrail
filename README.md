@@ -87,7 +87,7 @@ pnpm --filter @wemuda/launchrail exec launchrail --help
 
 See [ROADMAP.md](ROADMAP.md) — a living checklist of what exists, what's in progress, and what's missing. The phases in one line:
 
-`init` + `doctor` → core workflow plugin → browser testing → sync engine → Ralph orchestration → open-source readiness
+`init` + `doctor` → core workflow plugin → browser testing → Ralph orchestration → sync engine → open-source readiness
 
 ## Contributing
 

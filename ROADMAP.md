@@ -23,14 +23,12 @@ Freshly scaffolded monorepo. The `launchrail` CLI runs (help/version, all comman
 
 ## Phase 2 — Core workflow plugin
 
-**Goal:** a fresh project can move from idea to an approved MVP spec through committed artifacts.
+**Goal:** a fresh project can move from idea to an approved MVP spec through committed artifacts. Launchrail composes Matt Pocock's skills wherever one already covers a stage — no duplicate skills.
 
 - [ ] `vision-creation` skill
-- [ ] `complexity-grill` skill
-- [ ] `technical-landscape` research skill
+- [ ] Complexity grill: reference and integrate Matt Pocock's `grill-with-docs` (setup guidance + workflow docs, no custom skill)
+- [ ] Technical research: reference and integrate Matt Pocock's research skill, fed by the project's grill constraints
 - [ ] `design-validation` skill (spec → Claude Design → revised spec → handoff)
-- [ ] `release-verification` skill
-- [ ] `launchrail-status` skill (current stage, missing artifacts, next workflow)
 - [ ] Plugin installation through a project-scoped declaration
 
 ## Phase 3 — Browser-testing module
@@ -43,7 +41,16 @@ Freshly scaffolded monorepo. The `launchrail` CLI runs (help/version, all comman
 - [ ] Evidence bundle format (summary, traces, screenshots, console/network logs)
 - [ ] Local, CI, and cloud (fresh clone) support
 
-## Phase 4 — Sync engine
+## Phase 4 — Ralph release orchestration
+
+**Goal:** Ralph implements a small example MVP and cannot declare success while required verification fails.
+
+- [ ] Integrate the Wemuda-provided Ralph skill (supplied, not written from scratch)
+- [ ] Integrate the Wemuda-provided campaign workflow script
+- [ ] Completion contract, max iterations, blocker reports
+- [ ] Verification-gated completion and release evidence summary
+
+## Phase 5 — Sync engine
 
 **Goal:** an older project receives new skills and renamed capabilities without losing local product knowledge.
 
@@ -53,14 +60,6 @@ Freshly scaffolded monorepo. The `launchrail` CLI runs (help/version, all comman
 - [ ] Versioned, ordered, idempotent, dry-runnable migrations
 - [ ] Upstream dependency compatibility tracking (e.g. Matt Pocock skills rename map)
 - [ ] `eject` / vendor mode
-
-## Phase 5 — Ralph release orchestration
-
-**Goal:** Ralph implements a small example MVP and cannot declare success while required verification fails.
-
-- [ ] `ralph-release` skill: bounded campaign from approved tickets
-- [ ] Completion contract, max iterations, blocker reports
-- [ ] Verification-gated completion and release evidence summary
 
 ## Phase 6 — Open-source readiness
 
@@ -75,3 +74,4 @@ Freshly scaffolded monorepo. The `launchrail` CLI runs (help/version, all comman
 
 - [x] 2026-08-04 — Monorepo scaffold: pnpm workspace, `@wemuda/launchrail` CLI stub (full command surface registered), Claude plugin skeleton + marketplace manifest, ADR template, ADR-0001 (provisional stack)
 - [x] 2026-08-04 — Conventional Commits adopted for this repo and planned as an init interview question (ADR-0002)
+- [x] 2026-08-04 — Roadmap refined: compose Matt Pocock's `grill-with-docs` and research skills instead of custom ones; dropped `release-verification` and `launchrail-status`; Ralph phase (Wemuda-provided skill + workflow) moved ahead of the sync engine
