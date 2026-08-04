@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Lockfile } from "../src/lib/lockfile.js";
 
 export interface TmpRepo {
   root: string;
@@ -22,4 +23,12 @@ export function makeTmpRepo(): TmpRepo {
   git(["config", "user.email", "test@example.com"]);
   git(["config", "user.name", "Launchrail Test"]);
   return tmp;
+}
+
+/** Edit the lockfile on disk — used to simulate repositories written by older toolchain versions. */
+export function editLockfile(root: string, edit: (lockfile: Lockfile) => void): void {
+  const path = join(root, ".launchrail-lock.json");
+  const lockfile = JSON.parse(readFileSync(path, "utf8")) as Lockfile;
+  edit(lockfile);
+  writeFileSync(path, JSON.stringify(lockfile, null, 2) + "\n", "utf8");
 }

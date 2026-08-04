@@ -6,7 +6,7 @@ import { detectRepo, type RepoDetection } from "../lib/detect.js";
 import { emptyLockfile, readLockfile, writeLockfile } from "../lib/lockfile.js";
 import { MANIFEST_FILENAME, parseManifest, setModuleEnabled, type Manifest } from "../lib/manifest.js";
 import { claudeGeneratedFile } from "../lib/seeds.js";
-import { applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
+import { ACTION_LABEL, applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
 import { VERSION } from "../version.js";
 
 export interface AddOptions {
@@ -80,14 +80,6 @@ async function interview(defaults: BrowserTestingAnswers): Promise<BrowserTestin
     smokeCommand: answers.smokeCommand.trim() || defaults.smokeCommand,
   };
 }
-
-const ACTION_LABEL: Record<PlannedAction["kind"], string> = {
-  create: "create  ",
-  update: "update  ",
-  "skip-unchanged": "ok      ",
-  "skip-seeded-exists": "keep    ",
-  conflict: "conflict",
-};
 
 export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
   if (opts.module !== BROWSER_TESTING_MODULE) {

@@ -16,6 +16,7 @@ export type ActionKind =
   | "update"
   | "skip-unchanged"
   | "skip-seeded-exists"
+  | "skip-ejected"
   | "conflict";
 
 export interface PlannedAction {
@@ -24,9 +25,19 @@ export interface PlannedAction {
   detail: string;
 }
 
+export const ACTION_LABEL: Record<ActionKind, string> = {
+  create: "create  ",
+  update: "update  ",
+  "skip-unchanged": "ok      ",
+  "skip-seeded-exists": "keep    ",
+  "skip-ejected": "ejected ",
+  conflict: "conflict",
+};
+
 /**
  * Decide what would happen for each desired file without touching disk.
  *
+ * - ejected paths are never touched again, not even to recreate them
  * - seeded files are never overwritten once they exist
  * - managed files are only replaced when their on-disk checksum matches the
  *   lockfile (i.e. nobody edited them since Launchrail last wrote them)
@@ -34,6 +45,9 @@ export interface PlannedAction {
 export function planWrites(root: string, specs: FileSpec[], lockfile: Lockfile): PlannedAction[] {
   return specs.map((spec) => {
     const abs = join(root, spec.relPath);
+    if (lockfile.files[spec.relPath]?.class === "ejected") {
+      return { spec, kind: "skip-ejected" as const, detail: "ejected — Launchrail no longer manages this path" };
+    }
     if (!existsSync(abs)) {
       return { spec, kind: "create" as const, detail: "new file" };
     }

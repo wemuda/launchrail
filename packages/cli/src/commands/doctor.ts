@@ -5,6 +5,7 @@ import { sha256 } from "../lib/checksum.js";
 import { CLAUDE_SETTINGS_PATH, declarationState } from "../lib/claudeSettings.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
+import { pendingMigrations } from "../lib/migrations.js";
 import { MANIFEST_FILENAME, parseManifest, type Manifest } from "../lib/manifest.js";
 
 export type CheckStatus = "pass" | "warn" | "fail";
@@ -74,6 +75,12 @@ export function runDoctor(cwd: string): DoctorOutcome {
       add("warn", "managed drift", `${drifted.join(", ")} locally modified — sync will ask before replacing`);
     } else if (missing === 0 && managed.length > 0) {
       add("pass", "managed files", "match lockfile checksums");
+    }
+    const pending = pendingMigrations(lockfile);
+    if (pending.length > 0) {
+      add("warn", "migrations", `${pending.length} pending (${pending.map((m) => m.id).join(", ")}) — run \`launchrail sync\``);
+    } else {
+      add("pass", "migrations", "all applied");
     }
   }
 
