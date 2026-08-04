@@ -4,7 +4,7 @@
 
 ## Current status
 
-Phases 1–3 are implemented. `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile). The Claude plugin carries the core workflow — `vision-creation` and `design-validation` skills, a stage-by-stage workflow doc composing Matt Pocock's grill/research/spec skills, and plugin subscription via a project-scoped `.claude/settings.json` declaration (ADR-0003) — plus `browser-smoke`. `launchrail add browser-testing` seeds the browser-testing module (Playwright baseline, semantic scripts, smoke-journey contract, ADR-0004) with `launchrail verify` and `launchrail smoke` as the verification surface. 61 tests, including integration tests against temporary git repositories. Nothing is published to npm.
+Phases 1–4 are implemented. `launchrail init` and `launchrail doctor` work on blank and existing repositories (interview or `--yes`, `--dry-run`, idempotent re-runs, checksum-tracked lockfile). The Claude plugin carries the core workflow — `vision-creation` and `design-validation` skills, a stage-by-stage workflow doc composing Matt Pocock's grill/research/spec skills, and plugin subscription via a project-scoped `.claude/settings.json` declaration (ADR-0003) — plus `browser-smoke`. `launchrail add browser-testing` seeds the browser-testing module (Playwright baseline, semantic scripts, smoke-journey contract, ADR-0004) with `launchrail verify` and `launchrail smoke` as the verification surface. `launchrail add ralph` installs the Ralph campaign: the `ralph`/`ralph-implement`/`resolving-merge-conflicts` skills in the plugin plus a managed `.claude/workflows/ralph.js` workflow, verification-gated end to end (ADR-0005). 74 tests, including integration tests against temporary git repositories. Nothing is published to npm.
 
 ## Phase 1 — `init` + `doctor`
 
@@ -45,10 +45,11 @@ Phases 1–3 are implemented. `launchrail init` and `launchrail doctor` work on 
 
 **Goal:** Ralph implements a small example MVP and cannot declare success while required verification fails.
 
-- [ ] Integrate the Wemuda-provided Ralph skill (supplied, not written from scratch)
-- [ ] Integrate the Wemuda-provided campaign workflow script
-- [ ] Completion contract, max iterations, blocker reports
-- [ ] Verification-gated completion and release evidence summary
+- [x] Integrate the Wemuda-provided Ralph skill (supplied, not written from scratch) — adapted as the plugin's `ralph` orchestrator skill plus the named contracts it dispatches to (`ralph-implement`, `resolving-merge-conflicts`)
+- [x] Integrate the Wemuda-provided campaign workflow script — `launchrail add ralph` installs `.claude/workflows/ralph.js` as a managed file; policy overrides via workflow args, config discovered at run time (ADR-0005)
+- [x] Completion contract, max iterations, blocker reports — per-ticket contract in `ralph-implement`; retry-once-then-park with `needs-info` + failure history; `maxRounds` backstop; stuck tickets reported with their blockers
+- [x] Verification-gated completion and release evidence summary — `launchrail verify` gates preflight, every ticket, and campaign close-out (plus browser-smoke evidence when the module is enabled); a red or empty gate refuses to start, a red final gate reports "unverified"
+- [ ] Dogfood: run a Ralph campaign against a small example MVP end to end
 
 ## Phase 5 — Sync engine
 
@@ -78,3 +79,4 @@ Phases 1–3 are implemented. `launchrail init` and `launchrail doctor` work on 
 - [x] 2026-08-04 — Roadmap refined: compose Matt Pocock's `grill-with-docs` and research skills instead of custom ones; dropped `release-verification` and `launchrail-status`; Ralph phase (Wemuda-provided skill + workflow) moved ahead of the sync engine
 - [x] 2026-08-04 — Phase 2 complete: `vision-creation` and `design-validation` skills, `docs/workflow.md` stage contract composing upstream skills (grill fed by vision, research fed by grill constraints), and plugin subscription via an additive, idempotent `.claude/settings.json` merge in `init` with a matching `doctor` check (ADR-0003)
 - [x] 2026-08-04 — Phase 3 complete: `add browser-testing` (Playwright config + E2E baseline + smoke-journey contract + `scripts/{setup,dev,verify,smoke,doctor}.mjs`, comment-preserving manifest update), `verify` (deterministic gate, empty contract fails), `smoke` (evidence bundle scaffolding under `artifacts/verification/<run-id>/`), doctor module checks, and the `browser-smoke` skill (ADR-0004)
+- [x] 2026-08-04 — Phase 4 complete: Ralph release orchestration integrated from the Wemuda handoff as two frontends over one policy (ADR-0005) — `ralph`, `ralph-implement`, and `resolving-merge-conflicts` skills in the plugin; `launchrail add ralph` installing a managed, environment-agnostic `.claude/workflows/ralph.js`; doctor checks; verification-gated completion with release evidence summary
