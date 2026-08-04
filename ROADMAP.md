@@ -64,7 +64,7 @@ Phases 1–5 are implemented (phase 4's end-to-end dogfood run is still open). `
 
 ## Phase 6 — Open-source readiness
 
-- [ ] License selection
+- [x] License selection — MIT, generated output unencumbered ([ADR-0007](docs/adr/0007-mit-license.md))
 - [ ] Public docs, installation guide, example project
 - [ ] Contribution guide and security policy
 - [ ] Release automation and changelog (enabled by Conventional Commits)

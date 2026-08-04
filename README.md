@@ -143,4 +143,4 @@ See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progr
 
 ## License
 
-To be selected before public launch (open source intended).
+[MIT](LICENSE) ([ADR-0007](docs/adr/0007-mit-license.md)). Everything Launchrail writes into *your* repository — seeded files, managed files, rendered templates — is yours, with no attribution or license obligation attached.

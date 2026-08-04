@@ -2,7 +2,7 @@
   "name": "@wemuda/launchrail",
   "version": "0.0.0",
   "description": "Launchrail — initialize, inspect, update, and validate repositories using the Launchrail development system.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "launchrail": "./dist/index.js"
