@@ -1,0 +1,13 @@
+{
+  "name": "launchrail",
+  "owner": {
+    "name": "Wemuda"
+  },
+  "plugins": [
+    {
+      "name": "launchrail",
+      "source": "./plugins/launchrail",
+      "description": "The Launchrail workflow for Claude Code: vision creation, complexity grill, technical research, design validation, bounded Ralph campaigns, browser smoke testing, and release verification."
+    }
+  ]
+}

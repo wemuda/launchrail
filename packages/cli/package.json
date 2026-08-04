@@ -1,0 +1,29 @@
+{
+  "name": "@wemuda/launchrail",
+  "version": "0.0.0",
+  "description": "Launchrail — initialize, inspect, update, and validate repositories using the Launchrail development system.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": {
+    "launchrail": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wemuda/launchrail.git",
+    "directory": "packages/cli"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.7.0"
+  }
+}
