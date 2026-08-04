@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * Upstream dependency compatibility tracking (ADR-0005). Launchrail composes
+ * Upstream dependency compatibility tracking (ADR-0006). Launchrail composes
  * external capabilities — Matt Pocock's skills, Claude Design, the Ralph
  * plugin — whose names end up in project-owned docs. When an upstream rename
  * ships, an entry lands in this registry and `status` reports stale

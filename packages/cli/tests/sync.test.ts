@@ -1,9 +1,11 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { runAdd } from "../src/commands/add.js";
 import { runInit } from "../src/commands/init.js";
 import { runSync } from "../src/commands/sync.js";
 import { sha256 } from "../src/lib/checksum.js";
+import { RALPH_WORKFLOW_PATH } from "../src/lib/ralph.js";
 import type { Lockfile } from "../src/lib/lockfile.js";
 import type { Migration } from "../src/lib/migrations.js";
 import { editLockfile, makeTmpRepo, type TmpRepo } from "./helpers.js";
@@ -61,6 +63,19 @@ describe("launchrail sync", () => {
     expect(outcome.code).toBe(0);
     expect(outcome.actions.find((a) => a.spec.relPath === GENERATED)?.kind).toBe("conflict");
     expect(readFileSync(join(tmp.root, GENERATED), "utf8")).toBe(local);
+  });
+
+  test("updates an outdated managed module file (ralph workflow)", async () => {
+    await runAdd({ cwd: tmp.root, module: "ralph", dryRun: false, yes: true });
+    const old = "// old workflow shipped by an older toolchain\n";
+    writeFileSync(join(tmp.root, RALPH_WORKFLOW_PATH), old);
+    editLockfile(tmp.root, (lock) => {
+      lock.files[RALPH_WORKFLOW_PATH] = { class: "managed", checksum: sha256(old) };
+    });
+    const outcome = runSync({ cwd: tmp.root, dryRun: false });
+    expect(outcome.code).toBe(0);
+    expect(outcome.actions.find((a) => a.spec.relPath === RALPH_WORKFLOW_PATH)?.kind).toBe("update");
+    expect(readFileSync(join(tmp.root, RALPH_WORKFLOW_PATH), "utf8")).not.toBe(old);
   });
 
   test("recreates a deleted seeded file", () => {

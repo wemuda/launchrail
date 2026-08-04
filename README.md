@@ -71,6 +71,7 @@ npx @wemuda/launchrail sync
 
 # Add a module later
 npx @wemuda/launchrail add browser-testing
+npx @wemuda/launchrail add ralph
 
 # Validate the repository and environment
 npx @wemuda/launchrail doctor
@@ -97,7 +98,7 @@ Every file Launchrail touches in a consuming project belongs to exactly one clas
 | **Seeded** | The project, after creation | Create it once, then never touch it |
 | **Project-owned** | The project, always | Nothing |
 
-Every write supports dry-run, is checksum-aware, and is idempotent: re-running `init` or `sync` never duplicates blocks or destroys local work. A managed file you edit locally keeps your edits — `sync` reports the conflict instead of overwriting — and `launchrail eject` permanently opts a file or module out of management ([ADR-0005](docs/adr/0005-sync-engine.md)).
+Every write supports dry-run, is checksum-aware, and is idempotent: re-running `init` or `sync` never duplicates blocks or destroys local work. A managed file you edit locally keeps your edits — `sync` reports the conflict instead of overwriting — and `launchrail eject` permanently opts a file or module out of management ([ADR-0006](docs/adr/0006-sync-engine.md)).
 
 ## Repository layout
 

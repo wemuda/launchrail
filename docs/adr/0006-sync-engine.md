@@ -1,4 +1,4 @@
-# ADR-0005: Sync engine — checksum-gated safe subset, in-CLI migrations, eject as lockfile state
+# ADR-0006: Sync engine — checksum-gated safe subset, in-CLI migrations, eject as lockfile state
 
 ## Status
 Accepted

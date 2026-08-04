@@ -3,8 +3,9 @@ import { join } from "node:path";
 import * as p from "@clack/prompts";
 import { BROWSER_TESTING_MODULE, browserTestingFiles } from "../lib/browser-testing.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
-import { emptyLockfile, readLockfile, writeLockfile } from "../lib/lockfile.js";
-import { MANIFEST_FILENAME, parseManifest, setModuleEnabled, type Manifest } from "../lib/manifest.js";
+import { emptyLockfile, readLockfile, writeLockfile, type Lockfile } from "../lib/lockfile.js";
+import { MANIFEST_FILENAME, parseManifest, setModuleEnabled, type Manifest, type TestingKey } from "../lib/manifest.js";
+import { RALPH_MODULE, RALPH_WORKFLOW_PATH, ralphFiles } from "../lib/ralph.js";
 import { claudeGeneratedFile } from "../lib/seeds.js";
 import { ACTION_LABEL, applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
 import { VERSION } from "../version.js";
@@ -21,7 +22,7 @@ export interface AddOutcome {
   actions: PlannedAction[];
 }
 
-export const AVAILABLE_MODULES = [BROWSER_TESTING_MODULE];
+export const AVAILABLE_MODULES = [BROWSER_TESTING_MODULE, RALPH_MODULE];
 
 interface BrowserTestingAnswers {
   appUrl: string;
@@ -81,8 +82,83 @@ async function interview(defaults: BrowserTestingAnswers): Promise<BrowserTestin
   };
 }
 
+interface ModulePlan {
+  /** The manifest object the written files are rendered from. */
+  manifest: Manifest;
+  /** Testing keys to record alongside the module flag in the manifest. */
+  testing: Partial<Record<TestingKey, string | null>>;
+  specs: FileSpec[];
+  /** Extra decisions recorded in the lockfile. */
+  decisions: Record<string, string | boolean | null>;
+  notes: string[];
+  nextSteps: string[];
+}
+
+function planBrowserTesting(
+  parsed: Manifest,
+  detection: RepoDetection,
+  answers: BrowserTestingAnswers,
+): ModulePlan {
+  const manifest: Manifest = {
+    ...parsed,
+    testing: { ...parsed.testing, ...answers },
+    modules: { ...parsed.modules, [BROWSER_TESTING_MODULE]: true },
+  };
+  const notes: string[] = [];
+  if (detection.playwrightConfigFile) {
+    notes.push(`Existing ${detection.playwrightConfigFile} detected — keeping it; no config or baseline spec seeded.`);
+  }
+  const nextSteps = ["Run `node scripts/setup.mjs` — installs @playwright/test and browser binaries."];
+  if (!answers.devCommand) {
+    nextSteps.push("Set the dev command: edit scripts/dev.mjs (DEV_COMMAND) and testing.devCommand in .launchrail.yml.");
+  }
+  nextSteps.push(
+    "Review the seeded files — they are yours: playwright config, tests/e2e/, docs/testing/smoke-journeys.md.",
+    "Verify: `node scripts/verify.mjs`, then `npx @wemuda/launchrail smoke` with the app running.",
+  );
+  return {
+    manifest,
+    testing: { ...answers },
+    specs: browserTestingFiles({ manifest, detection }),
+    decisions: { ...answers },
+    notes,
+    nextSteps,
+  };
+}
+
+function planRalph(parsed: Manifest): ModulePlan {
+  const manifest: Manifest = {
+    ...parsed,
+    modules: { ...parsed.modules, [RALPH_MODULE]: true },
+  };
+  const notes: string[] = [];
+  if (parsed.issueTracker === "none") {
+    notes.push(
+      "Warning: .launchrail.yml has issueTracker: none — Ralph runs off tracker tickets and will refuse to start until one is configured.",
+    );
+  }
+  if (!parsed.testing.unitCommand && !parsed.testing.e2eCommand) {
+    notes.push(
+      "Warning: no testing commands configured — `launchrail verify` fails on an empty contract, and Ralph refuses to start on a red gate.",
+    );
+  }
+  return {
+    manifest,
+    testing: {},
+    specs: ralphFiles(),
+    decisions: {},
+    notes,
+    nextSteps: [
+      "Create the tracker labels Ralph uses: ready-for-agent, ralph:building, needs-info.",
+      "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (Matt Pocock's to-tickets, stage 8 of the workflow).",
+      "Run a campaign: the launchrail:ralph skill (watchable) or the `ralph` workflow (wide or long runs; scope with args, e.g. { width: 1 }).",
+      "Start with width 1 until a few tickets have landed cleanly, then widen.",
+    ],
+  };
+}
+
 export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
-  if (opts.module !== BROWSER_TESTING_MODULE) {
+  if (!AVAILABLE_MODULES.includes(opts.module)) {
     console.error(
       `launchrail: unknown module "${opts.module}". Available modules: ${AVAILABLE_MODULES.join(", ")}`,
     );
@@ -102,51 +178,43 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
     return { code: 1, actions: [] };
   }
 
-  const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
-  const answers = interactive
-    ? await interview(defaultAnswers(parsed.manifest, detection))
-    : defaultAnswers(parsed.manifest, detection);
+  let plan: ModulePlan;
+  if (opts.module === BROWSER_TESTING_MODULE) {
+    const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
+    const answers = interactive
+      ? await interview(defaultAnswers(parsed.manifest, detection))
+      : defaultAnswers(parsed.manifest, detection);
+    plan = planBrowserTesting(parsed.manifest, detection, answers);
+  } else {
+    plan = planRalph(parsed.manifest);
+  }
 
-  // The manifest object the seeded files are rendered from.
-  const manifest: Manifest = {
-    ...parsed.manifest,
-    testing: { ...parsed.manifest.testing, ...answers },
-    modules: { ...parsed.manifest.modules, [BROWSER_TESTING_MODULE]: true },
-  };
-
-  const manifestUpdate = setModuleEnabled(manifestSource, BROWSER_TESTING_MODULE, {
-    appUrl: answers.appUrl,
-    devCommand: answers.devCommand,
-    e2eCommand: answers.e2eCommand,
-    smokeCommand: answers.smokeCommand,
-  });
+  const manifestUpdate = setModuleEnabled(manifestSource, opts.module, plan.testing);
 
   const existing = readLockfile(opts.cwd);
   if (existing.error) {
     console.error(`launchrail: ${existing.error} — refusing to continue. Fix or remove the lockfile first.`);
     return { code: 1, actions: [] };
   }
-  const lockfile = existing.lockfile ?? emptyLockfile(VERSION);
+  const lockfile: Lockfile = existing.lockfile ?? emptyLockfile(VERSION);
   const lockBefore = JSON.stringify(lockfile);
 
   const specs: FileSpec[] = [
-    ...browserTestingFiles({ manifest, detection }),
-    claudeGeneratedFile({ projectName: detection.projectName, manifest, launchrailVersion: VERSION }),
+    ...plan.specs,
+    claudeGeneratedFile({ projectName: detection.projectName, manifest: plan.manifest, launchrailVersion: VERSION }),
   ];
   const actions = planWrites(opts.cwd, specs, lockfile);
 
   console.log("");
   console.log(
     manifestUpdate.changed
-      ? `  update    ${MANIFEST_FILENAME}  (enable ${BROWSER_TESTING_MODULE}, record testing commands)`
-      : `  ok        ${MANIFEST_FILENAME}  (${BROWSER_TESTING_MODULE} already enabled)`,
+      ? `  update    ${MANIFEST_FILENAME}  (enable ${opts.module}${Object.keys(plan.testing).length > 0 ? ", record testing commands" : ""})`
+      : `  ok        ${MANIFEST_FILENAME}  (${opts.module} already enabled)`,
   );
   for (const action of actions) {
     console.log(`  ${ACTION_LABEL[action.kind]}  ${action.spec.relPath}  (${action.detail})`);
   }
-  if (detection.playwrightConfigFile) {
-    console.log(`\nExisting ${detection.playwrightConfigFile} detected — keeping it; no config or baseline spec seeded.`);
-  }
+  for (const note of plan.notes) console.log(`\n${note}`);
 
   if (opts.dryRun) {
     console.log("\nDry run — nothing was written.");
@@ -160,14 +228,20 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
   lockfile.launchrailVersion = VERSION;
   lockfile.decisions = {
     ...lockfile.decisions,
-    [`module:${BROWSER_TESTING_MODULE}`]: true,
-    appUrl: answers.appUrl,
-    devCommand: answers.devCommand,
-    e2eCommand: answers.e2eCommand,
-    smokeCommand: answers.smokeCommand,
+    [`module:${opts.module}`]: true,
+    ...plan.decisions,
   };
   if (JSON.stringify(lockfile) !== lockBefore || !existing.lockfile) {
     writeLockfile(opts.cwd, lockfile);
+  }
+
+  const conflicts = actions.filter((a) => a.kind === "conflict");
+  if (conflicts.length > 0) {
+    console.log(
+      `\nNot overwritten (locally modified managed file${conflicts.length > 1 ? "s" : ""}): ${conflicts
+        .map((a) => a.spec.relPath)
+        .join(", ")} — revert local edits to receive updates, or run \`launchrail eject <file>\` to own them permanently.`,
+    );
   }
 
   console.log(
@@ -177,11 +251,9 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
   );
 
   console.log("\nNext steps:");
-  console.log("  1. Run `node scripts/setup.mjs` — installs @playwright/test and browser binaries.");
-  if (!answers.devCommand) {
-    console.log("  2. Set the dev command: edit scripts/dev.mjs (DEV_COMMAND) and testing.devCommand in .launchrail.yml.");
+  plan.nextSteps.forEach((step, i) => console.log(`  ${i + 1}. ${step}`));
+  if (opts.module === RALPH_MODULE) {
+    console.log(`\nThe campaign workflow lives at ${RALPH_WORKFLOW_PATH} (managed — do not hand-edit).`);
   }
-  console.log(`  ${answers.devCommand ? "2" : "3"}. Review the seeded files — they are yours: playwright config, tests/e2e/, docs/testing/smoke-journeys.md.`);
-  console.log(`  ${answers.devCommand ? "3" : "4"}. Verify: \`node scripts/verify.mjs\`, then \`npx @wemuda/launchrail smoke\` with the app running.`);
   return { code: 0, actions };
 }

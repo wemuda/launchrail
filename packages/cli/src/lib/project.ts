@@ -4,6 +4,7 @@ import { BROWSER_TESTING_MODULE, browserTestingFiles } from "./browser-testing.j
 import { detectRepo, type RepoDetection } from "./detect.js";
 import { LOCKFILE_FILENAME, readLockfile, type Lockfile } from "./lockfile.js";
 import { MANIFEST_FILENAME, parseManifest, type Manifest } from "./manifest.js";
+import { RALPH_MODULE, ralphFiles } from "./ralph.js";
 import { seedFiles } from "./seeds.js";
 import type { FileSpec } from "./writer.js";
 import { VERSION } from "../version.js";
@@ -47,6 +48,9 @@ export function moduleSpecs(state: ProjectState): Record<string, FileSpec[]> {
   const modules: Record<string, FileSpec[]> = { core: seedFiles(ctx) };
   if (state.manifest.modules[BROWSER_TESTING_MODULE]) {
     modules[BROWSER_TESTING_MODULE] = browserTestingFiles({ manifest: state.manifest, detection: state.detection });
+  }
+  if (state.manifest.modules[RALPH_MODULE]) {
+    modules[RALPH_MODULE] = ralphFiles();
   }
   return modules;
 }

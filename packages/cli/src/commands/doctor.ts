@@ -7,6 +7,7 @@ import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
 import { MANIFEST_FILENAME, parseManifest, type Manifest } from "../lib/manifest.js";
+import { RALPH_MODULE, RALPH_WORKFLOW_PATH } from "../lib/ralph.js";
 
 export type CheckStatus = "pass" | "warn" | "fail";
 
@@ -133,6 +134,28 @@ export function runDoctor(cwd: string): DoctorOutcome {
       add("pass", "testing commands", "e2e and smoke commands configured");
     } else {
       add("warn", "testing commands", `set testing.e2eCommand and testing.smokeCommand in ${MANIFEST_FILENAME}`);
+    }
+  }
+
+  if (manifest?.modules[RALPH_MODULE]) {
+    if (existsSync(join(cwd, RALPH_WORKFLOW_PATH))) {
+      add("pass", "ralph workflow", RALPH_WORKFLOW_PATH);
+    } else {
+      add("fail", "ralph workflow", `${RALPH_WORKFLOW_PATH} missing — re-run \`launchrail add ralph\``);
+    }
+    if (manifest.issueTracker !== "none") {
+      add("pass", "ralph tracker", `issueTracker: ${manifest.issueTracker}`);
+    } else {
+      add("warn", "ralph tracker", `issueTracker is none — Ralph runs off tickets; set it in ${MANIFEST_FILENAME}`);
+    }
+    if (manifest.testing.unitCommand || manifest.testing.e2eCommand) {
+      add("pass", "ralph verification gate", "testing commands configured");
+    } else {
+      add(
+        "warn",
+        "ralph verification gate",
+        `no testing commands in ${MANIFEST_FILENAME} — \`verify\` fails on an empty contract and Ralph refuses to start`,
+      );
     }
   }
 
