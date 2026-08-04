@@ -68,7 +68,7 @@ Phases 1–5 are implemented (phase 4's end-to-end dogfood run is still open). `
 - [ ] Public docs, installation guide, example project
 - [ ] Contribution guide and security policy
 - [ ] Release automation and changelog (enabled by Conventional Commits)
-- [ ] Brand due diligence (GitHub/npm/domain/trademark checks on the name)
+- [x] Brand due diligence (GitHub/npm/domain/trademark checks on the name) — findings and pre-launch actions in [docs/brand-due-diligence.md](docs/brand-due-diligence.md)
 - [ ] Dogfood case study on a real Wemuda project
 
 ## Landed
