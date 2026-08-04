@@ -1,0 +1,14 @@
+{
+  "name": "hello-launchrail",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Minimal example app used to demonstrate what `launchrail init` writes into a project.",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

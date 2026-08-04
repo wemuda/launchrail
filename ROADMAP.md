@@ -65,7 +65,7 @@ Phases 1–5 are implemented (phase 4's end-to-end dogfood run is still open). `
 ## Phase 6 — Open-source readiness
 
 - [x] License selection — MIT, generated output unencumbered ([ADR-0007](docs/adr/0007-mit-license.md))
-- [ ] Public docs, installation guide, example project
+- [x] Public docs, installation guide, example project — [docs/getting-started.md](docs/getting-started.md); [examples/hello-launchrail](examples/hello-launchrail) is real, unedited `init` output
 - [x] Contribution guide and security policy — [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) (private vulnerability reporting, Launchrail-specific vulnerability classes)
 - [x] Release automation and changelog (enabled by Conventional Commits) — CI + release-please, one toolchain version, provenance-attested npm publish ([ADR-0008](docs/adr/0008-release-automation.md), [docs/releasing.md](docs/releasing.md))
 - [x] Brand due diligence (GitHub/npm/domain/trademark checks on the name) — findings and pre-launch actions in [docs/brand-due-diligence.md](docs/brand-due-diligence.md)

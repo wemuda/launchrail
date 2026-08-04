@@ -12,6 +12,7 @@
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-FE5196?logo=conventionalcommits&logoColor=white)](docs/adr/0002-conventional-commits.md)
 
 [How it works](#how-it-works) ·
+[Getting started](docs/getting-started.md) ·
 [Usage](#usage-in-a-consuming-project) ·
 [Ownership model](#the-ownership-model) ·
 [Repository layout](#repository-layout) ·
@@ -55,6 +56,8 @@ Reusable lessons are deliberately promoted upstream.
 ```
 
 ## Usage (in a consuming project)
+
+Full walkthrough: [docs/getting-started.md](docs/getting-started.md). Committed example of what `init` produces: [examples/hello-launchrail](examples/hello-launchrail).
 
 ```bash
 # Initialize a new or existing repository
@@ -112,9 +115,12 @@ launchrail/
 ├── .claude-plugin/
 │   └── marketplace.json     # Claude Code plugin marketplace manifest
 ├── templates/               # Files seeded into consuming projects (added as built)
-├── examples/                # Example consuming projects for integration tests (added as built)
+├── examples/
+│   └── hello-launchrail/    # Committed, unedited output of `launchrail init` on a tiny app
 └── docs/
-    └── adr/                 # Architecture decision records
+    ├── adr/                 # Architecture decision records
+    ├── getting-started.md   # Installation and day-2 guide
+    └── releasing.md         # How releases are cut
 ```
 
 Directories marked "added as built" are created when their first real content lands.

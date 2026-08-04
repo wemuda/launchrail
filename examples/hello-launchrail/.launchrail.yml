@@ -1,0 +1,15 @@
+# Launchrail project manifest — https://github.com/wemuda/launchrail
+# This file is yours to edit; Launchrail reads it and never force-overwrites it.
+schemaVersion: 1
+mode: standard-mvp
+issueTracker: none
+conventions:
+  conventionalCommits: true
+testing:
+  unitCommand: npm test
+  devCommand: npm run dev
+  e2eCommand: null
+  smokeCommand: null
+  appUrl: null
+modules:
+  core: true

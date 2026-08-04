@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "launchrailVersion": "0.0.0",
+  "files": {
+    ".launchrail.yml": {
+      "class": "seeded",
+      "checksum": "c232f03a67ea91c4b16bf56f648e51c6a22a00c9d1f71d7def6431ea46164c4d"
+    },
+    ".launchrail/CLAUDE.generated.md": {
+      "class": "managed",
+      "checksum": "d2a250b5da1e59353b4b6174c0ea6cf719b2ea4f82055ae0d9dcfe2622ef2cd3"
+    },
+    "AGENTS.md": {
+      "class": "seeded",
+      "checksum": "af8ee5300ca0eece61b8c24718ed8899e96eb401e7d143a4be1919d9534ef8a1"
+    },
+    "CLAUDE.md": {
+      "class": "seeded",
+      "checksum": "4ed6ca55adc6aa3b05a1f688ddbd6453b34960b21af764fb407a3e72920e00e2"
+    },
+    "docs/adr/0000-template.md": {
+      "class": "seeded",
+      "checksum": "f28c0b63aefcba78b2e5db5d50b4b950031cba904eab6ebe4f51d633d09f2f1f"
+    }
+  },
+  "migrations": [
+    "2026-08-plugin-declaration"
+  ],
+  "decisions": {
+    "mode": "standard-mvp",
+    "issueTracker": "none",
+    "conventionalCommits": true,
+    "unitCommand": "npm test"
+  }
+}
