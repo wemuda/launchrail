@@ -71,6 +71,7 @@ npx @wemuda/launchrail sync
 
 # Add a module later
 npx @wemuda/launchrail add browser-testing
+npx @wemuda/launchrail add ralph
 
 # Validate the repository and environment
 npx @wemuda/launchrail doctor

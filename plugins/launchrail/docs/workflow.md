@@ -21,7 +21,7 @@ How a fresh project moves from idea to an approved, validated MVP spec through c
 | 7 | Design validation | Launchrail `design-validation` skill | Spec + Claude Design | Revised spec with `## Design validation` section |
 | 8 | Tickets | Matt Pocock's `to-tickets` | Validated spec | Tickets in the project's tracker |
 
-Later stages — bounded implementation (Ralph), browser smoke testing, and release verification — ship with their own Launchrail modules; see the repository roadmap.
+After stage 8, bounded implementation is a Ralph campaign: `launchrail add ralph` installs it, and the `ralph` skill (watchable) or the `ralph` workflow (wide/long runs) drives the tickets to verified merges — gated by `launchrail verify` and, where the browser-testing module is enabled, browser smoke evidence. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up `to-tickets` output if it lacks them.
 
 ## Composition rules
 
