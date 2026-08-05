@@ -4,8 +4,10 @@ import { delimiter, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runDoctor } from "../src/commands/doctor.js";
 import { runInit } from "../src/commands/init.js";
-import { detectClaudeCli, installLaunchrailPlugin, launchrailPluginState } from "../src/lib/claudeCli.js";
+import { detectClaudeCli, installPlugin, listInstalledPluginIds, WORKFLOW_PLUGINS } from "../src/lib/claudeCli.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
+
+const ALL_INSTALLED = JSON.stringify(WORKFLOW_PLUGINS.map((wp) => ({ id: wp.id, enabled: true })));
 
 /**
  * Integration tests against a stub `claude` binary on PATH: they verify what
@@ -74,11 +76,10 @@ describe("claude CLI wrapper", () => {
     expect(detectClaudeCli(tmp.root)).toBeNull();
   });
 
-  test("installs via marketplace add then plugin install", () => {
-    const outcome = installLaunchrailPlugin(tmp.root);
+  test("installs a plugin via marketplace add then plugin install", () => {
+    const outcome = installPlugin(tmp.root, WORKFLOW_PLUGINS[0]);
     expect(outcome).toEqual({ state: "installed", alreadyInstalled: false });
     expect(stubCalls()).toEqual([
-      "--version",
       "plugin marketplace add wemuda/launchrail",
       "plugin install launchrail@launchrail",
     ]);
@@ -86,30 +87,54 @@ describe("claude CLI wrapper", () => {
 
   test("reports an idempotent re-install as already installed", () => {
     process.env.CLAUDE_STUB_INSTALL_MSG = 'Plugin "launchrail@launchrail" is already installed (scope: user)';
-    const outcome = installLaunchrailPlugin(tmp.root);
+    const outcome = installPlugin(tmp.root, WORKFLOW_PLUGINS[0]);
     expect(outcome).toEqual({ state: "installed", alreadyInstalled: true });
   });
 
   test("surfaces a failing step", () => {
     process.env.CLAUDE_STUB_FAIL = "marketplace add";
-    const outcome = installLaunchrailPlugin(tmp.root);
+    const outcome = installPlugin(tmp.root, WORKFLOW_PLUGINS[0]);
     expect(outcome.state).toBe("failed");
     if (outcome.state === "failed") expect(outcome.step).toBe("marketplace-add");
   });
 
-  test("reads the installed state from plugin list --json", () => {
-    expect(launchrailPluginState(tmp.root)).toBe("not-installed");
-    process.env.CLAUDE_STUB_LIST = '[{"id":"launchrail@launchrail","enabled":true}]';
-    expect(launchrailPluginState(tmp.root)).toBe("installed");
+  test("reads installed plugin ids from plugin list --json", () => {
+    expect(listInstalledPluginIds(tmp.root)).toEqual({ state: "ok", ids: [] });
+    process.env.CLAUDE_STUB_LIST = ALL_INSTALLED;
+    expect(listInstalledPluginIds(tmp.root)).toEqual({
+      state: "ok",
+      ids: WORKFLOW_PLUGINS.map((wp) => wp.id),
+    });
   });
 });
 
 describe("init plugin handoff", () => {
-  test("installs the plugin when the CLI is present", async () => {
+  test("installs every workflow plugin when the CLI is present", async () => {
     const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(outcome.code).toBe(0);
     expect(outcome.plugin).toBe("installed");
-    expect(stubCalls()).toContain("plugin install launchrail@launchrail");
+    for (const wp of WORKFLOW_PLUGINS) {
+      expect(stubCalls()).toContain(`plugin marketplace add ${wp.marketplace}`);
+      expect(stubCalls()).toContain(`plugin install ${wp.id}`);
+    }
+  });
+
+  test("a partial failure reports failed and prints the missing commands", async () => {
+    process.env.CLAUDE_STUB_FAIL = "marketplace add mattpocock/skills";
+    const lines: string[] = [];
+    const original = console.log;
+    console.log = (...args: unknown[]) => {
+      lines.push(args.join(" "));
+    };
+    try {
+      const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+      expect(outcome.plugin).toBe("failed");
+    } finally {
+      console.log = original;
+    }
+    const output = lines.join("\n");
+    expect(output).toContain("claude plugin install mattpocock-skills@mattpocock");
+    expect(output).not.toContain("claude plugin install launchrail@launchrail");
   });
 
   test("--skip-plugin-install never invokes claude", async () => {
@@ -138,17 +163,23 @@ describe("init plugin handoff", () => {
       console.log = original;
     }
     const output = lines.join("\n");
-    expect(output).toContain("claude plugin marketplace add wemuda/launchrail");
-    expect(output).toContain("claude plugin install launchrail@launchrail");
+    for (const wp of WORKFLOW_PLUGINS) {
+      expect(output).toContain(`claude plugin marketplace add ${wp.marketplace}`);
+      expect(output).toContain(`claude plugin install ${wp.id}`);
+    }
   });
 });
 
 describe("doctor plugin install check", () => {
-  test("warns when not installed, passes when installed", async () => {
+  test("warns when plugins are missing, passes when all installed", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true, skipPluginInstall: true });
     const before = runDoctor(tmp.root).checks.find((c) => c.name === "plugin install");
     expect(before?.status).toBe("warn");
     process.env.CLAUDE_STUB_LIST = '[{"id":"launchrail@launchrail","enabled":true}]';
+    const partial = runDoctor(tmp.root).checks.find((c) => c.name === "plugin install");
+    expect(partial?.status).toBe("warn");
+    expect(partial?.message).toContain("mattpocock-skills@mattpocock");
+    process.env.CLAUDE_STUB_LIST = ALL_INSTALLED;
     const after = runDoctor(tmp.root).checks.find((c) => c.name === "plugin install");
     expect(after?.status).toBe("pass");
   });

@@ -2,8 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
-import { launchrailPluginState } from "../lib/claudeCli.js";
-import { CLAUDE_SETTINGS_PATH, declarationState, MARKETPLACE_REPO, PLUGIN_KEY } from "../lib/claudeSettings.js";
+import { listInstalledPluginIds, WORKFLOW_PLUGINS } from "../lib/claudeCli.js";
+import { CLAUDE_SETTINGS_PATH, declarationState } from "../lib/claudeSettings.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
@@ -98,7 +98,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
   }
 
   if (detection.hasMattPocockSetup) add("pass", "Matt Pocock setup", "docs/agents/ present");
-  else add("warn", "Matt Pocock setup", "docs/agents/ not found — install the skills and run /setup-matt-pocock-skills");
+  else add("warn", "Matt Pocock setup", "docs/agents/ not found — run /setup-matt-pocock-skills in Claude Code (init preinstalls the skills plugin)");
 
   const declaration = declarationState(cwd);
   if (declaration === "declared") {
@@ -109,16 +109,21 @@ export function runDoctor(cwd: string): DoctorOutcome {
     add("warn", "plugin declaration", `Launchrail plugin not declared in ${CLAUDE_SETTINGS_PATH} — run \`launchrail init\``);
   }
 
-  const pluginState = launchrailPluginState(cwd);
-  if (pluginState === "installed") {
-    add("pass", "plugin install", `${PLUGIN_KEY} is installed in Claude Code`);
-  } else if (pluginState === "not-installed") {
-    add(
-      "warn",
-      "plugin install",
-      `not installed — run \`claude plugin marketplace add ${MARKETPLACE_REPO}\` then \`claude plugin install ${PLUGIN_KEY}\``,
-    );
-  } else if (pluginState === "no-cli") {
+  const installed = listInstalledPluginIds(cwd);
+  if (installed.state === "ok") {
+    const missing = WORKFLOW_PLUGINS.filter((wp) => !installed.ids.includes(wp.id));
+    if (missing.length === 0) {
+      add("pass", "plugin install", `${WORKFLOW_PLUGINS.map((wp) => wp.id).join(", ")} installed in Claude Code`);
+    } else {
+      add(
+        "warn",
+        "plugin install",
+        `missing: ${missing
+          .map((wp) => `${wp.id} (\`claude plugin marketplace add ${wp.marketplace} && claude plugin install ${wp.id}\`)`)
+          .join(", ")}`,
+      );
+    }
+  } else if (installed.state === "no-cli") {
     add(
       "warn",
       "plugin install",
