@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
@@ -139,6 +140,17 @@ const SETTINGS_LABEL: Record<SettingsPlan["kind"], string> = {
 
 export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const detection = detectRepo(opts.cwd);
+  // Launchrail relies on git history for safe writes — a missing repository is
+  // something init fixes, not something it lectures about. `git init` never
+  // fires inside an existing repository (detection walks up the tree).
+  let gitInitialized = false;
+  if (!detection.isGitRepo && !opts.dryRun) {
+    gitInitialized = spawnSync("git", ["init", "-q"], { cwd: opts.cwd, encoding: "utf8" }).status === 0;
+    if (gitInitialized) {
+      console.log("Initialized a git repository (`git init`) — Launchrail relies on git history for safe writes.");
+      detection.isGitRepo = true;
+    }
+  }
   const settings = planPluginDeclaration(opts.cwd);
   const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
 
@@ -187,6 +199,9 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   console.log(`  ${SETTINGS_LABEL[settings.kind]}  ${CLAUDE_SETTINGS_PATH}  (${settings.detail})`);
 
   if (opts.dryRun) {
+    if (!detection.isGitRepo) {
+      console.log("  git-init  .  (not a git repository — init will run `git init` first)");
+    }
     if (opts.skipPluginInstall) {
       console.log("  skip      Claude Code plugin install  (--skip-plugin-install)");
     } else {
@@ -264,8 +279,8 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       console.log(`       claude plugin install ${wp.id}`);
     }
     console.log("     (No claude CLI? Inside Claude Code run /plugin → Marketplaces → Add, and enter the");
-    console.log(`      owner/repo sources above. ${CLAUDE_SETTINGS_PATH} also declares the Launchrail plugin,`);
-    console.log("      so Claude Code offers that one by itself the first time this folder is trusted.)");
+    console.log(`      owner/repo sources above. ${CLAUDE_SETTINGS_PATH} also declares these plugins, so`);
+    console.log("      Claude Code offers them by itself the first time this folder is trusted.)");
   }
   console.log("  3. Run /launchrail:launch — it detects the project's stage and drives the workflow from there.");
   console.log("     On a fresh project that means running /setup-matt-pocock-skills (the skills are already");

@@ -5,9 +5,16 @@
         "source": "github",
         "repo": "wemuda/launchrail"
       }
+    },
+    "mattpocock": {
+      "source": {
+        "source": "github",
+        "repo": "mattpocock/skills"
+      }
     }
   },
   "enabledPlugins": {
-    "launchrail@launchrail": true
+    "launchrail@launchrail": true,
+    "mattpocock-skills@mattpocock": true
   }
 }

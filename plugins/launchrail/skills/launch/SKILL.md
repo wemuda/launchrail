@@ -18,6 +18,7 @@ Two ways in:
 - **Artifacts gate stages, not chat memory.** A stage counts as done only when its committed artifact exists. Detect by reading the repository, not by remembering this session.
 - **Detect, then confirm when unsure.** A file existing is not proof a stage finished — `docs/vision.md` may be the bare template, `docs/specs/` may hold an abandoned draft. When a signal is ambiguous, or an artifact looks thin, ask the user what they have and haven't done before routing. Never silently assume a stage is complete or incomplete.
 - **Detection is read-only.** Finding the frontier changes nothing on disk. Every write happens inside the stage skill or CLI command you route to.
+- **Stage 0 is action, not conversation.** Setup gaps have known, additive fixes — apply them and report what you did instead of asking how to proceed: run `/setup-matt-pocock-skills` yourself when `docs/agents/` is missing, commit untracked init output (`chore: initialize launchrail`), and route to `npx @wemuda/launchrail init` when the manifest or a workflow plugin is missing (init installs the whole plugin roster, ADR-0011). Never improvise a dependency install from the web — init owns installs. Save questions for the product artifacts, where the user's intent is genuinely unknowable.
 - **Respect ownership and mode.** The workflow artifacts (vision, research, ADRs, spec, tickets) are project-owned; the stage skills already honor that. The manifest's `mode` decides which stages may be skipped — read it before insisting on one.
 - **Never start Ralph unprompted.** The implementation campaign (`launchrail:ralph`) is user-invoked only. Route the user to it and explain; do not launch it yourself.
 
@@ -27,7 +28,7 @@ Read `.launchrail.yml` (`mode`, `modules`, `issueTracker`) and confirm setup wit
 
 | # | Stage | Owner (invoke / run) | Done when |
 |---|---|---|---|
-| 0 | Setup | `npx @wemuda/launchrail init`, then `/setup-matt-pocock-skills` | `.launchrail.yml` + `.launchrail-lock.json` exist; `docs/agents/` present; `doctor` is green |
+| 0 | Setup | `npx @wemuda/launchrail init` (seeds files, installs the workflow plugins), then `/setup-matt-pocock-skills` | `.launchrail.yml` + `.launchrail-lock.json` exist and are committed; `docs/agents/` present; `doctor` is green |
 | 1 | Vision | `launchrail:vision-creation` | `docs/vision.md` exists and is real (not the bare template) |
 | 2 | Visual exploration | Claude Design | Exploration artifacts exist and are linked from `docs/vision.md` |
 | 3 | Complexity grill | Matt Pocock `grill-with-docs` | Grill constraints committed under `docs/research/` |
@@ -45,7 +46,7 @@ Read `.launchrail.yml` (`mode`, `modules`, `issueTracker`) and confirm setup wit
 ## Running it
 
 1. **Did the user name a stage?** Resolve it against the keywords below. Sanity-check its inputs exist (e.g. `spec` needs a vision and research). If a prerequisite is missing, say so and offer to start there instead — but if the user still wants the jump, honor it; they may have context you can't see. Then invoke that stage's owner and stop.
-2. **Otherwise, find the frontier.** Confirm setup (stage 0) first — if `.launchrail.yml` is missing, route to `init`; if `docs/agents/` is missing, route to `/setup-matt-pocock-skills`. Then walk stages 1 → 11 in order and stop at the first whose "done when" is not satisfied. Skip only the stages the manifest's `mode` permits skipping (see below).
+2. **Otherwise, find the frontier.** Confirm setup (stage 0) first — and close its gaps yourself, without asking (see ground rules): if `.launchrail.yml` is missing, run `init`; if `docs/agents/` is missing, run `/setup-matt-pocock-skills`; if the init output is untracked, commit it. Then walk stages 1 → 11 in order and stop at the first whose "done when" is not satisfied. Skip only the stages the manifest's `mode` permits skipping (see below).
 3. **Confirm the read.** Tell the user where you think they are and why — which artifacts you found, which you didn't. If any signal was ambiguous (a template-only vision, several specs, a recorded skip), ask before acting. This is the moment to ask "have you done X yet?" rather than guess.
 4. **Route.** Invoke the owning skill by its exact name (`launchrail:vision-creation`, `launchrail:design-validation`, `launchrail:browser-smoke`), or hand off to the upstream skill / CLI command the map names. For stage 9, explain the campaign and let the user start `launchrail:ralph` themselves.
 5. **Always leave a map.** Whatever you route to, tell the user their current stage, the next one, and that they can jump to any stage by keyword.

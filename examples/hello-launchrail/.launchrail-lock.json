@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "launchrailVersion": "0.0.0",
+  "launchrailVersion": "1.2.0",
   "files": {
     ".launchrail.yml": {
       "class": "seeded",
@@ -8,7 +8,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "d2a250b5da1e59353b4b6174c0ea6cf719b2ea4f82055ae0d9dcfe2622ef2cd3"
+      "checksum": "cab4d30616edf8f7628ad21a5eca77351dd41fcdc046266d0e21cf02b865061a"
     },
     "AGENTS.md": {
       "class": "seeded",
@@ -24,7 +24,8 @@
     }
   },
   "migrations": [
-    "2026-08-plugin-declaration"
+    "2026-08-plugin-declaration",
+    "2026-08-upstream-plugin-declarations"
   ],
   "decisions": {
     "mode": "standard-mvp",

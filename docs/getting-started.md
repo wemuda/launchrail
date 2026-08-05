@@ -5,7 +5,7 @@ How to install Launchrail into a project and live with it day to day. For what L
 ## Prerequisites
 
 - Node ≥ 22
-- A git repository (Launchrail warns but proceeds without one — its safe-write model leans on git history)
+- A git repository (`init` runs `git init` for you when the directory isn't one — the safe-write model leans on git history)
 - [Claude Code](https://claude.com/claude-code) if you want the workflow plugin and skills (the CLI works without it)
 
 ## Installing
@@ -41,7 +41,7 @@ The interview asks four things — project mode (spike / standard MVP / high-rig
 - `AGENTS.md` + `CLAUDE.md` — the agent operating contract (with your chosen conventions baked in) and the Claude Code entry point importing it. Seeded once; existing files are never overwritten.
 - `.launchrail/CLAUDE.generated.md` — managed workflow instructions, replaced on `sync` as modules change.
 - `docs/adr/0000-template.md` — ADR template.
-- `.claude/settings.json` — declares the Launchrail plugin marketplace and enables the plugin via an additive merge ([ADR-0003](adr/0003-plugin-subscription-via-project-settings.md)), which is how the rest of the team gets offered the plugin when they first trust the folder.
+- `.claude/settings.json` — declares both workflow plugin marketplaces (Launchrail's and Matt Pocock's) and enables their plugins via an additive merge ([ADR-0003](adr/0003-plugin-subscription-via-project-settings.md), extended by [ADR-0011](adr/0011-init-installs-plugin-via-claude-cli.md)), which is how the rest of the team gets offered the same skills when they first trust the folder.
 
 Finally, when the `claude` CLI is on your `PATH`, `init` **installs every Claude Code plugin the workflow needs** — Launchrail's own (`launchrail@launchrail` from `wemuda/launchrail`) and Matt Pocock's skills (`mattpocock-skills@mattpocock` from `mattpocock/skills`) — via `claude plugin marketplace add` + `claude plugin install` ([ADR-0011](adr/0011-init-installs-plugin-via-claude-cli.md)). No CLI, or an install fails? `init` prints the exact commands instead. Opt out with `--skip-plugin-install` (or `LAUNCHRAIL_SKIP_CLAUDE_CLI=1`).
 
@@ -63,7 +63,7 @@ From here the workflow lives in Claude Code, not the CLI:
 1. **Open Claude Code in the project.** `init` already installed the workflow plugins if the `claude` CLI was available; a session that was open during `init` needs `/reload-plugins` or a restart to see them. If `init` printed manual steps instead, run them (inside Claude Code: `/plugin` → Marketplaces → Add → the full `owner/repo` source, e.g. `wemuda/launchrail` — a bare name is rejected).
 2. **Run `/launchrail:launch`.** The conductor detects the project's stage and drives the workflow from there. On a fresh project that means running `/setup-matt-pocock-skills` (the skills plugin is preinstalled), then vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
 
-Teammates don't need the CLI at all: the committed `.claude/settings.json` makes Claude Code offer them the plugin the first time they trust the project folder.
+Teammates don't need the CLI at all: the committed `.claude/settings.json` makes Claude Code offer them both workflow plugins the first time they trust the project folder.
 
 ## Adding modules
 

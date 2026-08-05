@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { runInit } from "../src/commands/init.js";
-import { makeTmpRepo, type TmpRepo } from "./helpers.js";
+import { makeTmpDir, makeTmpRepo, type TmpRepo } from "./helpers.js";
 
 const EXPECTED_FILES = [
   ".launchrail.yml",
@@ -89,6 +89,28 @@ describe("launchrail init", () => {
     expect(output).toContain("claude plugin marketplace add wemuda/launchrail");
     expect(output).toContain("/launchrail:launch");
     expect(output).not.toContain("fill in the TODO");
+  });
+
+  test("runs git init in a directory that is not a repository", async () => {
+    const plain = makeTmpDir();
+    try {
+      const outcome = await runInit({ cwd: plain.root, dryRun: false, yes: true });
+      expect(outcome.code).toBe(0);
+      expect(existsSync(join(plain.root, ".git"))).toBe(true);
+    } finally {
+      plain.cleanup();
+    }
+  });
+
+  test("dry run plans git init but does not run it", async () => {
+    const plain = makeTmpDir();
+    try {
+      const outcome = await runInit({ cwd: plain.root, dryRun: true, yes: true });
+      expect(outcome.code).toBe(0);
+      expect(existsSync(join(plain.root, ".git"))).toBe(false);
+    } finally {
+      plain.cleanup();
+    }
   });
 
   test("fails cleanly on an invalid manifest", async () => {

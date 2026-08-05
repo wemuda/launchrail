@@ -12,7 +12,7 @@ Claude Code ships a scriptable CLI that closes the gap: `claude plugin marketpla
 
 ## Decision
 - After writing files, `init` detects the `claude` CLI and, when present, installs **every plugin the workflow depends on** (user scope): `launchrail@launchrail` from `wemuda/launchrail` and `mattpocock-skills@mattpocock` from `mattpocock/skills`. The roster is one list (`WORKFLOW_PLUGINS` in `lib/claudeCli.ts`) and grows only when the workflow gains a real upstream dependency. Failure or absence of the CLI never fails `init`; it degrades to printed instructions carrying the exact commands, including the full `owner/repo` marketplace sources.
-- The committed declaration (ADR-0003) stays: it is what subscribes *the rest of the team*, whose first folder trust still prompts them for the Launchrail plugin.
+- The committed declaration (ADR-0003) stays and grows the same roster: init declares both marketplaces and both plugins in `.claude/settings.json`, so a teammate's first folder trust offers the upstream skills too — not just Launchrail's plugin. A shipped migration (`2026-08-upstream-plugin-declarations`) brings existing projects along via `sync`.
 - `doctor` gains a `plugin install` check backed by `claude plugin list --json` — pass when the whole roster is installed, warn (never fail) listing what's missing or when the CLI is absent.
 - Opt-outs: `init --skip-plugin-install`, or `LAUNCHRAIL_SKIP_CLAUDE_CLI=1` in the environment. The test suite sets the latter globally so running tests never mutates a developer's real Claude setup; CLI-invoking tests run against a stub binary on `PATH`.
 

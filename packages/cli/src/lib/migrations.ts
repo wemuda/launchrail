@@ -40,6 +40,22 @@ export const MIGRATIONS: Migration[] = [
       };
     },
   },
+  {
+    id: "2026-08-upstream-plugin-declarations",
+    description: `declare the upstream workflow plugins (Matt Pocock's skills) in ${CLAUDE_SETTINGS_PATH} (ADR-0011)`,
+    plan(ctx) {
+      // Shares the roster-driven plan: projects initialized before the roster
+      // grew get the upstream declarations; anything newer is already satisfied.
+      const settings = planPluginDeclaration(ctx.cwd);
+      if (settings.content === null) return { changes: [], apply: () => {} };
+      return {
+        changes: [`${CLAUDE_SETTINGS_PATH} — ${settings.detail}`],
+        apply: () => {
+          applyPluginDeclaration(ctx.cwd, settings);
+        },
+      };
+    },
+  },
 ];
 
 export function migrationIds(registry: Migration[] = MIGRATIONS): string[] {

@@ -102,7 +102,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
 
   const declaration = declarationState(cwd);
   if (declaration === "declared") {
-    add("pass", "plugin declaration", `${CLAUDE_SETTINGS_PATH} declares the Launchrail plugin`);
+    add("pass", "plugin declaration", `${CLAUDE_SETTINGS_PATH} declares the workflow plugins`);
   } else if (declaration === "invalid-json") {
     add("warn", "plugin declaration", `${CLAUDE_SETTINGS_PATH} is not valid JSON`);
   } else {
@@ -198,4 +198,7 @@ export function printDoctor(outcome: DoctorOutcome): void {
   console.log(
     `\n${failed === 0 ? "Healthy" : "Unhealthy"}: ${outcome.checks.length} checks, ${failed} failed, ${warned} warning(s).`,
   );
+  if (failed === 0) {
+    console.log("Next: open Claude Code in this project and run /launchrail:launch.");
+  }
 }

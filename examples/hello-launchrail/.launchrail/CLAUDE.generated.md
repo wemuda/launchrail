@@ -1,4 +1,4 @@
-<!-- Managed by Launchrail v0.0.0. Do not edit: `launchrail sync` may replace this file. Project-specific instructions belong in CLAUDE.md. -->
+<!-- Managed by Launchrail v1.2.0. Do not edit: `launchrail sync` may replace this file. Project-specific instructions belong in CLAUDE.md. -->
 
 # Launchrail workflow instructions
 

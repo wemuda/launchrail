@@ -68,7 +68,7 @@ One command sets the rails:
 npx @wemuda/launchrail init
 ```
 
-`init` interviews you (or takes `--yes`), seeds `AGENTS.md` and ADR conventions without touching existing content, subscribes the repository to the Launchrail Claude Code plugin through `.claude/settings.json` — so every collaborator who opens the project in Claude Code gets the same skills — and, when the `claude` CLI is on your PATH, installs the workflow's plugins for you on the spot — Launchrail's own and Matt Pocock's skills ([ADR-0011](docs/adr/0011-init-installs-plugin-via-claude-cli.md)).
+`init` interviews you (or takes `--yes`), runs `git init` if the directory isn't a repository yet, seeds `AGENTS.md` and ADR conventions without touching existing content, subscribes the repository to the workflow's Claude Code plugins through `.claude/settings.json` — so every collaborator who opens the project in Claude Code gets the same skills — and, when the `claude` CLI is on your PATH, installs those plugins for you on the spot — Launchrail's own and Matt Pocock's skills ([ADR-0011](docs/adr/0011-init-installs-plugin-via-claude-cli.md)).
 
 From there, the day-to-day driver is not the CLI — it's the **`launch` skill** inside Claude Code: open the project and run `/launchrail:launch`. Invoke it (or just ask "what's next?") and it reads your committed artifacts, works out where the project is — no vision yet, mid-grill, spec validated, tickets ready — and runs or routes to the next stage's owner. Give it a stage name (`launch design-validation`) to jump straight there. The plugin carries the rest of the workflow too:
 
@@ -137,7 +137,7 @@ pnpm --filter @wemuda/launchrail exec launchrail --help
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. All six phases — `init` + `doctor`, the core workflow plugin, browser testing, Ralph orchestration, the sync engine, and open-source readiness — are implemented and covered by 132 tests. The first real Ralph campaigns have run against a Wemuda project, and their lessons are folded back into the toolchain (ADR-0010). What stands between here and a first release: the dogfood case study on a real project and flipping on the npm publish.
+See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. All six phases — `init` + `doctor`, the core workflow plugin, browser testing, Ralph orchestration, the sync engine, and open-source readiness — are implemented and covered by 135 tests. The first real Ralph campaigns have run against a Wemuda project, and their lessons are folded back into the toolchain (ADR-0010). What stands between here and a first release: the dogfood case study on a real project and flipping on the npm publish.
 
 ## Contributing
 

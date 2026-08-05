@@ -31,6 +31,11 @@ describe("plugin declaration in .claude/settings.json", () => {
       repo: "wemuda/launchrail",
     });
     expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(true);
+    expect(settings.extraKnownMarketplaces.mattpocock.source).toEqual({
+      source: "github",
+      repo: "mattpocock/skills",
+    });
+    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBe(true);
     expect(declarationState(tmp.root)).toBe("declared");
   });
 
@@ -57,15 +62,31 @@ describe("plugin declaration in .claude/settings.json", () => {
     expect(readFileSync(settingsPath(), "utf8")).toBe(before);
   });
 
-  test("respects an explicit opt-out", async () => {
+  test("respects an explicit opt-out while still declaring the rest of the roster", async () => {
     writeSettings({
       extraKnownMarketplaces: { launchrail: { source: { source: "github", repo: "wemuda/launchrail" } } },
       enabledPlugins: { "launchrail@launchrail": false },
     });
     const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(outcome.settings.kind).toBe("merge");
+    const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
+    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(false);
+    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBe(true);
+  });
+
+  test("an opt-out of every roster plugin is fully declared — nothing to merge", async () => {
+    writeSettings({
+      extraKnownMarketplaces: {
+        launchrail: { source: { source: "github", repo: "wemuda/launchrail" } },
+        mattpocock: { source: { source: "github", repo: "mattpocock/skills" } },
+      },
+      enabledPlugins: { "launchrail@launchrail": false, "mattpocock-skills@mattpocock": false },
+    });
+    const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(outcome.settings.kind).toBe("skip-declared");
     const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
     expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(false);
+    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBe(false);
   });
 
   test("leaves invalid JSON untouched and init still succeeds", async () => {
