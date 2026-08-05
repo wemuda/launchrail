@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/wemuda/launchrail/compare/v1.1.0...v1.2.0) (2026-08-05)
+
+
+### Features
+
+* **cli:** install the Claude plugin from init via the claude CLI (ADR-0011) ([f378410](https://github.com/wemuda/launchrail/commit/f378410ef0b2465588507af09b3a4191119e55cd))
+
 ## [1.1.0](https://github.com/wemuda/launchrail/compare/v1.0.0...v1.1.0) (2026-08-05)
 
 
