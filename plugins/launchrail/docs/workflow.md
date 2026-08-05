@@ -5,7 +5,7 @@ How a fresh project moves from idea to an approved, validated MVP spec through c
 ## Prerequisites
 
 - The repository is initialized (`npx @wemuda/launchrail init`) and healthy (`npx @wemuda/launchrail doctor`).
-- Matt Pocock's skills are installed and set up: run `/setup-matt-pocock-skills` once per repository (expected output: `docs/agents/`). `doctor` checks for this.
+- [Matt Pocock's skills](https://github.com/mattpocock/skills) are installed and set up: run `/setup-matt-pocock-skills` once per repository (expected output: `docs/agents/`). `doctor` checks for this.
 - The Launchrail plugin is declared in `.claude/settings.json` (init does this), so every collaborator's Claude Code session offers the same skills.
 
 ## Stages

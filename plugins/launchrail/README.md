@@ -19,7 +19,7 @@ The same campaign also exists as a deterministic workflow: `launchrail add ralph
 
 [docs/workflow.md](docs/workflow.md) is the stage-by-stage contract from idea to validated MVP spec: which tool owns each stage and what committed artifact it leaves behind.
 
-Stages that upstream skills already cover are composed, not duplicated:
+Stages that upstream skills already cover are composed, not duplicated — all from [Matt Pocock's `skills`](https://github.com/mattpocock/skills) repository:
 
 - **Complexity grill** → Matt Pocock's `grill-with-docs`
 - **Technical research** → Matt Pocock's research skill, fed by the project's grill constraints
