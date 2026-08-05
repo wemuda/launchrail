@@ -6,10 +6,12 @@
 
 **An updatable development system for taking a software idea from product intent to a verified release.**
 
+[![CI](https://github.com/wemuda/launchrail/actions/workflows/ci.yml/badge.svg)](https://github.com/wemuda/launchrail/actions/workflows/ci.yml)
 [![Status: pre-release](https://img.shields.io/badge/status-pre--release-orange)](ROADMAP.md)
 [![Node >= 22](https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white)](package.json)
 [![pnpm workspace](https://img.shields.io/badge/pnpm-workspace-F69220?logo=pnpm&logoColor=white)](pnpm-workspace.yaml)
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-FE5196?logo=conventionalcommits&logoColor=white)](docs/adr/0002-conventional-commits.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 [How it works](#how-it-works) ·
 [Getting started](docs/getting-started.md) ·
@@ -23,7 +25,7 @@
 
 ---
 
-> **Status:** Pre-release. Nothing is published to npm yet.
+> **Status:** Pre-release. All six roadmap phases are implemented; nothing is published to npm yet.
 
 This repository is the Launchrail **toolchain**: the CLI, Claude Code plugin, templates, and migrations that initialize other repositories and keep them current. It is not an application framework and it does not replace Claude Code, Claude Design, [Matt Pocock's skills](https://github.com/mattpocock/skills), GitHub, Playwright, or a project's chosen stack. It is the shared rail that connects them.
 
@@ -35,31 +37,38 @@ If Launchrail is useful to you, the credit belongs upstream first: star [`mattpo
 
 ## How it works
 
-Launchrail structures the path from idea to release as an explicit pipeline:
+Launchrail structures the path from idea to release as an explicit pipeline. Every stage is owned by exactly one tool and leaves a committed artifact behind — the next stage starts from that artifact, not from chat memory. The `launch` skill is the single entry point: it reads the committed artifacts, detects where the project is, and routes to the owner of the next stage.
 
-```text
-Vision
-  → visual exploration
-  → complexity and technical research
-  → architecture decisions
-  → MVP specification
-  → visual validation
-  → tickets
-  → bounded autonomous implementation
-  → deterministic and agentic verification
-  → release
-  → feedback
-  ↺
+```mermaid
+flowchart TD
+    V(["1 · Vision"]):::lr --> X["2 · Visual exploration"]:::cd
+    X --> G["3 · Complexity grill"]:::mp
+    G --> R["4 · Technical research"]:::mp
+    R --> A["5 · Architecture decisions"]:::proj
+    A --> S["6 · MVP specification"]:::mp
+    S --> D["7 · Design validation"]:::lr
+    D --> T["8 · Tickets"]:::mp
+    T --> RA["Ralph campaign — bounded implementation"]:::lr
+    RA --> VF["Verification — launchrail verify + browser smoke"]:::lr
+    VF --> REL(["Release"]):::lr
+    REL --> FB["Feedback"]:::proj
+    FB -.->|"next loop"| V
+
+    classDef lr fill:#ffedd5,stroke:#ea580c,color:#111827
+    classDef mp fill:#dbeafe,stroke:#2563eb,color:#111827
+    classDef cd fill:#ede9fe,stroke:#7c3aed,color:#111827
+    classDef proj fill:#dcfce7,stroke:#16a34a,color:#111827
 ```
 
-What makes projects updatable instead of copy-once-and-rot:
+<div align="center">
 
-```text
-Shared capabilities are subscribed to.
-Shared standards are synchronized.
-Product knowledge remains locally owned.
-Reusable lessons are deliberately promoted upstream.
-```
+**Stage owner:** &nbsp; 🟧 Launchrail &nbsp;·&nbsp; 🟦 [Matt Pocock's skills](https://github.com/mattpocock/skills) &nbsp;·&nbsp; 🟪 Claude Design &nbsp;·&nbsp; 🟩 Your project
+
+</div>
+
+The full stage contract — inputs, artifacts, composition rules, and per-mode rigor — lives in [the workflow doc](plugins/launchrail/docs/workflow.md).
+
+What makes projects **updatable** instead of copy-once-and-rot is the second half of the system: shared capabilities are *subscribed to*, shared standards are *synchronized*, product knowledge stays *locally owned*, and reusable lessons are *deliberately promoted upstream*.
 
 ## Usage (in a consuming project)
 
@@ -99,7 +108,27 @@ Initialized projects carry two files: `.launchrail.yml` (configuration) and `.la
 
 ## The ownership model
 
-Every file Launchrail touches in a consuming project belongs to exactly one class:
+Every file Launchrail touches in a consuming project belongs to exactly one class — and no feature is allowed to blur the lines:
+
+```mermaid
+flowchart LR
+    T["Launchrail toolchain<br/>templates · skills · migrations"]:::tool
+
+    subgraph repo ["Your repository"]
+        M["<b>Managed</b><br/>skills, workflows, configs"]:::managed
+        S["<b>Seeded</b><br/>AGENTS.md, ADR template, …"]:::seeded
+        P["<b>Project-owned</b><br/>vision, specs, ADRs, your code"]:::owned
+    end
+
+    T ==>|"sync — checksum-gated,<br/>dry-runnable, idempotent"| M
+    T -->|"init — created once,<br/>then yours"| S
+    T -. "never written" .- P
+
+    classDef tool fill:#ffedd5,stroke:#ea580c,color:#111827
+    classDef managed fill:#dbeafe,stroke:#2563eb,color:#111827
+    classDef seeded fill:#dcfce7,stroke:#16a34a,color:#111827
+    classDef owned fill:#f3f4f6,stroke:#6b7280,color:#111827
+```
 
 | Class | Who owns it | What Launchrail may do |
 | --- | --- | --- |
@@ -143,9 +172,7 @@ pnpm --filter @wemuda/launchrail exec launchrail --help
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. The phases in one line:
-
-`init` + `doctor` → core workflow plugin → browser testing → Ralph orchestration → sync engine → open-source readiness
+See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. All six phases — `init` + `doctor`, the core workflow plugin, browser testing, Ralph orchestration, the sync engine, and open-source readiness — are implemented and covered by 118 tests. What stands between here and a first release: dogfooding the toolchain on a real project (a Ralph campaign and a case study) and flipping on the npm publish.
 
 ## Contributing
 
