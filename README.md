@@ -12,6 +12,7 @@
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-FE5196?logo=conventionalcommits&logoColor=white)](docs/adr/0002-conventional-commits.md)
 
 [How it works](#how-it-works) ·
+[Getting started](docs/getting-started.md) ·
 [Usage](#usage-in-a-consuming-project) ·
 [Ownership model](#the-ownership-model) ·
 [Repository layout](#repository-layout) ·
@@ -55,6 +56,8 @@ Reusable lessons are deliberately promoted upstream.
 ```
 
 ## Usage (in a consuming project)
+
+Full walkthrough: [docs/getting-started.md](docs/getting-started.md). Committed example of what `init` produces: [examples/hello-launchrail](examples/hello-launchrail).
 
 ```bash
 # Initialize a new or existing repository
@@ -112,9 +115,12 @@ launchrail/
 ├── .claude-plugin/
 │   └── marketplace.json     # Claude Code plugin marketplace manifest
 ├── templates/               # Files seeded into consuming projects (added as built)
-├── examples/                # Example consuming projects for integration tests (added as built)
+├── examples/
+│   └── hello-launchrail/    # Committed, unedited output of `launchrail init` on a tiny app
 └── docs/
-    └── adr/                 # Architecture decision records
+    ├── adr/                 # Architecture decision records
+    ├── getting-started.md   # Installation and day-2 guide
+    └── releasing.md         # How releases are cut
 ```
 
 Directories marked "added as built" are created when their first real content lands.
@@ -137,10 +143,13 @@ See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progr
 
 ## Contributing
 
-- Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`type(scope): summary`); see [ADR-0002](docs/adr/0002-conventional-commits.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). The short version:
+
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`type(scope): summary`); see [ADR-0002](docs/adr/0002-conventional-commits.md). Releases and the changelog are generated from them ([docs/releasing.md](docs/releasing.md)).
 - Meaningful decisions are recorded as ADRs in [docs/adr/](docs/adr/).
 - The agent operating contract lives in [AGENTS.md](AGENTS.md).
+- Security issues go through [SECURITY.md](SECURITY.md), not public issues.
 
 ## License
 
-To be selected before public launch (open source intended).
+[MIT](LICENSE) ([ADR-0007](docs/adr/0007-mit-license.md)). Everything Launchrail writes into *your* repository — seeded files, managed files, rendered templates — is yours, with no attribution or license obligation attached.

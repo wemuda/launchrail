@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "launchrail": {
+      "source": {
+        "source": "github",
+        "repo": "wemuda/launchrail"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "launchrail@launchrail": true
+  }
+}
