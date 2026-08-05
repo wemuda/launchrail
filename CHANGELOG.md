@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0](https://github.com/wemuda/launchrail/compare/v1.3.0...v1.4.0) (2026-08-05)
+
+
+### Features
+
+* **cli:** make the whole onboarding journey hands-off (roster declaration, git init, doctor next-step) ([5c6c446](https://github.com/wemuda/launchrail/commit/5c6c44605fbf3c8546b4f327b0e605abed400bcd))
+
+
+### Bug Fixes
+
+* **plugin:** launch hands /setup-matt-pocock-skills to the user instead of reverse-engineering it ([b9b3526](https://github.com/wemuda/launchrail/commit/b9b3526ad88dcf7e4e8fcd97e4c55861ff77671b))
+
 ## [1.3.0](https://github.com/wemuda/launchrail/compare/v1.2.0...v1.3.0) (2026-08-05)
 
 
