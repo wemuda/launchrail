@@ -207,12 +207,14 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("\n⚠ Not a git repository. Run `git init` before letting agents work here — Launchrail relies on git for safe writes.");
   }
 
-  console.log("\nNext steps:");
-  console.log("  1. Review the seeded AGENTS.md and fill in the TODO sections.");
-  if (!detection.hasMattPocockSetup) {
-    console.log("  2. Install Matt Pocock's skills and run /setup-matt-pocock-skills (expected output: docs/agents/).");
-  }
-  console.log(`  ${detection.hasMattPocockSetup ? "2" : "3"}. Run \`npx @wemuda/launchrail doctor\` to validate the setup.`);
-  console.log(`  ${detection.hasMattPocockSetup ? "3" : "4"}. Commit the result.`);
+  console.log("\nYou're set up — from here the workflow runs inside Claude Code:");
+  console.log('  1. Commit the result: git add -A && git commit -m "chore: initialize launchrail"');
+  console.log("  2. Open Claude Code in this project and approve the Launchrail plugin when prompted —");
+  console.log(`     ${CLAUDE_SETTINGS_PATH} declares it, and the workflow skills arrive with the plugin.`);
+  console.log('     (Already open? Restart it, or run /plugin and install launchrail from the "launchrail" marketplace.)');
+  console.log("  3. Run /launchrail:launch — it detects the project's stage and drives the workflow from there.");
+  console.log("     On a fresh project that means Matt Pocock's skills setup, then vision creation, which also");
+  console.log("     replaces the seeded AGENTS.md project-purpose TODO. No seeded file needs filling in by hand.");
+  console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
   return { code: 0, actions, settings };
 }

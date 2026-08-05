@@ -27,8 +27,10 @@ Produce `docs/vision.md`: a short, honest statement of what this product is, who
    - Which assumption, if wrong, kills the product?
 3. **Draft** `docs/vision.md` using the template below. Use the user's words where they were precise; sharpen where they were vague, and say so.
 4. **Challenge the draft once.** Before presenting it, check: is any "goal" actually a feature? Is any assumption untestable as written? Is the non-goals section empty or evasive? Fix what you find.
-5. **Present and iterate** until the user approves, then commit the file (respect the project's commit conventions).
-6. **Hand off.** Point the user at the next stages of the loop: visual exploration in Claude Design to make the intent concrete, then the complexity grill (`grill-with-docs`) to attack the assumptions just recorded. See the plugin's `docs/workflow.md` for the full stage order.
+5. **Present and iterate** until the user approves.
+6. **Sync the agent contract.** If the seeded `AGENTS.md` still carries the TODO under `## Project purpose`, replace it with a one-paragraph distillation of the approved vision — what this is, who it serves, what it is not. Touch only that section: `AGENTS.md` belongs to the project, and the rest of it is not this skill's business.
+7. **Commit** `docs/vision.md` and the `AGENTS.md` update together (respect the project's commit conventions).
+8. **Hand off.** Point the user at the next stages of the loop: visual exploration in Claude Design to make the intent concrete, then the complexity grill (`grill-with-docs`) to attack the assumptions just recorded. See the plugin's `docs/workflow.md` for the full stage order.
 
 ## Template
 
