@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/wemuda/launchrail/compare/v1.2.0...v1.3.0) (2026-08-05)
+
+
+### Features
+
+* **cli:** preinstall the whole workflow plugin roster from init ([cccc597](https://github.com/wemuda/launchrail/commit/cccc5976ae603d219de88036a67fbff129eb3870))
+
 ## [1.2.0](https://github.com/wemuda/launchrail/compare/v1.1.0...v1.2.0) (2026-08-05)
 
 
