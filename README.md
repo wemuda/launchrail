@@ -19,7 +19,8 @@
 [Ownership model](#the-ownership-model) ·
 [Repository layout](#repository-layout) ·
 [Roadmap](ROADMAP.md) ·
-[Contributing](#contributing)
+[Contributing](#contributing) ·
+[Credits](#credits)
 
 </div>
 
@@ -29,44 +30,33 @@
 
 This repository is the Launchrail **toolchain**: the CLI, Claude Code plugin, templates, and migrations that initialize other repositories and keep them current. It is not an application framework and it does not replace Claude Code, Claude Design, [Matt Pocock's skills](https://github.com/mattpocock/skills), GitHub, Playwright, or a project's chosen stack. It is the shared rail that connects them.
 
-## Credits
-
-Launchrail doesn't reinvent a workflow — it composes one, and most of that workflow is [**Matt Pocock**](https://www.mattpocock.com/)'s. Four of the eight stages in the pipeline below (complexity grill, technical research, MVP specification, tickets) run directly on his [`skills`](https://github.com/mattpocock/skills) repository — `grill-with-docs`, the research skill, `wayfinder`/`to-spec`, and `to-tickets`. Launchrail exists to wire those skills into a repo cleanly and keep them updatable, not to replace them.
-
-If Launchrail is useful to you, the credit belongs upstream first: star [`mattpocock/skills`](https://github.com/mattpocock/skills), watch [Matt's YouTube channel](https://www.youtube.com/@mattpocockuk), follow [@mattpocockuk on X](https://x.com/mattpocockuk), and check out [AI Hero](https://www.aihero.dev/).
-
 ## How it works
 
-Launchrail structures the path from idea to release as an explicit pipeline. Every stage is owned by exactly one tool and leaves a committed artifact behind — the next stage starts from that artifact, not from chat memory. The `launch` skill is the single entry point: it reads the committed artifacts, detects where the project is, and routes to the owner of the next stage.
+Launchrail structures development as two movements. The **foundation** runs once per project: it turns an idea into hard constraints and recorded decisions. Then the **delivery loop** takes over — spec a slice, validate it, break it into tickets, implement, verify, and go around again for the next slice of the platform. Every stage leaves a committed artifact behind, and the next stage starts from that artifact, not from chat memory. The `launch` skill is the single entry point: it reads the committed artifacts, detects where the project is, and routes to the stage's owner.
 
 ```mermaid
-flowchart TD
-    V(["1 · Vision"]):::lr --> X["2 · Visual exploration"]:::cd
-    X --> G["3 · Complexity grill"]:::mp
-    G --> R["4 · Technical research"]:::mp
-    R --> A["5 · Architecture decisions"]:::proj
-    A --> S["6 · MVP specification"]:::mp
-    S --> D["7 · Design validation"]:::lr
-    D --> T["8 · Tickets"]:::mp
-    T --> RA["Ralph campaign — bounded implementation"]:::lr
-    RA --> VF["Verification — launchrail verify + browser smoke"]:::lr
-    VF --> REL(["Release"]):::lr
-    REL --> FB["Feedback"]:::proj
-    FB -.->|"next loop"| V
+flowchart LR
+    subgraph foundation ["Foundation — once per project"]
+        direction TB
+        V(["Vision"]) --> X["Visual exploration"]
+        X --> G["Complexity grill"]
+        G --> R["Technical research"]
+        R --> A["Architecture decisions"]
+    end
 
-    classDef lr fill:#ffedd5,stroke:#ea580c,color:#111827
-    classDef mp fill:#dbeafe,stroke:#2563eb,color:#111827
-    classDef cd fill:#ede9fe,stroke:#7c3aed,color:#111827
-    classDef proj fill:#dcfce7,stroke:#16a34a,color:#111827
+    A --> S
+
+    subgraph loop ["Delivery loop — once per slice"]
+        direction TB
+        S["MVP specification"] --> D["Design validation"]
+        D --> T["Tickets"]
+        T --> I["Bounded implementation — Ralph campaign"]
+        I --> VF["Verification — launchrail verify + browser smoke"]
+        VF -.->|"next slice"| S
+    end
 ```
 
-<div align="center">
-
-**Stage owner:** &nbsp; 🟧 Launchrail &nbsp;·&nbsp; 🟦 [Matt Pocock's skills](https://github.com/mattpocock/skills) &nbsp;·&nbsp; 🟪 Claude Design &nbsp;·&nbsp; 🟩 Your project
-
-</div>
-
-The full stage contract — inputs, artifacts, composition rules, and per-mode rigor — lives in [the workflow doc](plugins/launchrail/docs/workflow.md).
+Several stages run directly on [Matt Pocock's skills](https://github.com/mattpocock/skills) — see [Credits](#credits). The full stage contract — inputs, artifacts, composition rules, and per-mode rigor — lives in [the workflow doc](plugins/launchrail/docs/workflow.md).
 
 What makes projects **updatable** instead of copy-once-and-rot is the second half of the system: shared capabilities are *subscribed to*, shared standards are *synchronized*, product knowledge stays *locally owned*, and reusable lessons are *deliberately promoted upstream*.
 
@@ -109,26 +99,6 @@ Initialized projects carry two files: `.launchrail.yml` (configuration) and `.la
 ## The ownership model
 
 Every file Launchrail touches in a consuming project belongs to exactly one class — and no feature is allowed to blur the lines:
-
-```mermaid
-flowchart LR
-    T["Launchrail toolchain<br/>templates · skills · migrations"]:::tool
-
-    subgraph repo ["Your repository"]
-        M["<b>Managed</b><br/>skills, workflows, configs"]:::managed
-        S["<b>Seeded</b><br/>AGENTS.md, ADR template, …"]:::seeded
-        P["<b>Project-owned</b><br/>vision, specs, ADRs, your code"]:::owned
-    end
-
-    T ==>|"sync — checksum-gated,<br/>dry-runnable, idempotent"| M
-    T -->|"init — created once,<br/>then yours"| S
-    T -. "never written" .- P
-
-    classDef tool fill:#ffedd5,stroke:#ea580c,color:#111827
-    classDef managed fill:#dbeafe,stroke:#2563eb,color:#111827
-    classDef seeded fill:#dcfce7,stroke:#16a34a,color:#111827
-    classDef owned fill:#f3f4f6,stroke:#6b7280,color:#111827
-```
 
 | Class | Who owns it | What Launchrail may do |
 | --- | --- | --- |
@@ -182,6 +152,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). The short version:
 - Meaningful decisions are recorded as ADRs in [docs/adr/](docs/adr/).
 - The agent operating contract lives in [AGENTS.md](AGENTS.md).
 - Security issues go through [SECURITY.md](SECURITY.md), not public issues.
+
+## Credits
+
+Launchrail doesn't reinvent a workflow — it composes one, and much of that workflow is [**Matt Pocock**](https://www.mattpocock.com/)'s. Four stages of the pipeline (complexity grill, technical research, MVP specification, tickets) run directly on his [`skills`](https://github.com/mattpocock/skills) repository — `grill-with-docs`, the research skill, `wayfinder`/`to-spec`, and `to-tickets`. Launchrail exists to wire those skills into a repo cleanly and keep them updatable, not to replace them.
+
+If Launchrail is useful to you, the credit belongs upstream first: star [`mattpocock/skills`](https://github.com/mattpocock/skills), watch [Matt's YouTube channel](https://www.youtube.com/@mattpocockuk), follow [@mattpocockuk on X](https://x.com/mattpocockuk), and check out [AI Hero](https://www.aihero.dev/).
 
 ## License
 
