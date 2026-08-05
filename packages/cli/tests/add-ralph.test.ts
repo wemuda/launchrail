@@ -56,6 +56,18 @@ describe("launchrail add ralph", () => {
     expect(content).toContain("launchrail:resolving-merge-conflicts");
   });
 
+  test("the workflow carries the ADR-0010 field-revision mechanics", () => {
+    const content = ralphWorkflowContent();
+    // Blocking edges cross the model boundary verbatim and are parsed in script code.
+    expect(content).toContain("blockedByLine");
+    expect(content).toContain("matchAll(/#(\\d+)/g)");
+    // Dependency gate: blocked dispatches defer instead of burning an attempt.
+    expect(content).toContain("'blocked'");
+    expect(content).toContain("s.defers");
+    // Unparseable args refuse the run instead of building the whole tracker.
+    expect(content).toContain("refusing to run");
+  });
+
   test("regenerates the managed Claude instructions with a Ralph section", async () => {
     await addRalph();
     const generated = readFileSync(join(tmp.root, ".launchrail/CLAUDE.generated.md"), "utf8");

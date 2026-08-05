@@ -5,15 +5,15 @@
 // and every intermediate report live in script variables — not in any context window —
 // so long or wide runs cannot compact away their own state. The watchable, checkpointed
 // variant of the same loop is the launchrail:ralph skill; the two share one policy block,
-// and a policy change belongs in both places.
+// and a policy change belongs in both places (ADR-0005, field-revised by ADR-0010).
 export const meta = {
   name: 'ralph',
   description: 'Autonomous Ralph campaign: implement ready tickets with fresh-context subagents, verification-gated',
   whenToUse:
-    'Run a Ralph implementation campaign over the ticket backlog when the dependency graph is wide or the run is long. For a watchable, checkpointed run (or when something is already going wrong), use the launchrail:ralph skill instead.',
+    'Run a Ralph implementation campaign over the ticket backlog when the dependency graph is wide or the run is long. Scope a run via args: { only: [9, 10], width: 2 } or just [9, 10]. For a watchable, checkpointed run (or when something is already going wrong), use the launchrail:ralph skill instead.',
   phases: [
     { title: 'Preflight', detail: 'read project config, sync the base, run the verification gate' },
-    { title: 'Graph', detail: 'list ready tickets and their blocking edges' },
+    { title: 'Graph', detail: 'list ready tickets and their blocking edges, verbatim' },
     { title: 'Build', detail: 'one fresh-context implementer per ticket, merge included' },
     { title: 'Verify', detail: 'remote ground truth for every claimed merge' },
     { title: 'Park', detail: 'comment failure history, label needs-info' },
@@ -24,22 +24,42 @@ export const meta = {
 // ---------------------------------------------------------------------------
 // Policy — the launchrail:ralph policy block, as code. Override via args.
 // ---------------------------------------------------------------------------
-const A = args && !Array.isArray(args) ? args : {}
+
+// args may arrive as an object ({ only, width, ... }), a bare array of ticket numbers,
+// or a JSON string of either — some launch surfaces stringify it. Normalise all three.
+// A provided-but-unparseable args is a caller error, not licence to build the whole tracker.
+function resolveArgs(raw) {
+  if (raw == null) return {}
+  let value = raw
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value)
+    } catch {
+      throw new Error(`ralph: args was a string but not valid JSON — refusing to run: ${raw}`)
+    }
+  }
+  return Array.isArray(value) ? { only: value } : value
+}
+
+const A = resolveArgs(args)
+
 const POLICY = {
-  // Scope the run to specific ticket numbers ([] = whole ready frontier).
-  // Shorthand: a bare array as args, e.g. args: [9, 10].
-  only: Array.isArray(args) ? args : (A.only ?? []),
-  // Parallel implementers. Width multiplies conflict rate and local load, not just
-  // throughput — use 1 until a campaign has landed tickets cleanly on this project.
-  width: A.width ?? 2,
-  // Tries per ticket: 1 attempt + 1 retry with a fresh context, then park.
+  // Scope the run to specific ticket numbers ([] = the whole ready frontier).
+  only: A.only ?? [],
+  // Parallel implementers. Width also caps local build concurrency — several implementers
+  // share one machine, and fanning out test runs buys backpressure, not speed. Use 1 until
+  // a campaign has landed tickets cleanly on this project.
+  width: A.width ?? 3,
+  // Tries per ticket: 1 attempt + 1 retry with a fresh context, then park. Deferrals
+  // (a declared blocker had not landed yet) hand their attempt back, capped separately.
   attempts: A.attempts ?? 2,
-  // Backstop against a graph that never drains.
-  maxRounds: A.maxRounds ?? 10,
+  // Backstop against a graph that never drains; deferral rounds spend from this too.
+  maxRounds: A.maxRounds ?? 25,
   // Re-read the tracker between rounds so externally closed tickets unblock things.
   refreshGraph: A.refreshGraph ?? true,
-  // Stop starting new rounds when the remaining token budget drops below this.
-  reserve: A.reserve ?? 50_000,
+  // Stop starting new rounds when the remaining token budget drops below this — a round
+  // that starts without enough budget to merge is worse than one that never starts.
+  reserve: A.reserve ?? 200_000,
 }
 
 // ---------------------------------------------------------------------------
@@ -49,10 +69,10 @@ const INTEGRITY = `INTEGRITY: No placeholders, no stubs, no "simplified for now"
 skip, or weaken a test to get a green run; if a test is genuinely wrong, fix it deliberately
 and say so in the PR body. Never claim verification passed without having run it.`
 
-const IDEMPOTENCY = `IDEMPOTENCY: Before starting, check whether the ticket is already closed
-(if so, report status "already-done" and stop) and whether a ralph/<n>-* branch or an open PR
-for this ticket already exists (if so, adopt it and continue from where it left off — do not
-start over). Never open a second PR for the same ticket.`
+const IDEMPOTENCY = `IDEMPOTENCY: This step can be replayed after an interruption, so check
+before you act: if the ticket is already closed, report status "already-done" and stop; if a
+ralph/<n>-* branch or an open PR for this ticket already exists, adopt it and continue from
+where it left off — do not start over. Never open a second PR for the same ticket.`
 
 // ---------------------------------------------------------------------------
 // Schemas — stages return validated structure, never prose the script must parse.
@@ -93,14 +113,14 @@ const GRAPH_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['number', 'title', 'blockedBy'],
+        required: ['number', 'title', 'blockedByLine'],
         properties: {
           number: { type: 'integer' },
           title: { type: 'string' },
-          blockedBy: {
-            type: 'array',
-            items: { type: 'integer' },
-            description: 'raw blocking edges as written on the ticket; do not filter or resolve them',
+          blockedByLine: {
+            type: 'string',
+            description:
+              'The ticket\'s "Blocked by" line copied VERBATIM (e.g. "**Blocked by:** #11, #9"), or "" if it has none. Do NOT interpret or resolve the edges — copy the characters; the caller parses the #n itself.',
           },
         },
       },
@@ -115,11 +135,15 @@ const BUILD_SCHEMA = {
   properties: {
     status: {
       type: 'string',
-      enum: ['merged', 'already-done', 'ci-red', 'ci-timeout', 'conflict', 'verify-failed', 'failed'],
+      enum: ['merged', 'already-done', 'blocked', 'ci-red', 'ci-timeout', 'conflict', 'verify-failed', 'failed'],
     },
     pr: { type: 'integer', description: 'PR number, when one was opened or adopted' },
     mergeCommit: { type: 'string' },
     summary: { type: 'string', description: 'what happened, short; on failure, enough for a retry to act on' },
+    failure: {
+      type: 'string',
+      description: 'on "blocked": which blocker is still open; on failure: the one fact a fresh retry must know',
+    },
     punted: {
       type: 'array',
       items: { type: 'string' },
@@ -133,7 +157,10 @@ const VERIFY_SCHEMA = {
   additionalProperties: false,
   required: ['merged', 'issueClosed', 'evidence'],
   properties: {
-    merged: { type: 'boolean' },
+    merged: {
+      type: 'boolean',
+      description: 'true only if the PR is merged AND its merge commit appears in the base branch history',
+    },
     issueClosed: { type: 'boolean' },
     mergeCommit: { type: 'string' },
     evidence: { type: 'string', description: 'the API facts that establish the verdict' },
@@ -174,40 +201,60 @@ Start clean: delete the failed ralph/${ticket.number}-* branch first, re-sync th
       : ''
   return `${preamble(pre)}
 
-Implement ticket #${ticket.number} ("${ticket.title}") end to end — merge included. You own it alone; assume no knowledge of any other session.
+Implement ticket #${ticket.number} ("${ticket.title}") end to end — merge included. You own it alone; assume no knowledge of any other session. Other implementers are working on other tickets against the same base right now, so ${pre.base} will move under you. That is expected.
 ${retry}
 Steps, in order:
-1. Read the ticket and everything it links (spec sections, ADRs, journeys). Report status "already-done" if it is already closed.
-2. Label the ticket ralph:building.
-3. Branch from a fresh sync of ${pre.base}: ralph/${ticket.number}-<short-slug>.
-4. Implement by invoking the launchrail:ralph-implement skill — it owns the per-ticket contract: TDD, the verification gate, browser smoke for user-facing changes, self-review via /code-review, commit conventions.
-5. Pre-PR sync: merge the latest ${pre.base} into your branch. Conflicts are ordinary work — resolve them with the launchrail:resolving-merge-conflicts skill and re-run the verification gate if anything changed.
-6. Open a PR titled from the ticket, with "Closes #${ticket.number}" in the body. Never open a second PR if one already exists — adopt it.
-7. Wait for CI if the repository has it (fix failures on your branch; treat ~20 minutes as the budget and report status "ci-timeout" beyond it). Immediately before merging, re-sync with ${pre.base} once more (retry up to 3 times if the base keeps moving), then squash-merge. Squash-merge does not reliably fire "Closes" — read the issue back and close it explicitly if it is still open.
+1. Dependency gate: before anything else, confirm every ticket on this ticket's "Blocked by" line is CLOSED with its work merged into ${pre.base}. If any blocker is still open, do NOT build on a missing dependency — report status "blocked", name the open blocker in "failure", and stop. That is a deferral, not a failure; the loop retries you after the blocker lands.
+2. Read the ticket and everything it links (spec sections, ADRs, journeys). Report status "already-done" if it is already closed.
+3. Label the ticket ralph:building so a lost session leaves a trace.
+4. Branch from a fresh sync of ${pre.base}: ralph/${ticket.number}-<short-slug>.
+5. Implement by invoking the launchrail:ralph-implement skill — it owns the per-ticket contract: TDD, the verification gate, browser smoke for user-facing changes, self-review via /code-review, commit conventions.
+6. Pre-PR sync: merge the latest ${pre.base} into your branch. Conflicts are ordinary work — resolve them with the launchrail:resolving-merge-conflicts skill and re-run the verification gate if anything changed.
+7. Open a PR titled from the ticket, with "Closes #${ticket.number}" in the body. Never open a second PR if one already exists — adopt it. Opening against an up-to-date base means CI tests the state that will actually land.
+8. Wait for CI if the repository has it, spacing polls with the Monitor tool or a background sleep — never a foreground sleep, never a busy loop; treat ~20 minutes as the budget and report status "ci-timeout" beyond it. Fix what your branch broke and push. If a failure reproduces on ${pre.base} itself, report "ci-red" and stop — that is systemic, not this ticket's problem.
+9. Immediately before merging, re-sync with ${pre.base} once more (retry up to 3 times if the base keeps moving), then squash-merge. Squash-merge does not reliably fire "Closes" — read the issue back, close it explicitly if it is still open, and remove the ralph:building label. Never push to ${pre.base} directly; the PR is the only door.
 
 ${INTEGRITY}
 
 ${IDEMPOTENCY}
 
-Report honestly via the schema: "merged" only after the squash-merge API call succeeded; "verify-failed" when the verification gate would not go green; "conflict" when a conflict was too ambiguous to resolve without losing behavior (say which files and why); "ci-red" / "ci-timeout" / "failed" otherwise, with a summary a fresh retry can act on. List deliberately-out-of-scope discoveries in "punted".`
+Report honestly via the schema: "merged" only after the squash-merge API call succeeded; "blocked" when a declared blocker had not landed; "verify-failed" when the verification gate would not go green; "conflict" when a conflict was too ambiguous to resolve without losing behavior (say which files and why); "ci-red" / "ci-timeout" / "failed" otherwise, with a summary a fresh retry can act on. List deliberately-out-of-scope discoveries in "punted".`
 }
 
 function verifyPrompt(pre, ticket, build) {
   return `Establish ground truth for ticket #${ticket.number} using the tracker API only.
 Tracker access: ${pre.trackerAccess}
-An implementer claims it merged${build.pr ? ` via PR #${build.pr}` : ''}${build.mergeCommit ? ` (merge commit ${build.mergeCommit})` : ''}.
-Check, against the remote: (1) the PR exists and is merged into ${pre.base}; (2) the issue is closed.
-A PR description or comment is NOT evidence — only API state counts. Do not run local git. Fix nothing, close nothing; report only.`
+An implementer claims it merged via PR #${build.pr}${build.mergeCommit ? ` (merge commit ${build.mergeCommit})` : ''}.
+Check, against the remote: (1) the PR exists and is merged; (2) its merge commit actually appears in ${pre.base}'s history; (3) the issue is closed.
+Report merged: true only when (1) and (2) both hold. A PR description or comment is NOT evidence — only API state counts. Do not run local git, do not use a shell. Fix nothing, close nothing; report only.`
+}
+
+const graphPrompt = (pre) => `List the open, ready tickets for a Ralph campaign. Change nothing on the tracker.
+Tracker access: ${pre.trackerAccess}
+Include every open ticket labeled ready-for-agent, excluding any labeled needs-info.
+For each, report its number, its exact title, and its "Blocked by" line copied VERBATIM (the whole line, e.g. "**Blocked by:** #11, #9"), or "" when it has none. If the tracker records blocking through native relations instead of a body line, render those relations as one "Blocked by: #n, #m" line and nothing else.
+Do NOT interpret, resolve, or filter the edges — copy the characters and let the caller parse the #n. Getting a blocker wrong dispatches a ticket before its dependency lands.`
+
+// Blocking edges are parsed here, deterministically, from the verbatim line — never by a
+// model. A single misread edge silently builds a ticket on a dependency that hasn't landed.
+function parseGraph(graph) {
+  return (graph?.tickets ?? []).map((t) => ({
+    number: t.number,
+    title: t.title,
+    blockedBy: [...(t.blockedByLine ?? '').matchAll(/#(\d+)/g)]
+      .map((m) => Number(m[1]))
+      .filter((n) => n !== t.number),
+  }))
 }
 
 // ---------------------------------------------------------------------------
 // Stages
 // ---------------------------------------------------------------------------
-const state = new Map() // number -> { ticket, attempts, failures[], status, pr, mergeCommit, punted[] }
+const state = new Map() // number -> { ticket, attempts, defers, failures[], status, pr, mergeCommit, punted[] }
 
 function entry(ticket) {
   if (!state.has(ticket.number)) {
-    state.set(ticket.number, { ticket, attempts: 0, failures: [], status: 'pending', punted: [] })
+    state.set(ticket.number, { ticket, attempts: 0, defers: 0, failures: [], status: 'pending', punted: [] })
   }
   return state.get(ticket.number)
 }
@@ -230,8 +277,24 @@ async function drive(pre, ticket) {
     s.status = 'merged'
     return { ticket, ok: true }
   }
+  if (build.status === 'blocked') {
+    // A declared blocker had not actually landed — the frontier's view was stale, or the
+    // blocker is open but outside the ready set. Hand the attempt back: a deferral is not
+    // a failure. Capped so a permanently missing dependency still parks eventually.
+    s.defers += 1
+    if (s.defers <= POLICY.attempts) {
+      s.attempts -= 1
+      return { ticket, ok: false, deferred: true, why: build.failure ?? build.summary }
+    }
+    s.failures.push(`still blocked after ${s.defers} deferrals: ${build.failure ?? build.summary}`)
+    return { ticket, ok: false }
+  }
   if (build.status !== 'merged') {
-    s.failures.push(`${build.status}: ${build.summary}`)
+    s.failures.push(`[attempt ${s.attempts}] ${build.status}: ${build.failure ?? build.summary}`)
+    return { ticket, ok: false }
+  }
+  if (!build.pr) {
+    s.failures.push(`[attempt ${s.attempts}] reported merged but returned no PR number`)
     return { ticket, ok: false }
   }
   // Nothing is trusted from a report — a claimed merge is checked against the remote
@@ -243,20 +306,25 @@ async function drive(pre, ticket) {
     model: 'haiku',
     effort: 'low',
   })
-  if (verdict?.merged) {
+  if (verdict?.merged && verdict.issueClosed) {
     s.status = 'merged'
     s.pr = build.pr
     s.mergeCommit = verdict.mergeCommit || build.mergeCommit
-    if (!verdict.issueClosed) log(`#${ticket.number} merged but issue still open — flagged in the report`)
-    return { ticket, ok: true, issueClosed: verdict?.issueClosed ?? false }
+    return { ticket, ok: true }
   }
-  s.failures.push(`claimed merged, remote disagrees: ${verdict ? verdict.evidence : 'verifier died'}`)
+  // Merged-but-issue-open fails verification too: the retry adopts the merged PR (the
+  // idempotency clause), closes the issue explicitly, and the ticket settles cleanly.
+  s.failures.push(
+    `[attempt ${s.attempts}] claimed merged, remote disagrees: ${verdict ? verdict.evidence : 'verifier died'}`,
+  )
   return { ticket, ok: false }
 }
 
 // A ticket is ready when it isn't settled, hasn't exhausted its attempts, every blocker
 // is closed-before-the-run or merged-by-us, and no blocker is parked. Pure code — the
-// orchestrator never asks a subagent what's ready.
+// orchestrator never asks a subagent what's ready. The implementer's dependency gate is
+// the backstop for what this check cannot see (a blocker that is open but never entered
+// the ready set).
 function frontier(tickets, closedBefore) {
   return tickets.filter((t) => {
     const s = entry(t)
@@ -278,9 +346,9 @@ phase('Preflight')
 const pre = await agent(
   `Preflight for a Ralph campaign in this repository. Fix nothing; report actual state.
 1. Read .launchrail.yml (issueTracker, testing commands, modules) and AGENTS.md (verbatim commands).
-2. Identify the repo (git remote) and the default/base branch; sync it fresh.
+2. Identify the repo (git remote) and the default/base branch; sync it fresh (clean tree). If the base branch does not exist on the remote, report not green and say the base is missing — do not guess another branch.
 3. Determine how the tracker is reachable from THIS environment: check whether the CLI the project docs assume (e.g. gh) is installed; if not, name the concrete substitute available here (e.g. GitHub MCP tools) as an instruction future agents can follow.
-4. Run the project's install command, then the verification gate: npx @wemuda/launchrail verify. Report the real exit status. An empty verification contract failing the gate is a refusal condition, not something to work around.
+4. Run the project's install command, then the verification gate: npx @wemuda/launchrail verify. Report the actual exit codes, not the reassuring summary line. An empty verification contract failing the gate is a refusal condition, not something to work around.
 green means: base synced AND the verification gate exited 0.`,
   { label: 'preflight', phase: 'Preflight', schema: PREFLIGHT_SCHEMA },
 )
@@ -295,13 +363,16 @@ if ((pre.issueTracker ?? 'none') === 'none') {
 }
 
 phase('Graph')
-const graphPrompt = `List the open, ready tickets for a Ralph campaign.
-Tracker access: ${pre.trackerAccess}
-Include every open ticket labeled ready-for-agent, excluding any labeled needs-info.
-For each, report its number, exact title, and raw blocking edges ("Blocked by: #n" lines in the body, or the tracker's native blocking relations). Report edges as written — do not resolve or filter them. Change nothing on the tracker.`
-let graph = await agent(graphPrompt, { label: 'read-graph', phase: 'Graph', schema: GRAPH_SCHEMA, effort: 'low' })
+log(
+  `Base green at ${pre.headSha ?? pre.base} on ${pre.base}. ` +
+    (POLICY.only.length > 0
+      ? `Scoped to ${POLICY.only.map((n) => `#${n}`).join(', ')}.`
+      : 'No scope — building the whole ready frontier.') +
+    ` Width ${POLICY.width}, ${POLICY.attempts} attempts per ticket.`,
+)
+let graph = await agent(graphPrompt(pre), { label: 'read-graph', phase: 'Graph', schema: GRAPH_SCHEMA, model: 'haiku', effort: 'low' })
 if (!graph) throw new Error('graph agent died — refusing to start')
-let tickets = graph.tickets
+let tickets = parseGraph(graph)
 log(`${tickets.length} ready ticket(s) on the tracker`)
 
 const closedBefore = new Set() // blockers not in the ready set are treated as settled before the run
@@ -321,9 +392,12 @@ while (rounds < POLICY.maxRounds) {
   if (ready.length === 0) break
   rounds += 1
   const batch = ready.slice(0, POLICY.width)
-  log(`round ${rounds}: dispatching ${batch.map((t) => `#${t.number}`).join(', ')}`)
+  log(`round ${rounds}: dispatching ${batch.map((t) => `#${t.number}`).join(', ')} (${ready.length} unblocked)`)
   const results = await parallel(batch.map((t) => () => drive(pre, t)))
   const landed = results.filter((r) => r?.ok)
+  for (const r of results.filter((x) => x?.deferred)) {
+    log(`#${r.ticket.number} deferred (blocker not landed yet): ${r.why}`)
+  }
   if (results.every((r) => !r || r.dead)) {
     log('every agent in the round died — infrastructure, not tickets; stopping the campaign')
     break
@@ -334,13 +408,14 @@ while (rounds < POLICY.maxRounds) {
   }
   log(`round ${rounds}: ${landed.length}/${batch.length} verified merged`)
   if (POLICY.refreshGraph && frontier(tickets, closedBefore).length > 0) {
-    graph = await agent(graphPrompt, { label: `read-graph:r${rounds}`, phase: 'Graph', schema: GRAPH_SCHEMA, effort: 'low' })
+    graph = await agent(graphPrompt(pre), { label: `read-graph:r${rounds}`, phase: 'Graph', schema: GRAPH_SCHEMA, model: 'haiku', effort: 'low' })
     if (graph) {
-      for (const t of graph.tickets) {
+      const fresh = parseGraph(graph)
+      for (const t of fresh) {
         if (!tickets.some((x) => x.number === t.number)) tickets.push(t)
       }
       for (const t of tickets) {
-        const still = graph.tickets.some((x) => x.number === t.number)
+        const still = fresh.some((x) => x.number === t.number)
         const s = state.get(t.number)
         // Ticket left the ready set without us touching it (closed or re-labeled
         // externally): treat it as settled for blockers and never dispatch it.
@@ -359,11 +434,12 @@ const stuck = tickets.filter((t) => {
   const s = state.get(t.number)
   return !s || s.status === 'pending'
 })
+const settledNumber = (b) => closedBefore.has(b) || state.get(b)?.status === 'merged'
 
 phase('Park')
 if (parked.length > 0) {
   await agent(
-    `On the tracker (${pre.trackerAccess}), for each of these parked tickets: post one comment containing its accumulated failure history, remove the ralph:building label if present, and add the needs-info label. Change nothing else.
+    `On the tracker (${pre.trackerAccess}), for each of these parked tickets: post one comment containing its accumulated failure history verbatim, remove the ralph:building label if present, and add the needs-info label. Change nothing else. Fix nothing.
 ${parked.map((s) => `#${s.ticket.number} (${s.ticket.title}): ${s.failures.join(' | ')}`).join('\n')}`,
     { label: 'park', phase: 'Park', schema: { type: 'object', properties: { done: { type: 'boolean' } }, required: ['done'], additionalProperties: false }, model: 'haiku', effort: 'low' },
   )
@@ -375,7 +451,7 @@ phase('Release')
 const release = await agent(
   `Release verification for a finished Ralph campaign. Fix nothing.
 1. Sync a fresh ${pre.base} and record its head sha.
-2. Run the verification gate: npx @wemuda/launchrail verify. Report the real exit status.
+2. Run the verification gate: npx @wemuda/launchrail verify. Report the actual exit code.
 ${
     pre.browserTesting && merged.length > 0
       ? `3. The browser-testing module is enabled: start the app (node scripts/dev.mjs --background), scaffold an evidence bundle (npx @wemuda/launchrail smoke), and drive the smoke journeys from docs/testing/smoke-journeys.md per the launchrail:browser-smoke skill. Report the bundle path. A journey you could not complete is a failure, never a pass.`
@@ -391,6 +467,10 @@ return {
   release,
   merged: merged.map((s) => ({ ticket: s.ticket.number, title: s.ticket.title, pr: s.pr, mergeCommit: s.mergeCommit })),
   parked: parked.map((s) => ({ ticket: s.ticket.number, title: s.ticket.title, failures: s.failures })),
-  stuck: stuck.map((t) => ({ ticket: t.number, title: t.title, blockedBy: t.blockedBy })),
+  stuck: stuck.map((t) => ({
+    ticket: t.number,
+    title: t.title,
+    blockedBy: t.blockedBy.filter((b) => !settledNumber(b)),
+  })),
   followUps: [...state.values()].flatMap((s) => s.punted),
 }
