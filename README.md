@@ -15,7 +15,7 @@
 
 [How it works](#how-it-works) ·
 [Getting started](docs/getting-started.md) ·
-[Usage](#usage-in-a-consuming-project) ·
+[Using it](#using-it-in-your-project) ·
 [Ownership model](#the-ownership-model) ·
 [Repository layout](#repository-layout) ·
 [Roadmap](ROADMAP.md) ·
@@ -60,41 +60,36 @@ Several stages run directly on [Matt Pocock's skills](https://github.com/mattpoc
 
 What makes projects **updatable** instead of copy-once-and-rot is the second half of the system: shared capabilities are *subscribed to*, shared standards are *synchronized*, product knowledge stays *locally owned*, and reusable lessons are *deliberately promoted upstream*.
 
-## Usage (in a consuming project)
+## Using it in your project
 
-Full walkthrough: [docs/getting-started.md](docs/getting-started.md). Committed example of what `init` produces: [examples/hello-launchrail](examples/hello-launchrail).
+One command sets the rails:
 
 ```bash
-# Initialize a new or existing repository
 npx @wemuda/launchrail init
-
-# Inspect versions, enabled modules, drift, and missing requirements
-npx @wemuda/launchrail status
-
-# Preview upstream changes
-npx @wemuda/launchrail diff
-
-# Synchronize managed capabilities and run migrations
-npx @wemuda/launchrail sync
-
-# Add a module later
-npx @wemuda/launchrail add browser-testing
-npx @wemuda/launchrail add ralph
-
-# Validate the repository and environment
-npx @wemuda/launchrail doctor
-
-# Run the deterministic verification contract
-npx @wemuda/launchrail verify
-
-# Scaffold an evidence bundle for an agentic browser smoke run
-npx @wemuda/launchrail smoke
-
-# Stop managing a file or module (vendor mode: --all)
-npx @wemuda/launchrail eject <module|file>
 ```
 
-Initialized projects carry two files: `.launchrail.yml` (configuration) and `.launchrail-lock.json` (versions, checksums, applied migrations; committed to the repo).
+`init` interviews you (or takes `--yes`), seeds `AGENTS.md` and ADR conventions without touching existing content, and subscribes the repository to the Launchrail Claude Code plugin through `.claude/settings.json` — so every collaborator who opens the project in Claude Code gets the same skills.
+
+From there, the day-to-day driver is not the CLI — it's the **`launch` skill** inside Claude Code. Invoke it (or just ask "what's next?") and it reads your committed artifacts, works out where the project is — no vision yet, mid-grill, spec validated, tickets ready — and runs or routes to the next stage's owner. Give it a stage name (`launch design-validation`) to jump straight there. The plugin carries the rest of the workflow too:
+
+- **`vision-creation`** and **`design-validation`** — the Launchrail-owned stages of the pipeline
+- **`browser-smoke`** — drives a real browser journey and leaves a traceable evidence bundle (with the browser-testing module)
+- **`ralph`**, **`ralph-implement`**, **`resolving-merge-conflicts`** — the verification-gated implementation campaign (with the ralph module)
+
+The CLI is the maintenance surface you return to between sessions:
+
+```bash
+npx @wemuda/launchrail status                # versions, drift, pending migrations
+npx @wemuda/launchrail diff                  # preview upstream changes
+npx @wemuda/launchrail sync                  # apply managed updates + run migrations
+npx @wemuda/launchrail add browser-testing   # enable a module (also: add ralph)
+npx @wemuda/launchrail doctor                # repository and environment checks
+npx @wemuda/launchrail verify                # deterministic verification gate
+npx @wemuda/launchrail smoke                 # scaffold a browser-smoke evidence bundle
+npx @wemuda/launchrail eject <module|file>   # opt out of management (vendor mode: --all)
+```
+
+Initialized projects carry two files: `.launchrail.yml` (configuration) and `.launchrail-lock.json` (versions, checksums, applied migrations; committed to the repo). Full walkthrough: [docs/getting-started.md](docs/getting-started.md). Committed, unedited example of what `init` produces: [examples/hello-launchrail](examples/hello-launchrail).
 
 ## The ownership model
 
