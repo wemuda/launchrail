@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/wemuda/launchrail/compare/v1.0.0...v1.1.0) (2026-08-05)
+
+
+### Features
+
+* **cli:** end init with a hand-off into the Claude Code workflow ([ef6fecb](https://github.com/wemuda/launchrail/commit/ef6fecbfd1b08de28a3f3d6b30ceeb9bec6c59e9))
+
 ## 1.0.0 (2026-08-05)
 
 
