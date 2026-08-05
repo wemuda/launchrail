@@ -54,6 +54,13 @@ git add -A && git commit -m "chore: initialize launchrail"
 
 `doctor` checks the manifest, lockfile, checksum drift, pending migrations, plugin declaration, and environment, and exits non-zero on failures (warnings don't fail it).
 
+## Handing off to Claude Code
+
+From here the workflow lives in Claude Code, not the CLI:
+
+1. **Open Claude Code in the project** (restart it if it was already open) and **approve the Launchrail plugin when prompted** — the declaration in `.claude/settings.json` is what makes Claude Code offer it, and the skills arrive with the plugin. If no prompt appears, run `/plugin` and install `launchrail` from the `launchrail` marketplace.
+2. **Run `/launchrail:launch`.** The conductor detects the project's stage and drives the workflow from there. On a fresh project that means Matt Pocock's skills setup (`/setup-matt-pocock-skills`), then vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
+
 ## Adding modules
 
 ```bash
@@ -81,4 +88,4 @@ npx @wemuda/launchrail eject <module|file>   # vendor mode: Launchrail never wri
 
 With the plugin installed, the development loop runs vision → grill → research → ADRs → spec → design validation → tickets → bounded implementation (Ralph) → verification → release. The stage contract lives in the plugin's [workflow doc](../plugins/launchrail/docs/workflow.md).
 
-To run it, invoke the `launch` skill — it detects which stage your project has reached and routes you to the right stage skill, or jumps straight to a stage you name (e.g. `launch deep-research`). You don't have to memorize the order; `launch` finds the frontier and, when it can't tell whether a stage is done, asks.
+To run it, invoke the `launch` skill (`/launchrail:launch`) — it detects which stage your project has reached and routes you to the right stage skill, or jumps straight to a stage you name (e.g. `launch deep-research`). You don't have to memorize the order; `launch` finds the frontier and, when it can't tell whether a stage is done, asks.

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { runInit } from "../src/commands/init.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
 
@@ -72,6 +72,23 @@ describe("launchrail init", () => {
     expect(readFileSync(join(tmp.root, "AGENTS.md"), "utf8")).not.toContain("Conventional Commits");
     const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
     expect(lock.decisions.mode).toBe("spike");
+  });
+
+  test("ends with the Claude Code handoff (plugin approval + /launchrail:launch)", async () => {
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((...args) => {
+      lines.push(args.join(" "));
+    });
+    try {
+      const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+      expect(outcome.code).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+    const output = lines.join("\n");
+    expect(output).toContain("approve the Launchrail plugin");
+    expect(output).toContain("/launchrail:launch");
+    expect(output).not.toContain("fill in the TODO");
   });
 
   test("fails cleanly on an invalid manifest", async () => {
