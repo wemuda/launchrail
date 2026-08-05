@@ -72,6 +72,17 @@ All six phases are implemented; two real-world dogfood runs remain open (phase 4
 - [x] Brand due diligence (GitHub/npm/domain/trademark checks on the name) — findings and pre-launch actions in [docs/brand-due-diligence.md](docs/brand-due-diligence.md)
 - [ ] Dogfood case study on a real Wemuda project — blocked on running the toolchain against a real project; the committed example and getting-started guide are the groundwork, not the case study
 
+## Beyond 1.0 — candidate directions
+
+> Unscheduled and uncommitted — real gaps and expansion ideas kept here so they get weighed deliberately instead of forgotten. None of this is ceremony ahead of need; each item graduates into a phase (or an ADR that rejects it) only when a real project demands it.
+
+- **Close the promotion loop.** The updatability model promises "reusable lessons are deliberately promoted upstream," but today that is a habit, not a mechanism. Candidate: a documented promotion path (a CONTRIBUTING recipe, or eventually a `launchrail promote` helper) for lifting a project-grown skill or convention into the toolchain.
+- **True three-way merge for generated content.** `sync` updates generated content whole-file; storing base content in the lockfile would enable real three-way merges (explicitly deferred in ADR-0006).
+- **Upstream compatibility watch.** The rename-advisory registry is empty while Matt Pocock's skills keep evolving. A scheduled CI job that diffs upstream skill names and contracts against `plugins/launchrail/docs/workflow.md` would catch drift before consuming projects do.
+- **Command-surface audit before 1.0.** Nine commands with adjacent diagnostics (`status` vs `doctor`, `verify` vs `smoke`) — before the CLI surface freezes at 1.0, confirm each earns its place or fold overlapping ones.
+- **Editor/vendor breadth.** AGENTS.md is vendor-neutral but the plugin is Claude Code–only. Decide deliberately whether other agent runtimes are a goal or a non-goal, and record the answer as an ADR either way.
+- **Case study as launch artifact.** The phase-6 dogfood case study doubles as the primary public evidence at announcement time — worth writing for readers, not just as a checkbox.
+
 ## Landed
 
 - [x] 2026-08-05 — `launch` orchestrator skill: one plugin entry point that detects a project's stage from its committed artifacts (and `.launchrail.yml` / `launchrail status`), routes to the stage's owning skill or upstream tool, takes a stage keyword to jump (e.g. `deep-research`), and asks the user when the read is ambiguous — composing the stages in the workflow doc without duplicating them, and never starting Ralph unprompted (ADR-0009)
