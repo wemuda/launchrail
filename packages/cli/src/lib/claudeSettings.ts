@@ -12,8 +12,9 @@ import { dirname, join } from "node:path";
 export const CLAUDE_SETTINGS_PATH = join(".claude", "settings.json");
 
 const MARKETPLACE_NAME = "launchrail";
-const PLUGIN_KEY = "launchrail@launchrail";
-const MARKETPLACE_SOURCE = { source: "github", repo: "wemuda/launchrail" };
+export const PLUGIN_KEY = "launchrail@launchrail";
+export const MARKETPLACE_REPO = "wemuda/launchrail";
+const MARKETPLACE_SOURCE = { source: "github", repo: MARKETPLACE_REPO };
 
 export type DeclarationState = "declared" | "no-file" | "invalid-json" | "undeclared";
 

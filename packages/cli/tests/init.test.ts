@@ -86,7 +86,7 @@ describe("launchrail init", () => {
       spy.mockRestore();
     }
     const output = lines.join("\n");
-    expect(output).toContain("approve the Launchrail plugin");
+    expect(output).toContain("claude plugin marketplace add wemuda/launchrail");
     expect(output).toContain("/launchrail:launch");
     expect(output).not.toContain("fill in the TODO");
   });

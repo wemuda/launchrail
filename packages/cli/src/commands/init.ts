@@ -1,9 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
+import { detectClaudeCli, installLaunchrailPlugin } from "../lib/claudeCli.js";
 import {
   applyPluginDeclaration,
   CLAUDE_SETTINGS_PATH,
+  MARKETPLACE_REPO,
+  PLUGIN_KEY,
   planPluginDeclaration,
   type SettingsPlan,
 } from "../lib/claudeSettings.js";
@@ -28,12 +31,18 @@ export interface InitOptions {
   cwd: string;
   dryRun: boolean;
   yes: boolean;
+  /** Write the declaration but skip the `claude` CLI plugin install. */
+  skipPluginInstall?: boolean;
 }
+
+/** How the Claude Code plugin install ended up. */
+export type PluginHandoff = "installed" | "already-installed" | "failed" | "no-cli" | "skipped" | "dry-run";
 
 export interface InitOutcome {
   code: number;
   actions: PlannedAction[];
   settings: SettingsPlan;
+  plugin: PluginHandoff;
 }
 
 function suggestedTestCommand(detection: RepoDetection): string | null {
@@ -141,7 +150,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     if (!parsed.manifest) {
       console.error(`launchrail: existing ${MANIFEST_FILENAME} is invalid:`);
       for (const error of parsed.errors) console.error(`  - ${error}`);
-      return { code: 1, actions: [], settings };
+      return { code: 1, actions: [], settings, plugin: "skipped" };
     }
     manifest = parsed.manifest;
     console.log(`Found existing ${MANIFEST_FILENAME} — using its configuration (init is idempotent).`);
@@ -151,7 +160,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     manifest = defaultManifestFor(detection);
   } else {
     console.error("launchrail: non-interactive session — re-run with --yes to accept defaults.");
-    return { code: 1, actions: [], settings };
+    return { code: 1, actions: [], settings, plugin: "skipped" };
   }
 
   const specs: FileSpec[] = [
@@ -162,7 +171,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const existing = readLockfile(opts.cwd);
   if (existing.error) {
     console.error(`launchrail: ${existing.error} — refusing to continue. Fix or remove the lockfile first.`);
-    return { code: 1, actions: [], settings };
+    return { code: 1, actions: [], settings, plugin: "skipped" };
   }
   const lockfile = existing.lockfile ?? emptyLockfile(VERSION);
   if (!existing.lockfile) {
@@ -180,8 +189,18 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   console.log(`  ${SETTINGS_LABEL[settings.kind]}  ${CLAUDE_SETTINGS_PATH}  (${settings.detail})`);
 
   if (opts.dryRun) {
+    if (opts.skipPluginInstall) {
+      console.log("  skip      Claude Code plugin install  (--skip-plugin-install)");
+    } else {
+      const version = detectClaudeCli(opts.cwd);
+      console.log(
+        version
+          ? `  install   ${PLUGIN_KEY} into Claude Code  (claude CLI ${version} detected)`
+          : "  manual    Claude Code plugin install  (claude CLI not found — instructions will be printed)",
+      );
+    }
     console.log("\nDry run — nothing was written.");
-    return { code: 0, actions, settings };
+    return { code: 0, actions, settings, plugin: "dry-run" };
   }
 
   const written = applyPlan(opts.cwd, actions, lockfile);
@@ -207,14 +226,48 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("\n⚠ Not a git repository. Run `git init` before letting agents work here — Launchrail relies on git for safe writes.");
   }
 
+  let plugin: PluginHandoff = "skipped";
+  if (!opts.skipPluginInstall) {
+    const version = detectClaudeCli(opts.cwd);
+    if (version === null) {
+      plugin = "no-cli";
+    } else {
+      console.log("\nInstalling the Launchrail plugin into Claude Code (first run clones the marketplace)…");
+      const result = installLaunchrailPlugin(opts.cwd);
+      if (result.state === "installed") {
+        plugin = result.alreadyInstalled ? "already-installed" : "installed";
+        console.log(
+          result.alreadyInstalled
+            ? "  ✓ Launchrail plugin already installed — nothing to do."
+            : "  ✓ Launchrail plugin installed (user scope).",
+        );
+      } else {
+        plugin = "failed";
+        console.log(`  ⚠ Automatic install failed (${result.state === "failed" ? result.step : "claude CLI"}):`);
+        for (const line of (result.state === "failed" ? result.output : "").split("\n").slice(0, 3)) {
+          if (line.trim()) console.log(`    ${line.trim()}`);
+        }
+      }
+    }
+  }
+
+  const pluginReady = plugin === "installed" || plugin === "already-installed";
   console.log("\nYou're set up — from here the workflow runs inside Claude Code:");
   console.log('  1. Commit the result: git add -A && git commit -m "chore: initialize launchrail"');
-  console.log("  2. Open Claude Code in this project and approve the Launchrail plugin when prompted —");
-  console.log(`     ${CLAUDE_SETTINGS_PATH} declares it, and the workflow skills arrive with the plugin.`);
-  console.log('     (Already open? Restart it, or run /plugin and install launchrail from the "launchrail" marketplace.)');
+  if (pluginReady) {
+    console.log("  2. Open Claude Code in this project — the plugin and its skills are ready.");
+    console.log("     (Session already open? Run /reload-plugins, or restart Claude Code.)");
+  } else {
+    console.log("  2. Install the Launchrail plugin into Claude Code:");
+    console.log(`       claude plugin marketplace add ${MARKETPLACE_REPO}`);
+    console.log(`       claude plugin install ${PLUGIN_KEY}`);
+    console.log("     (No claude CLI? Inside Claude Code run /plugin → Marketplaces → Add, and enter");
+    console.log(`      ${MARKETPLACE_REPO} — the full owner/repo. ${CLAUDE_SETTINGS_PATH} also declares the`);
+    console.log("      plugin, so Claude Code offers it by itself the first time this folder is trusted.)");
+  }
   console.log("  3. Run /launchrail:launch — it detects the project's stage and drives the workflow from there.");
   console.log("     On a fresh project that means Matt Pocock's skills setup, then vision creation, which also");
   console.log("     replaces the seeded AGENTS.md project-purpose TODO. No seeded file needs filling in by hand.");
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
-  return { code: 0, actions, settings };
+  return { code: 0, actions, settings, plugin };
 }

@@ -2,7 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
-import { CLAUDE_SETTINGS_PATH, declarationState } from "../lib/claudeSettings.js";
+import { launchrailPluginState } from "../lib/claudeCli.js";
+import { CLAUDE_SETTINGS_PATH, declarationState, MARKETPLACE_REPO, PLUGIN_KEY } from "../lib/claudeSettings.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
@@ -106,6 +107,25 @@ export function runDoctor(cwd: string): DoctorOutcome {
     add("warn", "plugin declaration", `${CLAUDE_SETTINGS_PATH} is not valid JSON`);
   } else {
     add("warn", "plugin declaration", `Launchrail plugin not declared in ${CLAUDE_SETTINGS_PATH} — run \`launchrail init\``);
+  }
+
+  const pluginState = launchrailPluginState(cwd);
+  if (pluginState === "installed") {
+    add("pass", "plugin install", `${PLUGIN_KEY} is installed in Claude Code`);
+  } else if (pluginState === "not-installed") {
+    add(
+      "warn",
+      "plugin install",
+      `not installed — run \`claude plugin marketplace add ${MARKETPLACE_REPO}\` then \`claude plugin install ${PLUGIN_KEY}\``,
+    );
+  } else if (pluginState === "no-cli") {
+    add(
+      "warn",
+      "plugin install",
+      "claude CLI not found — cannot verify; Claude Code offers the declared plugin when the folder is first trusted",
+    );
+  } else {
+    add("warn", "plugin install", "could not read `claude plugin list --json`");
   }
 
   if (manifest?.modules[BROWSER_TESTING_MODULE]) {
