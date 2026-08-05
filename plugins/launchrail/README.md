@@ -4,8 +4,11 @@ Skills, commands, agents, and hooks that consuming projects subscribe to via the
 
 ## Skills
 
+Start with [`launch`](skills/launch/SKILL.md) — the one entry point that detects where a project sits in the loop and routes to the stage skills below. The rest own individual stages.
+
 | Skill | Purpose |
 |---|---|
+| [`launch`](skills/launch/SKILL.md) | The loop conductor: detect the project's current stage and run or route to the stage that owns the next step; jump straight to a stage by name (e.g. `deep-research`). Composes the skills below — never duplicates them ([ADR-0009](../../docs/adr/0009-launch-orchestrator-skill.md)) |
 | [`vision-creation`](skills/vision-creation/SKILL.md) | Turn an idea into broad product intent, assumptions, and non-goals (`docs/vision.md`) |
 | [`design-validation`](skills/design-validation/SKILL.md) | Coordinate spec → Claude Design → revised spec → handoff |
 | [`browser-smoke`](skills/browser-smoke/SKILL.md) | Drive the app through defined smoke journeys and capture a traceable evidence bundle (pairs with `launchrail add browser-testing`) |

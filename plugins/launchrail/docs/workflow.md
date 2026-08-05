@@ -2,6 +2,10 @@
 
 How a fresh project moves from idea to an approved, validated MVP spec through committed artifacts. Launchrail composes upstream skills wherever one already covers a stage — the table below is the contract for which tool owns which stage and what artifact it must leave behind.
 
+## Running it
+
+Invoke the `launch` skill (or just say where you are and ask what's next). It detects which stage a project has reached from its committed artifacts, then runs or routes to that stage's owner below — and it takes a stage name (`vision`, `deep-research`, `design-validation`, …) to jump straight there ([ADR-0009](../../../docs/adr/0009-launch-orchestrator-skill.md)). This table stays the contract for who owns each stage; `launch` executes it, it does not replace it.
+
 ## Prerequisites
 
 - The repository is initialized (`npx @wemuda/launchrail init`) and healthy (`npx @wemuda/launchrail doctor`).
