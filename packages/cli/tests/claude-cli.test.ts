@@ -47,6 +47,7 @@ case "$1" in
     case "$2" in
       marketplace) echo "Successfully added marketplace: launchrail";;
       install) echo "\${CLAUDE_STUB_INSTALL_MSG:-Successfully installed plugin: launchrail@launchrail (scope: user)}";;
+      update) echo "\${CLAUDE_STUB_UPDATE_MSG:-launchrail is already at the latest version (9.9.9).}";;
       list) echo "\${CLAUDE_STUB_LIST:-[]}";;
     esac;;
 esac
@@ -65,6 +66,7 @@ afterEach(() => {
   delete process.env.CLAUDE_STUB_FAIL;
   delete process.env.CLAUDE_STUB_LIST;
   delete process.env.CLAUDE_STUB_INSTALL_MSG;
+  delete process.env.CLAUDE_STUB_UPDATE_MSG;
   rmSync(stubDir, { recursive: true, force: true });
   tmp.cleanup();
 });
@@ -76,19 +78,27 @@ describe("claude CLI wrapper", () => {
     expect(detectClaudeCli(tmp.root)).toBeNull();
   });
 
-  test("installs a plugin via marketplace add then plugin install", () => {
+  test("installs a plugin via marketplace add then plugin install — no update on fresh installs", () => {
     const outcome = installPlugin(tmp.root, WORKFLOW_PLUGINS[0]);
-    expect(outcome).toEqual({ state: "installed", alreadyInstalled: false });
+    expect(outcome).toEqual({ state: "installed", detail: "installed" });
     expect(stubCalls()).toEqual([
       "plugin marketplace add wemuda/launchrail",
       "plugin install launchrail@launchrail",
     ]);
   });
 
-  test("reports an idempotent re-install as already installed", () => {
+  test("an already-installed plugin is updated to the marketplace's latest", () => {
+    process.env.CLAUDE_STUB_INSTALL_MSG = 'Plugin "launchrail@launchrail" is already installed (scope: user)';
+    process.env.CLAUDE_STUB_UPDATE_MSG = 'Plugin "launchrail" updated from 1.2.0 to 1.4.0 for scope user. Restart to apply changes.';
+    const outcome = installPlugin(tmp.root, WORKFLOW_PLUGINS[0]);
+    expect(outcome).toEqual({ state: "installed", detail: "updated", versions: "1.2.0 → 1.4.0" });
+    expect(stubCalls()).toContain("plugin update launchrail@launchrail");
+  });
+
+  test("an already-current plugin reports up to date", () => {
     process.env.CLAUDE_STUB_INSTALL_MSG = 'Plugin "launchrail@launchrail" is already installed (scope: user)';
     const outcome = installPlugin(tmp.root, WORKFLOW_PLUGINS[0]);
-    expect(outcome).toEqual({ state: "installed", alreadyInstalled: true });
+    expect(outcome).toEqual({ state: "installed", detail: "up-to-date" });
   });
 
   test("surfaces a failing step", () => {

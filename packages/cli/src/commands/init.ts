@@ -251,8 +251,14 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       for (const wp of WORKFLOW_PLUGINS) {
         const result = installPlugin(opts.cwd, wp);
         if (result.state === "installed") {
-          if (!result.alreadyInstalled) fresh += 1;
-          console.log(`  ✓ ${wp.label} (${wp.id})${result.alreadyInstalled ? " — already installed" : ""}`);
+          if (result.detail !== "up-to-date") fresh += 1;
+          const suffix =
+            result.detail === "updated"
+              ? ` — updated${result.versions ? ` (${result.versions})` : ""}`
+              : result.detail === "up-to-date"
+                ? " — already up to date"
+                : "";
+          console.log(`  ✓ ${wp.label} (${wp.id})${suffix}`);
         } else {
           failedPlugins.push(wp);
           console.log(`  ⚠ ${wp.label} (${wp.id}) failed at ${result.step}:`);

@@ -58,14 +58,15 @@ export function detectClaudeCli(cwd: string): string | null {
 }
 
 export type PluginInstallOutcome =
-  | { state: "installed"; alreadyInstalled: boolean }
-  | { state: "failed"; step: "marketplace-add" | "plugin-install"; output: string };
+  | { state: "installed"; detail: "installed" | "updated" | "up-to-date"; versions?: string }
+  | { state: "failed"; step: "marketplace-add" | "plugin-install" | "plugin-update"; output: string };
 
 /**
- * Register one plugin's marketplace and install it at user scope. Both
- * underlying commands are idempotent ("already on disk" / "already installed"
- * exit 0), so re-running init stays safe. Assumes the CLI is present —
- * callers detect first.
+ * Register one plugin's marketplace and install it at user scope — or, when
+ * it is already installed, update it to the marketplace's latest version, so
+ * re-running init always leaves the roster current. Every underlying command
+ * is idempotent (exit 0 on "already on disk" / "already installed" / "already
+ * at the latest version"). Assumes the CLI is present — callers detect first.
  */
 export function installPlugin(cwd: string, plugin: WorkflowPlugin): PluginInstallOutcome {
   const add = runClaude(cwd, ["plugin", "marketplace", "add", plugin.marketplace]);
@@ -76,7 +77,17 @@ export function installPlugin(cwd: string, plugin: WorkflowPlugin): PluginInstal
   if (!install.ok) {
     return { state: "failed", step: "plugin-install", output: install.stderr || install.stdout };
   }
-  return { state: "installed", alreadyInstalled: install.stdout.includes("already installed") };
+  if (!install.stdout.includes("already installed")) {
+    return { state: "installed", detail: "installed" };
+  }
+  const update = runClaude(cwd, ["plugin", "update", plugin.id]);
+  if (!update.ok) {
+    return { state: "failed", step: "plugin-update", output: update.stderr || update.stdout };
+  }
+  const moved = update.stdout.match(/updated from (\S+) to (\S+)/);
+  return moved
+    ? { state: "installed", detail: "updated", versions: `${moved[1]} → ${moved[2]}` }
+    : { state: "installed", detail: "up-to-date" };
 }
 
 export type InstalledPluginIds =
