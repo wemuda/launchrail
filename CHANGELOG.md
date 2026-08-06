@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/wemuda/launchrail/compare/v1.4.0...v1.5.0) (2026-08-06)
+
+
+### Features
+
+* **cli:** init updates already-installed plugins instead of leaving them stale ([4c545fd](https://github.com/wemuda/launchrail/commit/4c545fd56d2332f0e394294782b445a749182c92))
+
+
+### Bug Fixes
+
+* **plugin:** a missing docs/agents/ never blocks the vision or forces a sequencing question ([8ff7abf](https://github.com/wemuda/launchrail/commit/8ff7abf67405f3d703f6ca7946bd2e15fa202914))
+
 ## [1.4.0](https://github.com/wemuda/launchrail/compare/v1.3.0...v1.4.0) (2026-08-05)
 
 
