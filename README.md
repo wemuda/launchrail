@@ -137,7 +137,7 @@ pnpm --filter @wemuda/launchrail exec launchrail --help
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. All six phases — `init` + `doctor`, the core workflow plugin, browser testing, Ralph orchestration, the sync engine, and open-source readiness — are implemented and covered by 137 tests. The first real Ralph campaigns have run against a Wemuda project, and their lessons are folded back into the toolchain (ADR-0010). What stands between here and a first release: the dogfood case study on a real project and flipping on the npm publish.
+See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. All six phases — `init` + `doctor`, the core workflow plugin, browser testing, Ralph orchestration, the sync engine, and open-source readiness — are implemented and covered by 136 tests. The first real Ralph campaigns have run against a Wemuda project, and their lessons are folded back into the toolchain (ADR-0010). What stands between here and a first release: the dogfood case study on a real project and flipping on the npm publish.
 
 ## Contributing
 
