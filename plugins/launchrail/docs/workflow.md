@@ -27,6 +27,12 @@ Invoke the `launch` skill (or just say where you are and ask what's next). It de
 
 After stage 8, bounded implementation is a Ralph campaign: `launchrail add ralph` installs it, and the `ralph` skill (watchable) or the `ralph` workflow (wide/long runs) drives the tickets to verified merges — gated by `launchrail verify` and, where the browser-testing module is enabled, browser smoke evidence. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up `to-tickets` output if it lacks them.
 
+## Adopting an existing project
+
+A project that already has code doesn't start at a blank vision. When `.launchrail.yml` records `origin: existing` (the `init` interview asks, and defaults to it when it detects a `package.json` or existing agent files), the loop gains an **on-ramp** at stage 1: the Launchrail `project-alignment` skill. It inventories what the project already has against the artifacts below, infers a draft vision from the code, interviews only about the gaps, and detects an existing design system (recording it as the baseline for stages 2 and 7). It then hands to `vision-creation` to commit the vision and returns to `launch` for the first real gap.
+
+Alignment is an on-ramp, not a second workflow: everything from the vision onward is the same table above, and `project-alignment` composes the stage owners rather than duplicating them ([ADR-0013](../../../docs/adr/0013-existing-project-alignment.md)). Its job is to get an adopted codebase onto the rail with the least work — infer what the code answers, ask only what it doesn't.
+
 ## Composition rules
 
 - **No duplicate skills.** Where the table names an upstream skill, use it. Launchrail does not wrap, fork, or re-prompt `grill-with-docs`, the research skill, `wayfinder`, `to-spec`, or `to-tickets`.

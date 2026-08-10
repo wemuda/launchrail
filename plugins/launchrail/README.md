@@ -9,6 +9,7 @@ Start with [`launch`](skills/launch/SKILL.md) — the one entry point that detec
 | Skill | Purpose |
 |---|---|
 | [`launch`](skills/launch/SKILL.md) | The loop conductor: detect the project's current stage and run or route to the stage that owns the next step; jump straight to a stage by name (e.g. `deep-research`). Composes the skills below — never duplicates them ([ADR-0009](../../docs/adr/0009-launch-orchestrator-skill.md)) |
+| [`project-alignment`](skills/project-alignment/SKILL.md) | The on-ramp for adopting an existing codebase (`origin: existing`): inventory what's there, infer a draft vision from the code, interview only the gaps, detect the existing design system, then hand to the loop ([ADR-0013](../../docs/adr/0013-existing-project-alignment.md)) |
 | [`vision-creation`](skills/vision-creation/SKILL.md) | Turn an idea into broad product intent, assumptions, and non-goals (`docs/vision.md`) |
 | [`design-validation`](skills/design-validation/SKILL.md) | Coordinate spec → Claude Design → revised spec → handoff |
 | [`browser-smoke`](skills/browser-smoke/SKILL.md) | Drive the app through defined smoke journeys and capture a traceable evidence bundle (pairs with `launchrail add browser-testing`) |

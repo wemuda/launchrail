@@ -4,6 +4,7 @@ import { parseManifest, serializeManifest, setModuleEnabled, type Manifest } fro
 const manifest: Manifest = {
   schemaVersion: 1,
   mode: "standard-mvp",
+  origin: "new",
   issueTracker: "github",
   conventions: { conventionalCommits: true },
   testing: {
@@ -39,9 +40,24 @@ describe("manifest", () => {
     expect(parsed.errors.join(" ")).toContain("schemaVersion");
   });
 
+  test("rejects unknown origin", () => {
+    const parsed = parseManifest("schemaVersion: 1\nmode: spike\norigin: legacy\n");
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.join(" ")).toContain("origin must be one of");
+  });
+
+  test("origin round-trips and defaults to new when absent (older manifests stay valid)", () => {
+    const withOrigin = parseManifest("schemaVersion: 1\nmode: spike\norigin: existing\n");
+    expect(withOrigin.errors).toEqual([]);
+    expect(withOrigin.manifest?.origin).toBe("existing");
+    const withoutOrigin = parseManifest("schemaVersion: 1\nmode: spike\n");
+    expect(withoutOrigin.manifest?.origin).toBe("new");
+  });
+
   test("applies defaults for optional fields", () => {
     const parsed = parseManifest("schemaVersion: 1\nmode: spike\n");
     expect(parsed.manifest).toMatchObject({
+      origin: "new",
       issueTracker: "none",
       conventions: { conventionalCommits: true },
       testing: {

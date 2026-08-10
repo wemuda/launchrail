@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
 import { listInstalledPluginIds, WORKFLOW_PLUGINS } from "../lib/claudeCli.js";
+import { missingImports } from "../lib/claudeImports.js";
 import { CLAUDE_SETTINGS_PATH, declarationState } from "../lib/claudeSettings.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
@@ -91,10 +92,18 @@ export function runDoctor(cwd: string): DoctorOutcome {
 
   if (!detection.hasClaudeMd) {
     add("fail", "CLAUDE.md", "missing — run `launchrail init`");
-  } else if (readFileSync(join(cwd, "CLAUDE.md"), "utf8").includes("@AGENTS.md")) {
-    add("pass", "CLAUDE.md", "imports @AGENTS.md");
   } else {
-    add("warn", "CLAUDE.md", "does not import @AGENTS.md — Claude will not see the shared agent contract");
+    const missing = missingImports(readFileSync(join(cwd, "CLAUDE.md"), "utf8"));
+    if (missing.length === 0) {
+      add("pass", "CLAUDE.md", "imports the shared contract and workflow instructions");
+    } else {
+      // The generated import is the silent one: without it Launchrail's managed
+      // workflow instructions sit on disk that Claude never loads.
+      const consequence = missing.includes("@.launchrail/CLAUDE.generated.md")
+        ? "Launchrail's workflow instructions never reach Claude"
+        : "Claude will not see the shared agent contract";
+      add("warn", "CLAUDE.md", `does not import ${missing.join(", ")} — ${consequence}; re-run \`launchrail init\` to wire it in`);
+    }
   }
 
   if (detection.hasMattPocockSetup) add("pass", "Matt Pocock setup", "docs/agents/ present");
