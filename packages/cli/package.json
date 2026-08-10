@@ -17,7 +17,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "node scripts/generate-readme.mjs"
   },
   "repository": {
     "type": "git",
