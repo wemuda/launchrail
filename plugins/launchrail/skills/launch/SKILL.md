@@ -1,6 +1,6 @@
 ---
 name: launch
-description: The single entry point to the Launchrail loop. Detects how far a project has moved from idea toward release — setup, vision, visual exploration, complexity grill, technical research, ADRs, MVP spec, design validation, tickets, implementation, verification — then runs or routes to the stage that owns the next step. Use to start or continue the Launchrail workflow, to ask what stage a project is at or what comes next, or to jump straight to a named stage (e.g. vision, deep-research, design-validation, tickets). It composes the stage skills; it never reimplements them.
+description: The single entry point to the Launchrail loop. Detects how far a project has moved from idea toward release — setup, vision, visual exploration, discovery research, complexity grill, technical research, ADRs, MVP spec, design validation, tickets, implementation, verification — then runs or routes to the stage that owns the next step. Use to start or continue the Launchrail workflow, to ask what stage a project is at or what comes next, or to jump straight to a named stage (e.g. vision, discovery, deep-research, design-validation, tickets). It composes the stage skills; it never reimplements them.
 ---
 
 # Launch — the Launchrail loop conductor
@@ -31,24 +31,27 @@ Read `.launchrail.yml` (`mode`, `modules`, `issueTracker`) and confirm setup wit
 
 | # | Stage | Owner (invoke / run) | Done when |
 |---|---|---|---|
-| 0 | Setup | `npx @wemuda/launchrail init` (seeds files, installs the workflow plugins), then `/setup-matt-pocock-skills` | `.launchrail.yml` + `.launchrail-lock.json` exist and are committed; `doctor` is green; `docs/agents/` present (soft until stage 6 — see step 2) |
+| 0 | Setup | `npx @wemuda/launchrail init` (seeds files, installs the workflow plugins), then `/setup-matt-pocock-skills` | `.launchrail.yml` + `.launchrail-lock.json` exist and are committed; `doctor` is green; `docs/agents/` present (soft until stage 7 — see step 2) |
 | 1 | Vision | `launchrail:vision-creation` — or `launchrail:project-alignment` when `origin: existing` (see below) | `docs/vision.md` exists and is real (not the bare template) |
 | 2 | Visual exploration | Claude Design | Exploration artifacts exist and are linked from `docs/vision.md` |
-| 3 | Complexity grill | Matt Pocock `grill-with-docs` — never the bare `grilling` primitive | Grill constraints committed under `docs/research/` |
-| 4 | Technical research | Matt Pocock research skill (fed the grill constraints) | Research notes committed under `docs/research/` |
-| 5 | Architecture decisions | ADRs (`docs/adr/0000-template.md`) | `docs/adr/NNNN-*.md` exist beyond the template |
-| 6 | MVP specification | Matt Pocock `wayfinder` / `to-spec` | A spec exists under `docs/specs/` |
-| 7 | Design validation | `launchrail:design-validation` | The spec carries a `## Design validation` section |
-| 8 | Tickets | Matt Pocock `to-tickets` | The tracker has `ready-for-agent` tickets with `Blocked by: #n` edges |
-| 9 | Implementation | `launchrail:ralph` (needs `launchrail add ralph`) | The ready frontier is drained; PRs merged and verified |
-| 10 | Verification | `npx @wemuda/launchrail verify` · `launchrail:browser-smoke` | The gate is green; smoke evidence exists where behavior is user-facing |
-| 11 | Release | The project's release setup | The release is cut |
+| 3 | Discovery research | `launchrail:discovery` (Launchrail-owned; composes the Matt Pocock research skill) | A landscape/options map committed under `docs/research/` (convention: `discovery-*.md`) |
+| 4 | Complexity grill | Matt Pocock `grill-with-docs` — never the bare `grilling` primitive | Grill constraints committed under `docs/research/` |
+| 5 | Technical research | Matt Pocock research skill (fed the grill constraints) | Research notes committed under `docs/research/` |
+| 6 | Architecture decisions | ADRs (`docs/adr/0000-template.md`) | `docs/adr/NNNN-*.md` exist beyond the template |
+| 7 | MVP specification | Matt Pocock `wayfinder` / `to-spec` | A spec exists under `docs/specs/` |
+| 8 | Design validation | `launchrail:design-validation` | The spec carries a `## Design validation` section |
+| 9 | Tickets | Matt Pocock `to-tickets` | The tracker has `ready-for-agent` tickets with `Blocked by: #n` edges |
+| 10 | Implementation | `launchrail:ralph` (needs `launchrail add ralph`) | The ready frontier is drained; PRs merged and verified |
+| 11 | Verification | `npx @wemuda/launchrail verify` · `launchrail:browser-smoke` | The gate is green; smoke evidence exists where behavior is user-facing |
+| 12 | Release | The project's release setup | The release is cut |
 
-`deep-research` = stages 3 + 4 together (grill → research); the grill always runs first and feeds research.
+`deep-research` = the tech-decision arc, stages 3 → 4 → 5 (discovery → grill → technical research): discovery widens the option space, the grill narrows it, research de-risks what survives.
 
-**Stage 3 is `grill-with-docs`, never the bare `grilling` primitive.** Both ship in the installed `mattpocock-skills` plugin, so the wrong one is a tab-completion away — but only `grill-with-docs` runs the domain-modeling pass that writes the `docs/research/` artifact this stage is *done when* it has. The bare `grilling` primitive produces conversation and no committed file, so the frontier never advances and stage 4 research gets no brief. `grill-with-docs` composes `grilling` under the hood, so the interview is identical either way — reaching for the primitive only loses you the artifact.
+**Stage 3 (discovery) feeds stage 4 (the grill).** Discovery is Launchrail-owned and *divergent* — it maps the real options for the vision's hard parts (all the auth vendors, not one) so the grill has a real field to narrow, then commits a landscape doc under `docs/research/`. It composes the Matt Pocock research skill for depth but owns the divergent framing, and it does **not** pick winners. Don't collapse discovery into the grill unless `mode` is `spike`: a grill with no discovery narrows whatever stack was assumed upstream, which is exactly the failure discovery exists to prevent.
 
-**Existing projects (`origin: existing`).** Reach stage 1 through `launchrail:project-alignment`: it inventories what the codebase already has, infers a draft vision, interviews only the gaps, and detects the existing design system (a baseline for stages 2 and 7), then hands to `vision-creation` to commit and returns here for the first real gap. Everything downstream of the vision is unchanged — alignment is an on-ramp onto the same rail, not a separate track.
+**Stage 4 is `grill-with-docs`, never the bare `grilling` primitive.** Both ship in the installed `mattpocock-skills` plugin, so the wrong one is a tab-completion away — but only `grill-with-docs` runs the domain-modeling pass that writes the `docs/research/` artifact this stage is *done when* it has. The bare `grilling` primitive produces conversation and no committed file, so the frontier never advances and stage 5 research gets no brief. `grill-with-docs` composes `grilling` under the hood, so the interview is identical either way — reaching for the primitive only loses you the artifact.
+
+**Existing projects (`origin: existing`).** Reach stage 1 through `launchrail:project-alignment`: it inventories what the codebase already has, infers a draft vision, interviews only the gaps, and detects the existing design system (a baseline for stages 2 and 8), then hands to `vision-creation` to commit and returns here for the first real gap. Everything downstream of the vision is unchanged — alignment is an on-ramp onto the same rail, not a separate track.
 
 ## Orient before you route
 
@@ -61,9 +64,9 @@ The stage map tells you *what's next on the rail*; a quick read of the live sess
 ## Running it
 
 1. **Did the user name a stage?** Resolve it against the keywords below. Sanity-check its inputs exist (e.g. `spec` needs a vision and research). If a prerequisite is missing, say so and offer to start there instead — but if the user still wants the jump, honor it; they may have context you can't see. Then invoke that stage's owner and stop.
-2. **Otherwise, orient (above), then find the frontier.** Confirm setup (stage 0) first — and close its gaps yourself, without asking (see ground rules): if `.launchrail.yml` is missing, run `init`; if the init output is untracked, commit it; if `docs/agents/` is missing, tell the user to type `/setup-matt-pocock-skills` (user-invoked upstream — hand them the manifest-derived answers so it's a ten-second run). A missing `docs/agents/` alone never blocks stages 1–5 and is never a sequencing question: hand over the one-liner, then drive the real frontier in the same breath — the hard dependents are the spec and tickets stages (6 and 8), so treat it as required only from there. Then walk stages 1 → 11 in order and stop at the first whose "done when" is not satisfied. Skip only the stages the manifest's `mode` permits skipping (see below). **If the frontier is stage 1 and `.launchrail.yml` says `origin: existing`, route to `launchrail:project-alignment` rather than `vision-creation` directly** — the on-ramp infers from the code and aligns instead of starting blank.
+2. **Otherwise, orient (above), then find the frontier.** Confirm setup (stage 0) first — and close its gaps yourself, without asking (see ground rules): if `.launchrail.yml` is missing, run `init`; if the init output is untracked, commit it; if `docs/agents/` is missing, tell the user to type `/setup-matt-pocock-skills` (user-invoked upstream — hand them the manifest-derived answers so it's a ten-second run). A missing `docs/agents/` alone never blocks stages 1–6 and is never a sequencing question: hand over the one-liner, then drive the real frontier in the same breath — the hard dependents are the spec and tickets stages (7 and 9), so treat it as required only from there. Then walk stages 1 → 12 in order and stop at the first whose "done when" is not satisfied. Skip only the stages the manifest's `mode` permits skipping (see below). **If the frontier is stage 1 and `.launchrail.yml` says `origin: existing`, route to `launchrail:project-alignment` rather than `vision-creation` directly** — the on-ramp infers from the code and aligns instead of starting blank.
 3. **Confirm the read.** Tell the user where you think they are and why — which artifacts you found, which you didn't. If any signal was ambiguous (a template-only vision, several specs, a recorded skip), ask before acting. This is the moment to ask "have you done X yet?" rather than guess.
-4. **Route.** Invoke the owning skill by its exact name (`launchrail:vision-creation`, `launchrail:design-validation`, `launchrail:browser-smoke`), or hand off to the upstream skill / CLI command the map names. For stage 9, explain the loop and let the user start `launchrail:ralph` themselves.
+4. **Route.** Invoke the owning skill by its exact name (`launchrail:vision-creation`, `launchrail:design-validation`, `launchrail:browser-smoke`), or hand off to the upstream skill / CLI command the map names. For stage 10, explain the loop and let the user start `launchrail:ralph` themselves.
 5. **Always leave a map.** Whatever you route to, tell the user their current stage, the next one, and that they can jump to any stage by keyword.
 
 ## Stage keywords
@@ -76,16 +79,17 @@ Accept any of these as a direct jump (case-insensitive):
 - `align` / `adopt` — the existing-project on-ramp to stage 1 (`launchrail:project-alignment`).
 - `vision` — stage 1.
 - `explore` / `design-exploration` — stage 2.
-- `grill` — stage 3.
-- `research` — stage 4.
-- `deep-research` — stages 3 → 4 as a pair.
-- `adr` / `architecture` — stage 5.
-- `spec` — stage 6.
-- `design-validation` / `validate` — stage 7.
-- `tickets` — stage 8.
-- `implement` / `ralph` — stage 9 (hand off for explicit start).
-- `verify` / `smoke` — stage 10.
-- `release` — stage 11.
+- `discovery` / `landscape` — stage 3 (`launchrail:discovery`).
+- `grill` — stage 4.
+- `research` — stage 5.
+- `deep-research` — stages 3 → 4 → 5 as a set (discovery → grill → research).
+- `adr` / `architecture` — stage 6.
+- `spec` — stage 7.
+- `design-validation` / `validate` — stage 8.
+- `tickets` — stage 9.
+- `implement` / `ralph` — stage 10 (hand off for explicit start).
+- `verify` / `smoke` — stage 11.
+- `release` — stage 12.
 - `feature` / `start-feature` — hand a single new feature to `launchrail:start-feature`, which sizes it and routes its planning path.
 
 An unrecognized keyword → show this list and ask which stage they meant.
@@ -94,7 +98,7 @@ An unrecognized keyword → show this list and ask which stage they meant.
 
 The manifest's `mode` calibrates rigor, not stage order (see [`docs/workflow.md`](../../docs/workflow.md)):
 
-- `spike` — stages 2–4 and 7 may be skipped deliberately; treat them as done when the vision's non-goals record the skip, and don't nag.
+- `spike` — stages 2–5 and 8 may be skipped deliberately; treat them as done when the vision's non-goals record the skip, and don't nag.
 - `standard-mvp` — the full path; skip nothing silently.
 - `high-rigor` — no skips; every stage-5 decision needs an ADR, and design validation covers error and edge states, not just happy paths.
 

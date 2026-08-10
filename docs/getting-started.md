@@ -96,6 +96,6 @@ npx @wemuda/launchrail eject <module|file>   # vendor mode: Launchrail never wri
 
 ## The workflow
 
-With the plugin installed, the development loop runs vision → grill → research → ADRs → spec → design validation → tickets → bounded implementation (Ralph) → verification → release. The stage contract lives in the plugin's [workflow doc](../plugins/launchrail/docs/workflow.md).
+With the plugin installed, the development loop runs vision → discovery → grill → research → ADRs → spec → design validation → tickets → bounded implementation (Ralph) → verification → release. The stage contract lives in the plugin's [workflow doc](../plugins/launchrail/docs/workflow.md).
 
 To run it, invoke the `launch` skill (`/launchrail:launch`) — it detects which stage your project has reached and routes you to the right stage skill, or jumps straight to a stage you name (e.g. `launch deep-research`). You don't have to memorize the order; `launch` finds the frontier and, when it can't tell whether a stage is done, asks.
