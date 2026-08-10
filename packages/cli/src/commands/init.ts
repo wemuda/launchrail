@@ -4,6 +4,11 @@ import { join } from "node:path";
 import * as p from "@clack/prompts";
 import { detectClaudeCli, installPlugin, WORKFLOW_PLUGINS, type WorkflowPlugin } from "../lib/claudeCli.js";
 import {
+  applyClaudeImports,
+  planClaudeImports,
+  type ClaudeImportsPlan,
+} from "../lib/claudeImports.js";
+import {
   applyPluginDeclaration,
   CLAUDE_SETTINGS_PATH,
   planPluginDeclaration,
@@ -41,6 +46,8 @@ export interface InitOutcome {
   code: number;
   actions: PlannedAction[];
   settings: SettingsPlan;
+  /** How init wired the two workflow @-imports into CLAUDE.md (relevant when the repo already had one). */
+  claudeImports: ClaudeImportsPlan;
   plugin: PluginHandoff;
 }
 
@@ -138,6 +145,12 @@ const SETTINGS_LABEL: Record<SettingsPlan["kind"], string> = {
   "skip-invalid": "conflict",
 };
 
+const CLAUDE_IMPORTS_LABEL: Record<ClaudeImportsPlan["kind"], string> = {
+  seed: "create  ",
+  ok: "ok      ",
+  merge: "update  ",
+};
+
 export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const detection = detectRepo(opts.cwd);
   // Launchrail relies on git history for safe writes — a missing repository is
@@ -152,6 +165,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     }
   }
   const settings = planPluginDeclaration(opts.cwd);
+  const claudeImports = planClaudeImports(opts.cwd);
   const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
 
   let manifest: Manifest;
@@ -160,7 +174,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     if (!parsed.manifest) {
       console.error(`launchrail: existing ${MANIFEST_FILENAME} is invalid:`);
       for (const error of parsed.errors) console.error(`  - ${error}`);
-      return { code: 1, actions: [], settings, plugin: "skipped" };
+      return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
     }
     manifest = parsed.manifest;
     console.log(`Found existing ${MANIFEST_FILENAME} — using its configuration (init is idempotent).`);
@@ -170,7 +184,18 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     manifest = defaultManifestFor(detection);
   } else {
     console.error("launchrail: non-interactive session — re-run with --yes to accept defaults.");
-    return { code: 1, actions: [], settings, plugin: "skipped" };
+    return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
+  }
+
+  // Adopting a project that already exists (not a fresh Launchrail init): make
+  // the safe-write model explicit — existing files are kept, and Launchrail
+  // wires itself in additively rather than overwriting anything.
+  const adoptingExisting =
+    !detection.hasManifest && (detection.hasAgentsMd || detection.hasClaudeMd || detection.hasPackageJson);
+  if (adoptingExisting) {
+    console.log(
+      "Adopting an existing project — your files are kept as-is; Launchrail wires itself in additively and overwrites nothing.",
+    );
   }
 
   const specs: FileSpec[] = [
@@ -181,7 +206,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const existing = readLockfile(opts.cwd);
   if (existing.error) {
     console.error(`launchrail: ${existing.error} — refusing to continue. Fix or remove the lockfile first.`);
-    return { code: 1, actions: [], settings, plugin: "skipped" };
+    return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
   }
   const lockfile = existing.lockfile ?? emptyLockfile(VERSION);
   if (!existing.lockfile) {
@@ -197,6 +222,11 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log(`  ${ACTION_LABEL[action.kind]}  ${action.spec.relPath}  (${action.detail})`);
   }
   console.log(`  ${SETTINGS_LABEL[settings.kind]}  ${CLAUDE_SETTINGS_PATH}  (${settings.detail})`);
+  // Only worth a line when a CLAUDE.md already exists; a fresh one is seeded
+  // with both imports and shows up in the file actions above.
+  if (claudeImports.kind !== "seed") {
+    console.log(`  ${CLAUDE_IMPORTS_LABEL[claudeImports.kind]}  CLAUDE.md  (${claudeImports.detail})`);
+  }
 
   if (opts.dryRun) {
     if (!detection.isGitRepo) {
@@ -213,11 +243,16 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       );
     }
     console.log("\nDry run — nothing was written.");
-    return { code: 0, actions, settings, plugin: "dry-run" };
+    return { code: 0, actions, settings, claudeImports, plugin: "dry-run" };
   }
 
   const written = applyPlan(opts.cwd, actions, lockfile);
   if (applyPluginDeclaration(opts.cwd, settings)) written.push(CLAUDE_SETTINGS_PATH);
+  // Wire the workflow imports into a pre-existing CLAUDE.md (no-op when init
+  // just seeded a fresh one, which already carries both). Additive and
+  // idempotent, mirroring the .claude/settings.json merge (ADR-0003, ADR-0012).
+  const importsWired = applyClaudeImports(opts.cwd, claudeImports);
+  if (importsWired) written.push("CLAUDE.md");
   lockfile.launchrailVersion = VERSION;
   lockfile.decisions = {
     ...lockfile.decisions,
@@ -235,6 +270,11 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       ? `\nWrote ${written.length} file(s).`
       : "\nEverything already up to date — nothing written.",
   );
+  if (importsWired) {
+    console.log(
+      `Wired the workflow imports into your existing CLAUDE.md (${claudeImports.added.join(", ")}) — your content is untouched above them.`,
+    );
+  }
   if (!detection.isGitRepo) {
     console.log("\n⚠ Not a git repository. Run `git init` before letting agents work here — Launchrail relies on git for safe writes.");
   }
@@ -293,5 +333,5 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   console.log("     installed), then vision creation, which also replaces the seeded AGENTS.md project-purpose");
   console.log("     TODO. No seeded file needs filling in by hand.");
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
-  return { code: 0, actions, settings, plugin };
+  return { code: 0, actions, settings, claudeImports, plugin };
 }

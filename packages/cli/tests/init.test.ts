@@ -53,6 +53,55 @@ describe("launchrail init", () => {
     expect(action?.kind).toBe("skip-seeded-exists");
   });
 
+  test("wires the workflow imports into an existing CLAUDE.md, preserving its content", async () => {
+    // A mid-development project already using AI almost always has a CLAUDE.md.
+    // It is never overwritten — but init must additively wire in the two
+    // @-imports, or the managed workflow instructions are orphaned.
+    writeFileSync(join(tmp.root, "CLAUDE.md"), "# My existing Claude setup\n\nAlways run the tests.\n");
+    const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(outcome.code).toBe(0);
+    expect(outcome.claudeImports.kind).toBe("merge");
+    expect(outcome.claudeImports.added).toEqual(["@AGENTS.md", "@.launchrail/CLAUDE.generated.md"]);
+    // The CLAUDE.md action itself is still a keep — the writer never overwrites it.
+    expect(outcome.actions.find((a) => a.spec.relPath === "CLAUDE.md")?.kind).toBe("skip-seeded-exists");
+    const claude = readFileSync(join(tmp.root, "CLAUDE.md"), "utf8");
+    expect(claude).toContain("@AGENTS.md");
+    expect(claude).toContain("@.launchrail/CLAUDE.generated.md");
+    expect(claude).toContain("# My existing Claude setup");
+    expect(claude).toContain("Always run the tests.");
+  });
+
+  test("adds only the missing import when CLAUDE.md already imports the contract", async () => {
+    writeFileSync(join(tmp.root, "CLAUDE.md"), "@AGENTS.md\n\n# House rules\n");
+    const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(outcome.claudeImports.added).toEqual(["@.launchrail/CLAUDE.generated.md"]);
+    const claude = readFileSync(join(tmp.root, "CLAUDE.md"), "utf8");
+    // @AGENTS.md is not duplicated.
+    expect(claude.match(/^@AGENTS\.md$/gm)).toHaveLength(1);
+    expect(claude).toContain("@.launchrail/CLAUDE.generated.md");
+    expect(claude).toContain("# House rules");
+  });
+
+  test("re-adopting is idempotent — a CLAUDE.md that already imports both is left untouched", async () => {
+    writeFileSync(
+      join(tmp.root, "CLAUDE.md"),
+      "@AGENTS.md\n@.launchrail/CLAUDE.generated.md\n\n# mine\n",
+    );
+    const first = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(first.claudeImports.kind).toBe("ok");
+    const before = readFileSync(join(tmp.root, "CLAUDE.md"), "utf8");
+    const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(second.claudeImports.kind).toBe("ok");
+    expect(readFileSync(join(tmp.root, "CLAUDE.md"), "utf8")).toBe(before);
+  });
+
+  test("dry run plans the CLAUDE.md import wiring but writes nothing", async () => {
+    writeFileSync(join(tmp.root, "CLAUDE.md"), "# mine\n");
+    const outcome = await runInit({ cwd: tmp.root, dryRun: true, yes: true });
+    expect(outcome.claudeImports.kind).toBe("merge");
+    expect(readFileSync(join(tmp.root, "CLAUDE.md"), "utf8")).toBe("# mine\n");
+  });
+
   test("dry run writes nothing", async () => {
     const outcome = await runInit({ cwd: tmp.root, dryRun: true, yes: true });
     expect(outcome.code).toBe(0);
