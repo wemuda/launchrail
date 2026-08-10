@@ -34,7 +34,7 @@ Read `.launchrail.yml` (`mode`, `modules`, `issueTracker`) and confirm setup wit
 | 0 | Setup | `npx @wemuda/launchrail init` (seeds files, installs the workflow plugins), then `/setup-matt-pocock-skills` | `.launchrail.yml` + `.launchrail-lock.json` exist and are committed; `doctor` is green; `docs/agents/` present (soft until stage 6 — see step 2) |
 | 1 | Vision | `launchrail:vision-creation` — or `launchrail:project-alignment` when `origin: existing` (see below) | `docs/vision.md` exists and is real (not the bare template) |
 | 2 | Visual exploration | Claude Design | Exploration artifacts exist and are linked from `docs/vision.md` |
-| 3 | Complexity grill | Matt Pocock `grill-with-docs` | Grill constraints committed under `docs/research/` |
+| 3 | Complexity grill | Matt Pocock `grill-with-docs` — never the bare `grilling` primitive | Grill constraints committed under `docs/research/` |
 | 4 | Technical research | Matt Pocock research skill (fed the grill constraints) | Research notes committed under `docs/research/` |
 | 5 | Architecture decisions | ADRs (`docs/adr/0000-template.md`) | `docs/adr/NNNN-*.md` exist beyond the template |
 | 6 | MVP specification | Matt Pocock `wayfinder` / `to-spec` | A spec exists under `docs/specs/` |
@@ -45,6 +45,8 @@ Read `.launchrail.yml` (`mode`, `modules`, `issueTracker`) and confirm setup wit
 | 11 | Release | The project's release setup | The release is cut |
 
 `deep-research` = stages 3 + 4 together (grill → research); the grill always runs first and feeds research.
+
+**Stage 3 is `grill-with-docs`, never the bare `grilling` primitive.** Both ship in the installed `mattpocock-skills` plugin, so the wrong one is a tab-completion away — but only `grill-with-docs` runs the domain-modeling pass that writes the `docs/research/` artifact this stage is *done when* it has. The bare `grilling` primitive produces conversation and no committed file, so the frontier never advances and stage 4 research gets no brief. `grill-with-docs` composes `grilling` under the hood, so the interview is identical either way — reaching for the primitive only loses you the artifact.
 
 **Existing projects (`origin: existing`).** Reach stage 1 through `launchrail:project-alignment`: it inventories what the codebase already has, infers a draft vision, interviews only the gaps, and detects the existing design system (a baseline for stages 2 and 7), then hands to `vision-creation` to commit and returns here for the first real gap. Everything downstream of the vision is unchanged — alignment is an on-ramp onto the same rail, not a separate track.
 
