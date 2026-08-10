@@ -7,7 +7,7 @@
     {
       "name": "launchrail",
       "source": "./plugins/launchrail",
-      "description": "The Launchrail workflow for Claude Code: one `launch` command that detects your stage and routes the whole loop — vision creation, complexity grill, technical research, design validation, bounded Ralph campaigns, browser smoke testing, and release verification."
+      "description": "The Launchrail workflow for Claude Code: one `launch` command that detects your stage and routes the whole loop — vision creation, complexity grill, technical research, design validation, the bounded Ralph loop, browser smoke testing, and release verification."
     }
   ]
 }

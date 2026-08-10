@@ -1,10 +1,10 @@
 ---
 name: ralph
-description: Orchestrate a bounded Ralph implementation campaign — dispatch fresh-context implementer subagents over the ready ticket frontier, verify every claimed merge against the remote, and gate completion on the project's verification contract. Also the supervisor's contract when the campaign runs as the ralph workflow. Only ever started explicitly by the user.
+description: Orchestrate the bounded Ralph implementation loop — dispatch fresh-context implementer subagents over the ready ticket frontier, verify every claimed merge against the remote, and gate completion on the project's verification contract. Also the supervisor's contract when the loop runs as the ralph workflow. Only ever started explicitly by the user.
 disable-model-invocation: true
 ---
 
-# Ralph — the autonomous implementation campaign
+# Ralph — the autonomous implementation loop
 
 You are the orchestrator. **You do not write code. You do not read diffs. You do not fix failing branches yourself.** You compute what's ready, dispatch, verify, and keep a running log. Tracker state and subagent reports in, decisions out.
 
@@ -14,13 +14,13 @@ This skill is the watchable, checkpointed frontend of the loop. The same loop ex
 
 ## Policies
 
-- **Width: 3** implementers at once. Width multiplies conflict rate and shared-machine load, not just throughput — use 1 until a campaign has landed tickets cleanly on this project. Cut a batch below width when its tickets would obviously collide (same module, same files); when in doubt, narrow.
+- **Width: 3** implementers at once. Width multiplies conflict rate and shared-machine load, not just throughput — use 1 until a run has landed tickets cleanly on this project. Cut a batch below width when its tickets would obviously collide (same module, same files); when in doubt, narrow.
 - **Attempts: 2** — retry a failed ticket once with a fresh context, then park it.
 - **Deferrals are not attempts.** An implementer that stops at its dependency gate (a declared blocker had not actually landed) hands the attempt back and is retried after the blocker lands — capped at 2 deferrals, then it counts as a real failure.
 - **Max rounds: 25** — a backstop, not a target; deferral rounds spend from it too. Stop and report if the frontier hasn't drained.
 - **Checkpoints: none** by default — run to completion, report once. The user may ask for a pause after each round instead.
 - **Review gate:** the implementer's own self-review via `/code-review`, inside `launchrail:ralph-implement`.
-- **Verification gate:** `npx @wemuda/launchrail verify` — per ticket before the PR, and once more on the final base before the campaign may report success.
+- **Verification gate:** `npx @wemuda/launchrail verify` — per ticket before the PR, and once more on the final base before the loop may report success.
 - **Merge ordering: optimistic, arbitrated by the remote.** Implementers re-sync immediately before merging and retry up to 3 times if the base moved. No merge locks.
 - **Labels:** tickets enter as `ready-for-agent`, are marked `ralph:building` while owned, and leave as closed or `needs-info` (parked).
 
@@ -28,7 +28,7 @@ This skill is the watchable, checkpointed frontend of the loop. The same loop ex
 
 1. `.launchrail.yml` exists with `issueTracker` not `none`, and the tracker is reachable **from this environment**: check whether the CLI the project docs assume (e.g. `gh`) is installed here; if not, identify the substitute (e.g. GitHub MCP tools) and name it in every dispatch.
 2. Open tickets labeled `ready-for-agent` exist and carry explicit `Blocked by: #n` edges (or the tracker's native blocking relations). No tickets with edges → nothing to orchestrate; point the user at `to-tickets`.
-3. The base branch exists on the remote and is green on a fresh checkout: sync it, run the install command, then `npx @wemuda/launchrail verify` — report actual exit codes, not the reassuring summary line; a broken base poisons every implementer after it. A missing base branch is a refusal, not a cue to guess another. An **empty verification contract fails `verify` and is a refusal condition**: a campaign whose completion nothing can verify must not start. Tell the user to configure `testing` commands in `.launchrail.yml` first.
+3. The base branch exists on the remote and is green on a fresh checkout: sync it, run the install command, then `npx @wemuda/launchrail verify` — report actual exit codes, not the reassuring summary line; a broken base poisons every implementer after it. A missing base branch is a refusal, not a cue to guess another. An **empty verification contract fails `verify` and is a refusal condition**: a run whose completion nothing can verify must not start. Tell the user to configure `testing` commands in `.launchrail.yml` first.
 4. The verbatim local commands are known (from `AGENTS.md` / `.launchrail.yml`), including which checks belong to CI rather than the shared local machine.
 
 ## The loop
@@ -65,11 +65,11 @@ Every dispatch — retries included — also carries these two clauses verbatim:
 - **First failure** → delete the failed branch, then re-dispatch later with a *fresh context* plus the failure summary. A failed attempt's context is assumed poisoned — never resume it.
 - **Claimed merged, remote disagrees** — including merged-but-issue-still-open — → a failure like any other; the retry adopts the merged PR (idempotency clause), finishes the bookkeeping, and settles cleanly.
 - **Second failure** → park: comment both failure summaries on the ticket, remove `ralph:building`, add `needs-info`, move on.
-- **Systemic failure** — the base breaks, the tracker becomes unreachable, or the *same* infrastructure error hits different tickets → stop the whole campaign and report; another retry won't fix it.
+- **Systemic failure** — the base breaks, the tracker becomes unreachable, or the *same* infrastructure error hits different tickets → stop the whole run and report; another retry won't fix it.
 
 ## Supervising a workflow run
 
-When the campaign runs as the `ralph` workflow instead of through this loop, you are still on the hook — the script runs headless, but a human is watching *you*, not it. Babysit the run like a deploy:
+When the Ralph loop runs as the `ralph` workflow instead of through this skill, you are still on the hook — the script runs headless, but a human is watching *you*, not it. Babysit the run like a deploy:
 
 1. **Read the resolved scope back, immediately.** The first `log()` lines state it ("Scoped to #11, #12" or "No scope — building the whole ready frontier"). An unscoped run when the user asked for three tickets is the cheapest failure to catch and the most expensive to miss — stop and relaunch if it is wrong.
 2. **Establish ground truth from the remote, never from the run's own reports.** On every check-in read the workflow journal (`journal.jsonl`) *and* the tracker/PRs. A merge is real only when the commit is on the base branch and the issue is closed.
@@ -78,11 +78,11 @@ When the campaign runs as the `ralph` workflow instead of through this loop, you
 5. **Intervene by exception, not by reflex.** Parked ticket → dispatch a fresh scoped run for just that one. Stall (an agent stops writing, CI never returns) → diagnose from the journal. Wrong scope or wrong base → stop, fix, relaunch. Otherwise stay out of the way; the loop is built to self-correct.
 6. **Report once at the end, concretely** — PR numbers, merge commits, issues closed, the verification outcome, anything punted — then disarm the check-ins.
 
-## Campaign close-out — verification-gated completion
+## Loop close-out — verification-gated completion
 
 When the frontier drains (or max rounds / a stop condition hits):
 
-1. Sync a fresh base and run `npx @wemuda/launchrail verify`. **The campaign may not report success while this fails** — report "unverified" with the failures instead.
+1. Sync a fresh base and run `npx @wemuda/launchrail verify`. **The loop may not report success while this fails** — report "unverified" with the failures instead.
 2. If `.launchrail.yml` has `modules.browser-testing: true` and any merged ticket changed user-facing behavior, dispatch one smoke run per the `launchrail:browser-smoke` skill and reference its evidence bundle (`artifacts/verification/<run-id>/`).
 3. Report the release evidence summary: merged tickets (PR and merge commit each), parked tickets with their failure histories, stuck tickets and what blocks them, follow-ups implementers punted, and the verification outcome with its evidence. Evidence over assertion — link what was run, never summarize what wasn't.
 

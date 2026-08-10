@@ -21,7 +21,7 @@ function addRalph(overrides: Partial<Parameters<typeof runAdd>[0]> = {}) {
 }
 
 describe("launchrail add ralph", () => {
-  test("writes the campaign workflow and enables the module", async () => {
+  test("writes the Ralph loop workflow and enables the module", async () => {
     const outcome = await addRalph();
     expect(outcome.code).toBe(0);
     expect(existsSync(join(tmp.root, RALPH_WORKFLOW_PATH))).toBe(true);
@@ -71,7 +71,7 @@ describe("launchrail add ralph", () => {
   test("regenerates the managed Claude instructions with a Ralph section", async () => {
     await addRalph();
     const generated = readFileSync(join(tmp.root, ".launchrail/CLAUDE.generated.md"), "utf8");
-    expect(generated).toContain("## Ralph campaigns");
+    expect(generated).toContain("## The Ralph loop");
     expect(generated).toContain(RALPH_WORKFLOW_PATH);
   });
 
@@ -133,7 +133,7 @@ describe("launchrail add ralph", () => {
     await addRalph();
     const generated = readFileSync(join(tmp.root, ".launchrail/CLAUDE.generated.md"), "utf8");
     expect(generated).toContain("## Browser testing");
-    expect(generated).toContain("## Ralph campaigns");
+    expect(generated).toContain("## The Ralph loop");
     const parsed = parseManifest(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8"));
     expect(parsed.manifest?.modules["browser-testing"]).toBe(true);
     expect(parsed.manifest?.modules.ralph).toBe(true);

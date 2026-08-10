@@ -25,7 +25,17 @@ Invoke the `launch` skill (or just say where you are and ask what's next). It de
 | 7 | Design validation | Launchrail `design-validation` skill | Spec + Claude Design | Revised spec with `## Design validation` section |
 | 8 | Tickets | Matt Pocock's `to-tickets` | Validated spec | Tickets in the project's tracker |
 
-After stage 8, bounded implementation is a Ralph campaign: `launchrail add ralph` installs it, and the `ralph` skill (watchable) or the `ralph` workflow (wide/long runs) drives the tickets to verified merges — gated by `launchrail verify` and, where the browser-testing module is enabled, browser smoke evidence. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up `to-tickets` output if it lacks them.
+After stage 8, bounded implementation is the Ralph loop: `launchrail add ralph` installs it, and the `ralph` skill (watchable) or the `ralph` workflow (wide/long runs) drives the tickets to verified merges — gated by `launchrail verify` and, where the browser-testing module is enabled, browser smoke evidence. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up `to-tickets` output if it lacks them.
+
+## Sizing the work in the delivery loop
+
+The stages above take a fresh project to its first release. After that, the delivery loop repeats once per feature, and its planning front-end scales with the feature's size instead of always producing a full MVP spec:
+
+- **Large feature** — `wayfinder` to break it down, a complexity grill, `to-spec`, design validation, then `to-tickets`.
+- **Semi feature** — a grill, `to-spec`, optionally design validation, then `to-tickets`.
+- **Small feature** — a grill straight to `to-tickets`.
+
+Every size ends the same way: the Ralph loop implements and verifies the resulting tickets. Sizing changes *how many* planning stages a feature needs, never *who owns* them — the stage table above is still the contract.
 
 ## Adopting an existing project
 

@@ -32,27 +32,28 @@ This repository is the Launchrail **toolchain**: the CLI, Claude Code plugin, te
 
 ## How it works
 
-Launchrail structures development as two movements. The **foundation** runs once per project: it turns an idea into hard constraints and recorded decisions. Then the **delivery loop** takes over — spec a slice, validate it, break it into tickets, implement, verify, and go around again for the next slice of the platform. Every stage leaves a committed artifact behind, and the next stage starts from that artifact, not from chat memory. The `launch` skill is the single entry point: it reads the committed artifacts, detects where the project is, and routes to the stage's owner.
+Launchrail structures development as two movements. The **foundation** runs once per project: it turns an idea into hard constraints and recorded decisions. Then the **delivery loop** takes over — once per feature: size the work and plan it only as deeply as it needs (a small change goes straight from a grill to tickets; a larger one adds `wayfinder`, a spec, and design validation first), then hand the tickets to the **Ralph loop** to implement and verify before going around again for the next feature. Every stage leaves a committed artifact behind, and the next stage starts from that artifact, not from chat memory. The `launch` skill is the single entry point: it reads the committed artifacts, detects where the project is, and routes to the stage's owner.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph foundation ["Foundation — once per project"]
-        direction TB
-        V(["Vision"]) --> X["Visual exploration"]
-        X --> G["Complexity grill"]
-        G --> R["Technical research"]
-        R --> A["Architecture decisions"]
+        direction LR
+        V(["Vision"]) --> X["Visual exploration"] --> G["Complexity grill"] --> R["Technical research"] --> A["Architecture decisions"]
     end
 
-    A --> S
+    A ==>|"project ready"| P
 
-    subgraph loop ["Delivery loop — once per slice"]
+    subgraph loop ["Delivery loop — once per feature"]
         direction TB
-        S["MVP specification"] --> D["Design validation"]
-        D --> T["Tickets"]
-        T --> I["Bounded implementation — Ralph campaign"]
-        I --> VF["Verification — launchrail verify + browser smoke"]
-        VF -.->|"next slice"| S
+        P{"Plan — size the feature"}
+        P -->|large| BL["wayfinder → grill → spec → validate design → tickets"]
+        P -->|semi| BS["grill → spec → validate design (optional) → tickets"]
+        P -->|small| BM["grill → tickets"]
+        BL --> RL["Ralph loop — implement · verify · merge, per ticket"]
+        BS --> RL
+        BM --> RL
+        RL --> VF["Verification — launchrail verify + browser smoke"]
+        VF -.->|"next feature"| P
     end
 ```
 
@@ -75,7 +76,7 @@ From there, the day-to-day driver is not the CLI — it's the **`launch` skill**
 - **`project-alignment`** — the on-ramp for an existing codebase: infer a vision from the code, interview only the gaps, inventory the design system, then join the loop
 - **`vision-creation`** and **`design-validation`** — the Launchrail-owned stages of the pipeline
 - **`browser-smoke`** — drives a real browser journey and leaves a traceable evidence bundle (with the browser-testing module)
-- **`ralph`**, **`ralph-implement`**, **`resolving-merge-conflicts`** — the verification-gated implementation campaign (with the ralph module)
+- **`ralph`**, **`ralph-implement`**, **`resolving-merge-conflicts`** — the verification-gated implementation loop (with the ralph module)
 
 The CLI is the maintenance surface you return to between sessions:
 
@@ -138,7 +139,7 @@ pnpm --filter @wemuda/launchrail exec launchrail --help
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. All six phases — `init` + `doctor`, the core workflow plugin, browser testing, Ralph orchestration, the sync engine, and open-source readiness — are implemented and covered by 164 tests. The first real Ralph campaigns have run against a Wemuda project, and their lessons are folded back into the toolchain (ADR-0010). What stands between here and a first release: the dogfood case study on a real project and flipping on the npm publish.
+See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. All six phases — `init` + `doctor`, the core workflow plugin, browser testing, Ralph orchestration, the sync engine, and open-source readiness — are implemented and covered by 164 tests. The Ralph loop has run for real against a Wemuda project, and its lessons are folded back into the toolchain (ADR-0010). What stands between here and a first release: the dogfood case study on a real project and flipping on the npm publish.
 
 ## Contributing
 
