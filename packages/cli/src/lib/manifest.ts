@@ -5,6 +5,14 @@ export const MANIFEST_FILENAME = ".launchrail.yml";
 export const MODES = ["spike", "standard-mvp", "high-rigor"] as const;
 export type Mode = (typeof MODES)[number];
 
+/**
+ * Whether the repository is a greenfield start or a codebase being adopted.
+ * `existing` sends `launch` down the alignment on-ramp — infer artifacts from
+ * the code and fill gaps — instead of the from-scratch vision flow (ADR-0013).
+ */
+export const ORIGINS = ["new", "existing"] as const;
+export type Origin = (typeof ORIGINS)[number];
+
 export const ISSUE_TRACKERS = ["github", "linear", "none"] as const;
 export type IssueTracker = (typeof ISSUE_TRACKERS)[number];
 
@@ -14,6 +22,7 @@ export type TestingKey = (typeof TESTING_KEYS)[number];
 export interface Manifest {
   schemaVersion: 1;
   mode: Mode;
+  origin: Origin;
   issueTracker: IssueTracker;
   conventions: {
     conventionalCommits: boolean;
@@ -46,6 +55,17 @@ export function validateManifest(data: unknown): ManifestParseResult {
   }
   if (typeof data.mode !== "string" || !(MODES as readonly string[]).includes(data.mode)) {
     errors.push(`mode must be one of: ${MODES.join(", ")}`);
+  }
+
+  // Optional with a default so manifests written before `origin` existed stay
+  // valid; an explicit but unknown value is still an error.
+  let origin: Origin = "new";
+  if (data.origin !== undefined) {
+    if (typeof data.origin === "string" && (ORIGINS as readonly string[]).includes(data.origin)) {
+      origin = data.origin as Origin;
+    } else {
+      errors.push(`origin must be one of: ${ORIGINS.join(", ")}`);
+    }
   }
 
   let issueTracker: IssueTracker = "none";
@@ -100,6 +120,7 @@ export function validateManifest(data: unknown): ManifestParseResult {
     manifest: {
       schemaVersion: 1,
       mode: data.mode as Mode,
+      origin,
       issueTracker,
       conventions: { conventionalCommits },
       testing,

@@ -25,6 +25,8 @@ export interface RepoDetection {
   hasManifest: boolean;
   /** docs/agents/ is the output location of Matt Pocock's /setup-matt-pocock-skills. */
   hasMattPocockSetup: boolean;
+  /** The repo already carries real work (source manifest or agent files) — default the interview to the `existing` origin. */
+  looksEstablished: boolean;
 }
 
 function git(root: string, args: string[]): string | null {
@@ -111,5 +113,11 @@ export function detectRepo(root: string): RepoDetection {
     hasClaudeMd: existsSync(join(root, "CLAUDE.md")),
     hasManifest: existsSync(join(root, MANIFEST_FILENAME)),
     hasMattPocockSetup: existsSync(join(root, "docs", "agents")),
+    // A package.json or pre-existing agent files mean there is already a
+    // project here to adopt, not a blank slate to start from.
+    looksEstablished:
+      hasPackageJson ||
+      existsSync(join(root, "AGENTS.md")) ||
+      existsSync(join(root, "CLAUDE.md")),
   };
 }

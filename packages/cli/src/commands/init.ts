@@ -20,12 +20,12 @@ import { migrationIds } from "../lib/migrations.js";
 import {
   ISSUE_TRACKERS,
   MANIFEST_FILENAME,
-  MODES,
   parseManifest,
   serializeManifest,
   type IssueTracker,
   type Manifest,
   type Mode,
+  type Origin,
 } from "../lib/manifest.js";
 import { seedFiles } from "../lib/seeds.js";
 import { ACTION_LABEL, applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
@@ -70,6 +70,7 @@ function defaultManifestFor(detection: RepoDetection): Manifest {
   return {
     schemaVersion: 1,
     mode: "standard-mvp",
+    origin: detection.looksEstablished ? "existing" : "new",
     issueTracker: detection.gitRemoteUrl?.includes("github.com") ? "github" : "none",
     conventions: {
       conventionalCommits:
@@ -89,6 +90,19 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
 
   const answers = await p.group(
     {
+      origin: () =>
+        p.select({
+          message: "New project, or an existing one you're adopting?",
+          initialValue: defaults.origin as string,
+          options: [
+            { value: "new", label: "New project", hint: "start the full vision → spec → build loop" },
+            {
+              value: "existing",
+              label: "Existing project",
+              hint: "adopt code you already have; launch aligns it to Launchrail's artifacts",
+            },
+          ],
+        }),
       mode: () =>
         p.select({
           message: "Project mode",
@@ -128,6 +142,7 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
   return {
     schemaVersion: 1,
     mode: answers.mode as Mode,
+    origin: answers.origin as Origin,
     issueTracker: answers.issueTracker as IssueTracker,
     conventions: { conventionalCommits: answers.conventionalCommits },
     testing: {
@@ -257,6 +272,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   lockfile.decisions = {
     ...lockfile.decisions,
     mode: manifest.mode,
+    origin: manifest.origin,
     issueTracker: manifest.issueTracker,
     conventionalCommits: manifest.conventions.conventionalCommits,
     unitCommand: manifest.testing.unitCommand,
@@ -329,9 +345,16 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("      Claude Code offers them by itself the first time this folder is trusted.)");
   }
   console.log("  3. Run /launchrail:launch — it detects the project's stage and drives the workflow from there.");
-  console.log("     On a fresh project that means running /setup-matt-pocock-skills (the skills are already");
-  console.log("     installed), then vision creation, which also replaces the seeded AGENTS.md project-purpose");
-  console.log("     TODO. No seeded file needs filling in by hand.");
+  if (manifest.origin === "existing") {
+    console.log("     For an existing project it starts by aligning your code with Launchrail's artifacts:");
+    console.log("     it infers a vision from what you already have, asks about the gaps, and inventories your");
+    console.log("     design system — rather than starting from a blank vision. Run /setup-matt-pocock-skills");
+    console.log("     first (the skills are already installed).");
+  } else {
+    console.log("     On a fresh project that means running /setup-matt-pocock-skills (the skills are already");
+    console.log("     installed), then vision creation, which also replaces the seeded AGENTS.md project-purpose");
+    console.log("     TODO. No seeded file needs filling in by hand.");
+  }
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
   return { code: 0, actions, settings, claudeImports, plugin };
 }

@@ -123,6 +123,37 @@ describe("launchrail init", () => {
     expect(lock.decisions.mode).toBe("spike");
   });
 
+  test("defaults a blank repo to the 'new' origin", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8")).toContain("origin: new");
+    const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
+    expect(lock.decisions.origin).toBe("new");
+  });
+
+  test("defaults a repo that already has code to the 'existing' origin", async () => {
+    // A package.json means there is already a project here to adopt.
+    writeFileSync(join(tmp.root, "package.json"), '{ "name": "my-app" }\n');
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8")).toContain("origin: existing");
+    const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
+    expect(lock.decisions.origin).toBe("existing");
+  });
+
+  test("the handoff points an existing project at the alignment on-ramp", async () => {
+    writeFileSync(join(tmp.root, "package.json"), '{ "name": "my-app" }\n');
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((...args) => {
+      lines.push(args.join(" "));
+    });
+    try {
+      await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    } finally {
+      spy.mockRestore();
+    }
+    const output = lines.join("\n");
+    expect(output).toContain("aligning your code with Launchrail's artifacts");
+  });
+
   test("ends with the Claude Code handoff (plugin approval + /launchrail:launch)", async () => {
     const lines: string[] = [];
     const spy = vi.spyOn(console, "log").mockImplementation((...args) => {
