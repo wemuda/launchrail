@@ -34,27 +34,9 @@ This repository is the Launchrail **toolchain**: the CLI, Claude Code plugin, te
 
 Launchrail structures development as two movements. The **foundation** runs once per project: it turns an idea into hard constraints and recorded decisions. Then the **delivery loop** takes over — spec a slice, validate it, break it into tickets, implement, verify, and go around again for the next slice of the platform. Every stage leaves a committed artifact behind, and the next stage starts from that artifact, not from chat memory. The `launch` skill is the single entry point: it reads the committed artifacts, detects where the project is, and routes to the stage's owner.
 
-```mermaid
-flowchart LR
-    subgraph foundation ["Foundation — once per project"]
-        direction TB
-        V(["Vision"]) --> X["Visual exploration"]
-        X --> G["Complexity grill"]
-        G --> R["Technical research"]
-        R --> A["Architecture decisions"]
-    end
-
-    A --> S
-
-    subgraph loop ["Delivery loop — once per slice"]
-        direction TB
-        S["MVP specification"] --> D["Design validation"]
-        D --> T["Tickets"]
-        T --> I["Bounded implementation — Ralph campaign"]
-        I --> VF["Verification — launchrail verify + browser smoke"]
-        VF -.->|"next slice"| S
-    end
-```
+<p align="center">
+  <img src="assets/how-launchrail-works.png" alt="How Launchrail works — the foundation runs once per project (Vision → Visual exploration → Complexity grill → Technical research → Architecture decisions); the delivery loop then repeats once per slice (Specify features into tickets → Ralph loop → Verification) before looping back for the next slice." width="880" />
+</p>
 
 Several stages run directly on [Matt Pocock's skills](https://github.com/mattpocock/skills) — see [Credits](#credits). The full stage contract — inputs, artifacts, composition rules, and per-mode rigor — lives in [the workflow doc](plugins/launchrail/docs/workflow.md).
 
