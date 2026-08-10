@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.5.0](https://github.com/wemuda/launchrail/compare/v1.4.0...v1.5.0) (2026-08-10)
+
+
+### Features
+
+* adopt existing projects via an origin flag and the project-alignment on-ramp ([983401f](https://github.com/wemuda/launchrail/commit/983401fdb95ac914ad718bfabc49fa63f26a1eab))
+* **cli:** init updates already-installed plugins instead of leaving them stale ([4c545fd](https://github.com/wemuda/launchrail/commit/4c545fd56d2332f0e394294782b445a749182c92))
+* **cli:** make init aware of adopting an existing project ([9673882](https://github.com/wemuda/launchrail/commit/96738823ed56b2513310826379026218aabd60bf))
+* launch orientation, seeded operating principles, optional browser MCP ([e2e97c7](https://github.com/wemuda/launchrail/commit/e2e97c75571f2ca9c9ea344ded47de8a1e321055))
+* launch orientation, seeded operating principles, optional browser MCP ([b7af7eb](https://github.com/wemuda/launchrail/commit/b7af7eb7367cdb5aee93e39c1c8e9fcb94341ce9))
+
+
+### Bug Fixes
+
+* **cli:** ship the README with the npm package ([435b404](https://github.com/wemuda/launchrail/commit/435b40409bf4bd49e47c8c628587b48ef0c810c6))
+* **plugin:** a missing docs/agents/ never blocks the vision or forces a sequencing question ([8ff7abf](https://github.com/wemuda/launchrail/commit/8ff7abf67405f3d703f6ca7946bd2e15fa202914))
+
 ## [1.4.0](https://github.com/wemuda/launchrail/compare/v1.3.0...v1.4.0) (2026-08-05)
 
 
