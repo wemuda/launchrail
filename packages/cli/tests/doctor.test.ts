@@ -54,6 +54,21 @@ describe("launchrail doctor", () => {
     expect(check?.status).toBe("warn");
   });
 
+  test("warns when CLAUDE.md imports the contract but not the workflow instructions", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    // The silent failure: contract imported, but the managed workflow file is orphaned.
+    writeFileSync(join(tmp.root, "CLAUDE.md"), "@AGENTS.md\n\n# mine\n");
+    const check = runDoctor(tmp.root).checks.find((c) => c.name === "CLAUDE.md");
+    expect(check?.status).toBe("warn");
+    expect(check?.message).toContain("@.launchrail/CLAUDE.generated.md");
+  });
+
+  test("passes the CLAUDE.md check after a normal init (both imports present)", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    const check = runDoctor(tmp.root).checks.find((c) => c.name === "CLAUDE.md");
+    expect(check?.status).toBe("pass");
+  });
+
   test("passes the plugin declaration check after init, warns without it", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(runDoctor(tmp.root).checks.find((c) => c.name === "plugin declaration")?.status).toBe("pass");

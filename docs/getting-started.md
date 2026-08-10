@@ -47,6 +47,12 @@ Finally, when the `claude` CLI is on your `PATH`, `init` **installs every Claude
 
 Re-running `init` is idempotent — it reports "everything already up to date" rather than duplicating or clobbering. See [examples/hello-launchrail](../examples/hello-launchrail) for a committed, unedited example of the result.
 
+### Adopting an existing project
+
+Running `init` inside a mid-development project that already uses AI works the same way, and nothing you own is overwritten. Your `AGENTS.md` and `CLAUDE.md` are kept as-is (`keep` in the plan). The one thing `init` does add is linkage: if you already have a `CLAUDE.md`, it **additively prepends the two workflow imports** — `@AGENTS.md` and `@.launchrail/CLAUDE.generated.md` — to the top of your file, leaving the rest byte-for-byte ([ADR-0012](adr/0012-init-wires-imports-into-existing-claude-md.md)). Without them, the managed workflow instructions Launchrail writes to `.launchrail/CLAUDE.generated.md` would sit on disk unread. The merge is idempotent (an import already present is never duplicated), so a project onboarded before this behavior existed is brought current by simply re-running `init`, and `doctor` warns if either import is missing.
+
+The interview also asks whether this is a **new or existing project** and records the answer as `origin` in `.launchrail.yml` — it defaults to `existing` when it detects a `package.json` or existing agent files. That answer changes how the workflow starts: for an existing project, `/launchrail:launch` takes the **alignment on-ramp** ([ADR-0013](adr/0013-existing-project-alignment.md)) instead of a blank vision. The `project-alignment` skill inventories what your codebase already has, infers a draft vision from the code, interviews you only about the gaps (the real target user, the bet, the success signal), and detects your existing design system as the baseline for later design stages — then hands to `vision-creation` to commit and routes you to the first real gap. Everything after the vision is the same loop; alignment just gets an adopted project onto the rail without re-asking what the code already answers.
+
 Then validate and commit:
 
 ```bash
