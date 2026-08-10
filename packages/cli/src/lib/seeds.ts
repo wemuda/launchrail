@@ -81,7 +81,7 @@ function claudeGeneratedMd(ctx: SeedContext): string {
 
   const ralph = ctx.manifest.modules.ralph
     ? `
-## Ralph campaigns
+## The Ralph loop
 
 - Bounded implementation runs through the Ralph loop: the \`launchrail:ralph\` skill (watchable, checkpointed) or the \`ralph\` workflow in \`.claude/workflows/ralph.js\` (wide or long runs). Both are only ever started explicitly by the user.
 - Tickets enter the loop with the \`ready-for-agent\` label and explicit \`Blocked by: #n\` edges; parked tickets carry \`needs-info\` plus their failure history.

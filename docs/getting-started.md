@@ -75,7 +75,7 @@ Teammates don't need the CLI at all: the committed `.claude/settings.json` makes
 
 ```bash
 npx @wemuda/launchrail add browser-testing   # Playwright baseline + smoke-journey contract (ADR-0004)
-npx @wemuda/launchrail add ralph             # bounded autonomous implementation campaigns (ADR-0005)
+npx @wemuda/launchrail add ralph             # the bounded autonomous Ralph implementation loop (ADR-0005)
 ```
 
 Both update the manifest (preserving your comments), seed or manage their files, and extend the generated Claude instructions. `verify` runs the deterministic gate; `smoke` scaffolds an evidence bundle for an agentic browser-smoke run.

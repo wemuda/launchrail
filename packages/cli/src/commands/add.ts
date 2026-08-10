@@ -152,7 +152,7 @@ function planRalph(parsed: Manifest): ModulePlan {
     nextSteps: [
       "Create the tracker labels Ralph uses: ready-for-agent, ralph:building, needs-info.",
       "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (Matt Pocock's to-tickets, stage 8 of the workflow).",
-      "Run a campaign: the launchrail:ralph skill (watchable) or the `ralph` workflow (wide or long runs; scope with args, e.g. { width: 1 }).",
+      "Run the loop: the launchrail:ralph skill (watchable) or the `ralph` workflow (wide or long runs; scope with args, e.g. { width: 1 }).",
       "Start with width 1 until a few tickets have landed cleanly, then widen.",
     ],
   };
@@ -254,7 +254,7 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
   console.log("\nNext steps:");
   plan.nextSteps.forEach((step, i) => console.log(`  ${i + 1}. ${step}`));
   if (opts.module === RALPH_MODULE) {
-    console.log(`\nThe campaign workflow lives at ${RALPH_WORKFLOW_PATH} (managed — do not hand-edit).`);
+    console.log(`\nThe Ralph loop workflow lives at ${RALPH_WORKFLOW_PATH} (managed — do not hand-edit).`);
   }
   return { code: 0, actions };
 }

@@ -1,16 +1,16 @@
 // Managed by Launchrail. Do not hand-edit — `launchrail sync` may replace this file.
 // Override policy per run via args instead, e.g. { width: 1, only: [9, 10] }.
 //
-// The Ralph campaign as a deterministic workflow: the plan, the frontier bookkeeping,
+// The Ralph loop as a deterministic workflow: the plan, the frontier bookkeeping,
 // and every intermediate report live in script variables — not in any context window —
 // so long or wide runs cannot compact away their own state. The watchable, checkpointed
 // variant of the same loop is the launchrail:ralph skill; the two share one policy block,
 // and a policy change belongs in both places (ADR-0005, field-revised by ADR-0010).
 export const meta = {
   name: 'ralph',
-  description: 'Autonomous Ralph campaign: implement ready tickets with fresh-context subagents, verification-gated',
+  description: 'Autonomous Ralph loop: implement ready tickets with fresh-context subagents, verification-gated',
   whenToUse:
-    'Run a Ralph implementation campaign over the ticket backlog when the dependency graph is wide or the run is long. Scope a run via args: { only: [9, 10], width: 2 } or just [9, 10]. For a watchable, checkpointed run (or when something is already going wrong), use the launchrail:ralph skill instead.',
+    'Run the Ralph implementation loop over the ticket backlog when the dependency graph is wide or the run is long. Scope a run via args: { only: [9, 10], width: 2 } or just [9, 10]. For a watchable, checkpointed run (or when something is already going wrong), use the launchrail:ralph skill instead.',
   phases: [
     { title: 'Preflight', detail: 'read project config, sync the base, run the verification gate' },
     { title: 'Graph', detail: 'list ready tickets and their blocking edges, verbatim' },
@@ -48,7 +48,7 @@ const POLICY = {
   only: A.only ?? [],
   // Parallel implementers. Width also caps local build concurrency — several implementers
   // share one machine, and fanning out test runs buys backpressure, not speed. Use 1 until
-  // a campaign has landed tickets cleanly on this project.
+  // a run has landed tickets cleanly on this project.
   width: A.width ?? 3,
   // Tries per ticket: 1 attempt + 1 retry with a fresh context, then park. Deferrals
   // (a declared blocker had not landed yet) hand their attempt back, capped separately.
@@ -229,7 +229,7 @@ Check, against the remote: (1) the PR exists and is merged; (2) its merge commit
 Report merged: true only when (1) and (2) both hold. A PR description or comment is NOT evidence — only API state counts. Do not run local git, do not use a shell. Fix nothing, close nothing; report only.`
 }
 
-const graphPrompt = (pre) => `List the open, ready tickets for a Ralph campaign. Change nothing on the tracker.
+const graphPrompt = (pre) => `List the open, ready tickets for a Ralph loop run. Change nothing on the tracker.
 Tracker access: ${pre.trackerAccess}
 Include every open ticket labeled ready-for-agent, excluding any labeled needs-info.
 For each, report its number, its exact title, and its "Blocked by" line copied VERBATIM (the whole line, e.g. "**Blocked by:** #11, #9"), or "" when it has none. If the tracker records blocking through native relations instead of a body line, render those relations as one "Blocked by: #n, #m" line and nothing else.
@@ -344,7 +344,7 @@ function frontier(tickets, closedBefore) {
 // ---------------------------------------------------------------------------
 phase('Preflight')
 const pre = await agent(
-  `Preflight for a Ralph campaign in this repository. Fix nothing; report actual state.
+  `Preflight for a Ralph loop run in this repository. Fix nothing; report actual state.
 1. Read .launchrail.yml (issueTracker, testing commands, modules) and AGENTS.md (verbatim commands).
 2. Identify the repo (git remote) and the default/base branch; sync it fresh (clean tree). If the base branch does not exist on the remote, report not green and say the base is missing — do not guess another branch.
 3. Determine how the tracker is reachable from THIS environment: check whether the CLI the project docs assume (e.g. gh) is installed; if not, name the concrete substitute available here (e.g. GitHub MCP tools) as an instruction future agents can follow.
@@ -354,7 +354,7 @@ green means: base synced AND the verification gate exited 0.`,
 )
 if (!pre) throw new Error('preflight agent died — refusing to start')
 if (!pre.green) {
-  // A broken base poisons every implementer after it; a campaign that starts red
+  // A broken base poisons every implementer after it; a run that starts red
   // can only end with unverifiable results.
   return { refused: true, reason: 'preflight not green', failures: pre.failures }
 }
@@ -399,7 +399,7 @@ while (rounds < POLICY.maxRounds) {
     log(`#${r.ticket.number} deferred (blocker not landed yet): ${r.why}`)
   }
   if (results.every((r) => !r || r.dead)) {
-    log('every agent in the round died — infrastructure, not tickets; stopping the campaign')
+    log('every agent in the round died — infrastructure, not tickets; stopping the run')
     break
   }
   for (const t of batch) {
@@ -445,11 +445,11 @@ ${parked.map((s) => `#${s.ticket.number} (${s.ticket.title}): ${s.failures.join(
   )
 }
 
-// The completion contract: the campaign cannot declare success while required
+// The completion contract: the loop cannot declare success while required
 // verification fails on the final, post-merge base.
 phase('Release')
 const release = await agent(
-  `Release verification for a finished Ralph campaign. Fix nothing.
+  `Release verification for a finished Ralph loop run. Fix nothing.
 1. Sync a fresh ${pre.base} and record its head sha.
 2. Run the verification gate: npx @wemuda/launchrail verify. Report the actual exit code.
 ${
