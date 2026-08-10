@@ -17,7 +17,7 @@ Drive the real application through its user journeys in a browser and record evi
 
 1. **Collect the journeys.** Read `docs/testing/smoke-journeys.md` (sections headed `## Journey:`) plus any journeys defined in the ticket or spec under verification. Each journey has a start point, steps, and verify checks.
 2. **Scaffold the evidence bundle.** Run `npx @wemuda/launchrail smoke` (add `--url <url>` for a preview environment). It confirms the app responds and creates `artifacts/verification/<run-id>/` containing `meta.json`, a `summary.md` skeleton, and `screenshots/` + `traces/` directories. If it reports the app unreachable, start the app — do not skip the journey.
-3. **Drive each journey in a real browser** — Playwright MCP, browser tools, or a Playwright script, whichever is available. Follow the steps as a user would: click, type, navigate. Try realistic variations and obvious edge cases, and watch the console and network panel as you go.
+3. **Drive each journey in a real browser** — Playwright MCP, browser tools, or a Playwright script, whichever is available. The browser-testing module seeds a Playwright MCP server (`.mcp.json`); approve it once in Claude Code to drive the browser interactively, or fall back to a Playwright script in headless CI. Follow the steps as a user would: click, type, navigate. Try realistic variations and obvious edge cases, and watch the console and network panel as you go.
 4. **Capture evidence while testing, not afterwards:**
    - Screenshots of each key state → `screenshots/`
    - Console errors and warnings → `console.log`
