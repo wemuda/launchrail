@@ -23,6 +23,7 @@ Two ways in:
 - **Respect ownership and mode.** The workflow artifacts (vision, research, ADRs, spec, tickets) are project-owned; the stage skills already honor that. The manifest's `mode` decides which stages may be skipped — read it before insisting on one.
 - **Existing projects take the alignment on-ramp.** When `.launchrail.yml` says `origin: existing` and there is no real vision yet, stage 1 is owned by `launchrail:project-alignment`, not `vision-creation` directly. A mid-development codebase already answers much of the vision — alignment infers a draft from the code, interviews only the gaps, and inventories the existing design system before handing to `vision-creation` to commit. Don't start an adopted project from a blank vision, and don't re-ask what the repository already states.
 - **Never start Ralph unprompted.** The implementation loop (`launchrail:ralph`) is user-invoked only. Route the user to it and explain; do not launch it yourself.
+- **The next feature has its own conductor.** Once the foundation exists and the project is delivering feature by feature, `launchrail:start-feature` sizes a single feature (large / semi / small) and routes its planning path (ADR-0014). `launch` still drives the frontier per feature; hand to `start-feature` when the user is explicitly starting one new feature and wants the sizing made up front.
 
 ## The stage map
 
@@ -83,6 +84,7 @@ Accept any of these as a direct jump (case-insensitive):
 - `implement` / `ralph` — stage 9 (hand off for explicit start).
 - `verify` / `smoke` — stage 10.
 - `release` — stage 11.
+- `feature` / `start-feature` — hand a single new feature to `launchrail:start-feature`, which sizes it and routes its planning path.
 
 An unrecognized keyword → show this list and ask which stage they meant.
 

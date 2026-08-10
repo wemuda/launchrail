@@ -35,7 +35,7 @@ The stages above take a fresh project to its first release. After that, the deli
 - **Semi feature** — a grill, `to-spec`, optionally design validation, then `to-tickets`.
 - **Small feature** — a grill straight to `to-tickets`.
 
-Every size ends the same way: the Ralph loop implements and verifies the resulting tickets. Sizing changes *how many* planning stages a feature needs, never *who owns* them — the stage table above is still the contract.
+Every size ends the same way: the Ralph loop implements and verifies the resulting tickets. Sizing changes *how many* planning stages a feature needs, never *who owns* them — the stage table above is still the contract. The `launchrail:start-feature` skill conducts exactly this: it sizes a feature and routes it through the matching path, composing the same owners ([ADR-0014](../../../docs/adr/0014-start-feature-conductor.md)).
 
 ## Adopting an existing project
 
