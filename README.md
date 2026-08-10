@@ -34,28 +34,9 @@ This repository is the Launchrail **toolchain**: the CLI, Claude Code plugin, te
 
 Launchrail structures development as two movements. The **foundation** runs once per project: it turns an idea into hard constraints and recorded decisions. Then the **delivery loop** takes over — once per feature: size the work and plan it only as deeply as it needs (a small change goes straight from a grill to tickets; a larger one adds `wayfinder`, a spec, and design validation first), then hand the tickets to the **Ralph loop** to implement and verify before going around again for the next feature. Every stage leaves a committed artifact behind, and the next stage starts from that artifact, not from chat memory. The `launch` skill is the single entry point: it reads the committed artifacts, detects where the project is, and routes to the stage's owner.
 
-```mermaid
-flowchart TB
-    subgraph foundation ["Foundation — once per project"]
-        direction LR
-        V(["Vision"]) --> X["Visual exploration"] --> G["Complexity grill"] --> R["Technical research"] --> A["Architecture decisions"]
-    end
-
-    A ==>|"project ready"| P
-
-    subgraph loop ["Delivery loop — once per feature"]
-        direction TB
-        P{"Plan — size the feature"}
-        P -->|large| BL["wayfinder → grill → spec → validate design → tickets"]
-        P -->|semi| BS["grill → spec → validate design (optional) → tickets"]
-        P -->|small| BM["grill → tickets"]
-        BL --> RL["Ralph loop — implement · verify · merge, per ticket"]
-        BS --> RL
-        BM --> RL
-        RL --> VF["Verification — launchrail verify + browser smoke"]
-        VF -.->|"next feature"| P
-    end
-```
+<p align="center">
+  <img src="assets/how-launchrail-works.png" alt="How Launchrail works — the foundation runs once per project (Vision → Visual exploration → Complexity grill → Technical research → Architecture decisions); the delivery loop then repeats once per slice (Specify features into tickets → Ralph loop → Verification) before looping back for the next slice." width="880" />
+</p>
 
 Several stages run directly on [Matt Pocock's skills](https://github.com/mattpocock/skills) — see [Credits](#credits). The full stage contract — inputs, artifacts, composition rules, and per-mode rigor — lives in [the workflow doc](plugins/launchrail/docs/workflow.md).
 
