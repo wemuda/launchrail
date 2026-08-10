@@ -41,6 +41,7 @@ ${commands}
 ${commitSection}
 ## Workflow rules
 
+- Ask, don't guess. On product decisions, data-model or schema changes, security-relevant behaviour, or anything genuinely ambiguous, stop and ask rather than guessing — a wrong guess on these costs more than the question.
 - Do not silently change scope; surface deviations from the spec or ADRs.
 - If implementation invalidates an artifact (vision, spec, ADR, design note), update that artifact in the same change.
 - Meaningful decisions become lightweight ADRs in \`docs/adr/\` using [docs/adr/0000-template.md](docs/adr/0000-template.md).
@@ -49,6 +50,8 @@ ${commitSection}
 
 - The change matches the relevant spec or ADR, or updates it.
 - Deterministic checks pass${manifest.testing.unitCommand ? ` (\`${manifest.testing.unitCommand}\`)` : ""}.
+- Behaviour-bearing changes are proven in the running app, not only by green unit tests — capability is not the same as done.
+- Report honest status: say what you verified and to what depth; never imply complete when it is not.
 - Evidence over assertion: "done" requires passing checks, not agent say-so.
 `;
 }
@@ -70,6 +73,7 @@ function claudeGeneratedMd(ctx: SeedContext): string {
 
 - User-facing changes are verified twice: deterministic checks (\`node scripts/verify.mjs\`) and agentic smoke journeys from \`docs/testing/smoke-journeys.md\` (browser-smoke skill).
 - Start the app with \`node scripts/dev.mjs\` (\`--background\` in cloud or CI sessions); prepare an evidence bundle with \`npx @wemuda/launchrail smoke\`.
+- Drive journeys agentically via the seeded Playwright MCP (\`.mcp.json\`, approve it once in Claude Code) or a Playwright script — whichever the session has; headless CI falls back to the scripts.
 - Smoke evidence lives in \`artifacts/verification/<run-id>/\` — fill in \`summary.md\`; only summary, deviations, and meta are meant to be committed.
 - When a smoke run finds a real bug: reproduce it, add a failing deterministic test, fix, prove the test passes, re-run the journey.
 `

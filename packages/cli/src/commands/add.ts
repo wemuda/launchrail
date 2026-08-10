@@ -113,7 +113,8 @@ function planBrowserTesting(
     nextSteps.push("Set the dev command: edit scripts/dev.mjs (DEV_COMMAND) and testing.devCommand in .launchrail.yml.");
   }
   nextSteps.push(
-    "Review the seeded files — they are yours: playwright config, tests/e2e/, docs/testing/smoke-journeys.md.",
+    "Review the seeded files — they are yours: playwright config, tests/e2e/, docs/testing/smoke-journeys.md, .mcp.json.",
+    "In Claude Code, approve the seeded Playwright MCP (.mcp.json) for agent-driven browser journeys; where no MCP is available (e.g. headless CI), the seeded Playwright scripts still run.",
     "Verify: `node scripts/verify.mjs`, then `npx @wemuda/launchrail smoke` with the app running.",
   );
   return {

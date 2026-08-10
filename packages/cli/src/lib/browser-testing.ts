@@ -94,6 +94,33 @@ Verify:
 `;
 }
 
+/**
+ * A project-scoped Playwright MCP server so the `browser-smoke` skill can drive
+ * the app agentically (click/type/navigate, watch console + network) instead of
+ * only running fixed specs — the skill already looks for "Playwright MCP ...
+ * whichever is available". Deliberately app-agnostic: the agent supplies URLs at
+ * run time, so no hardcoded origins. `--isolated` keeps it profile-less, which is
+ * what a fresh clone / CI / cloud session wants. It is a convenience, never a hard
+ * dependency — where no MCP is available the seeded Playwright scripts still run
+ * headless (ADR-0004).
+ */
+function mcpConfig(): string {
+  return (
+    JSON.stringify(
+      {
+        mcpServers: {
+          playwright: {
+            command: "npx",
+            args: ["-y", "@playwright/mcp@latest", "--isolated"],
+          },
+        },
+      },
+      null,
+      2,
+    ) + "\n"
+  );
+}
+
 const ADD_PLAYWRIGHT_DEP: Record<PackageManager, string> = {
   pnpm: "pnpm add -D @playwright/test",
   yarn: "yarn add -D @playwright/test",
@@ -188,6 +215,7 @@ export function browserTestingFiles(ctx: BrowserTestingContext): FileSpec[] {
   }
 
   specs.push(
+    { relPath: ".mcp.json", content: mcpConfig(), ownership: "seeded" },
     { relPath: SMOKE_JOURNEYS_PATH, content: smokeJourneysDoc(), ownership: "seeded" },
     { relPath: "scripts/setup.mjs", content: setupScript(pm), ownership: "seeded", executable: true },
     { relPath: "scripts/dev.mjs", content: devScript(ctx.manifest.testing.devCommand), ownership: "seeded", executable: true },

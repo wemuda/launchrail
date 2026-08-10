@@ -7,6 +7,7 @@ import { parseManifest } from "../src/lib/manifest.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
 
 const SEEDED_FILES = [
+  ".mcp.json",
   "playwright.config.ts",
   "tests/e2e/smoke.spec.ts",
   "docs/testing/smoke-journeys.md",
@@ -35,6 +36,8 @@ describe("launchrail add browser-testing", () => {
     for (const file of SEEDED_FILES) {
       expect(existsSync(join(tmp.root, file)), file).toBe(true);
     }
+    const mcp = JSON.parse(readFileSync(join(tmp.root, ".mcp.json"), "utf8"));
+    expect(mcp.mcpServers.playwright.args).toContain("@playwright/mcp@latest");
     const parsed = parseManifest(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8"));
     expect(parsed.manifest?.modules["browser-testing"]).toBe(true);
     expect(parsed.manifest?.testing.appUrl).toBe("http://localhost:3000");
@@ -111,6 +114,16 @@ describe("launchrail add browser-testing", () => {
     expect(outcome.code).toBe(0);
     expect(readFileSync(join(tmp.root, "docs/testing/smoke-journeys.md"), "utf8")).toBe("# Our journeys\n");
     const action = outcome.actions.find((a) => a.spec.relPath === "docs/testing/smoke-journeys.md");
+    expect(action?.kind).toBe("skip-seeded-exists");
+  });
+
+  test("never overwrites an existing .mcp.json (keeps the project's MCP servers)", async () => {
+    const existing = '{\n  "mcpServers": {\n    "custom": { "command": "node", "args": ["mine.js"] }\n  }\n}\n';
+    writeFileSync(join(tmp.root, ".mcp.json"), existing, "utf8");
+    const outcome = await addBrowserTesting();
+    expect(outcome.code).toBe(0);
+    expect(readFileSync(join(tmp.root, ".mcp.json"), "utf8")).toBe(existing);
+    const action = outcome.actions.find((a) => a.spec.relPath === ".mcp.json");
     expect(action?.kind).toBe("skip-seeded-exists");
   });
 
