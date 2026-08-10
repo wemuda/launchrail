@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.6.0](https://github.com/wemuda/launchrail/compare/v1.5.0...v1.6.0) (2026-08-10)
+
+
+### Features
+
+* **plugin:** add the start-feature conductor for the delivery loop ([0436f96](https://github.com/wemuda/launchrail/commit/0436f968bf90d62ef8557adb7213d06c95f838dd))
+
+
+### Bug Fixes
+
+* **plugin:** route stage 3 to grill-with-docs, not the bare grilling primitive ([5e7478b](https://github.com/wemuda/launchrail/commit/5e7478b3c8b21bd70520c26a3725e973ba76a1ef))
+* **plugin:** route stage 3 to grill-with-docs, not the bare grilling primitive ([ab60b1b](https://github.com/wemuda/launchrail/commit/ab60b1b26808dc3fd72243f8d125006a5d4fe510))
+
 ## [1.5.0](https://github.com/wemuda/launchrail/compare/v1.4.0...v1.5.0) (2026-08-10)
 
 
