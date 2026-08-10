@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Generated at pack time from the root README (packages/cli/scripts/generate-readme.mjs).
+packages/cli/README.md
 *.log
 .DS_Store
 artifacts/verification/
