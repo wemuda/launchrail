@@ -59,7 +59,7 @@ Walk the chosen path, invoking each owner by its exact name and gating on its co
 - **wayfinder** (Matt Pocock) — break the feature into a navigable plan; feed its output to the spec.
 - **grill** → Matt Pocock `grill-with-docs`, feature-scoped; its surviving constraints are the spec's brief.
 - **spec** → Matt Pocock `to-spec`, committed under `docs/specs/`. `to-spec` is **user-typed** (`disable-model-invocation`): you can't call it — hand the user the exact, fully-argumented command naming the feature's committed inputs (grill constraints, wayfinder plan, ADRs) so it builds on them instead of re-exploring, then resume when the spec lands. A `disable-model-invocation` refusal is a handoff cue, never a reason to reverse-engineer the skill (see [`docs/workflow.md`](../../docs/workflow.md)).
-- **design validation** → `launchrail:design-validation` (spec + Claude Design → revised spec carrying a `## Design validation` section).
+- **design validation** → `launchrail:design-validation` — validates the spec at a confirmed fidelity level (recorded skip, flow diagrams, screen mockups, or Claude Design; ADR-0016) and leaves the revised spec carrying a `## Design validation` section.
 - **tickets** → Matt Pocock `to-tickets`. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up the output if it lacks them — the Ralph loop depends on both. Only tickets take `ready-for-agent`: an issue publishing the spec itself wears a different label (e.g. `spec`), or the loop will dispatch the document as work.
 
 ## Step 5 — Hand off to the Ralph loop
