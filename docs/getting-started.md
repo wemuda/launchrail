@@ -10,7 +10,7 @@ How to install Launchrail into a project and live with it day to day. For what L
 
 ## Installing
 
-> **Pre-release note:** `@wemuda/launchrail` is not on npm yet ([roadmap](../ROADMAP.md)). Until it is, run the CLI from a checkout of this repo:
+> **Not on npm yet.** The publish flips on with the first release token (see [releasing](releasing.md)). Until then, run the CLI from a checkout of this repo:
 >
 > ```bash
 > git clone https://github.com/wemuda/launchrail && cd launchrail
@@ -96,6 +96,6 @@ npx @wemuda/launchrail eject <module|file>   # vendor mode: Launchrail never wri
 
 ## The workflow
 
-With the plugin installed, the development loop runs vision → grill → research → ADRs → spec → design validation → tickets → bounded implementation (Ralph) → verification → release. The stage contract lives in the plugin's [workflow doc](../plugins/launchrail/docs/workflow.md).
+With the plugin installed, the development loop runs vision → discovery → grill → research → ADRs → spec → design validation → tickets → bounded implementation (Ralph) → verification → release. The stage contract lives in the plugin's [workflow doc](../plugins/launchrail/docs/workflow.md).
 
 To run it, invoke the `launch` skill (`/launchrail:launch`) — it detects which stage your project has reached and routes you to the right stage skill, or jumps straight to a stage you name (e.g. `launch deep-research`). You don't have to memorize the order; `launch` finds the frontier and, when it can't tell whether a stage is done, asks.

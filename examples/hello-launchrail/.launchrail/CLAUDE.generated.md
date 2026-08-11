@@ -2,7 +2,7 @@
 
 # Launchrail workflow instructions
 
-- This project follows the Launchrail development loop: vision → design exploration → grill/research → ADRs → spec → visual validation → tickets → bounded implementation → verification → release.
+- This project follows the Launchrail development loop: vision → design exploration → discovery → grill/research → ADRs → spec → visual validation → tickets → bounded implementation → verification → release.
 - Product knowledge (vision, specs, ADRs, designs, tickets, code) is project-owned; Launchrail never overwrites it.
 - `.launchrail.yml` is project configuration; `.launchrail-lock.json` is machine-managed — do not hand-edit it.
 - Before claiming completion, run the project's deterministic checks. Completion requires evidence, not assertion.
