@@ -12,6 +12,7 @@ Coordinate the loop **spec → Claude Design → revised spec → handoff**. The
 - The spec and everything this skill writes are **project-owned** artifacts. Revise the spec in place; never fork a parallel copy that can drift.
 - Validate flows, not pixels. This stage answers "does the specified behavior survive contact with a screen?", not "is the visual style final?".
 - Every design finding must land in exactly one place: a spec revision, an ADR (if it changes an architecture decision), or an explicitly recorded rejection. Findings that live only in chat are lost.
+- Scale to the spec's design surface. A UI-heavy spec gets the full flow pass. An API-, schema-, or infrastructure-heavy spec may have only a screen or two — validate just those and record the rest as having no design surface. When there is genuinely nothing to drive, write the `## Design validation` section anyway as a recorded skip (date, what was assessed, why nothing needed driving): the section is the artifact the ticket stage gates on, and a skip that lives only in chat re-opens the question every review.
 - Do not start implementation from this skill. The output is a validated spec and a handoff note — tickets come next.
 
 ## Process

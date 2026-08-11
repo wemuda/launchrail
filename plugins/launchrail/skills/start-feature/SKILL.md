@@ -59,7 +59,7 @@ Walk the chosen path, invoking each owner by its exact name and gating on its co
 - **grill** → Matt Pocock `grill-with-docs`, feature-scoped; its surviving constraints are the spec's brief.
 - **spec** → Matt Pocock `to-spec`, committed under `docs/specs/`.
 - **design validation** → `launchrail:design-validation` (spec + Claude Design → revised spec carrying a `## Design validation` section).
-- **tickets** → Matt Pocock `to-tickets`. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up the output if it lacks them — the Ralph loop depends on both.
+- **tickets** → Matt Pocock `to-tickets`. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up the output if it lacks them — the Ralph loop depends on both. Only tickets take `ready-for-agent`: an issue publishing the spec itself wears a different label (e.g. `spec`), or the loop will dispatch the document as work.
 
 ## Step 5 — Hand off to the Ralph loop
 
