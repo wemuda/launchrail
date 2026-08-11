@@ -30,7 +30,7 @@ This repository is the Launchrail **toolchain**: the CLI, Claude Code plugin, te
 
 ## How it works
 
-Launchrail structures development as two movements. The **foundation** runs once per project: it turns an idea into hard constraints and recorded decisions. Then the **delivery loop** takes over — once per feature: size the work and plan it only as deeply as it needs (a small change goes straight from a grill to tickets; a larger one adds `wayfinder`, a spec, and design validation first), then hand the tickets to the project's **implementation loop** — the built-in Ralph loop by default, or another the project selects — to implement and verify before going around again for the next feature. Every stage leaves a committed artifact behind, and the next stage starts from that artifact, not from chat memory. The `launch` skill is the single entry point: it reads the committed artifacts, detects where the project is, and routes to the stage's owner.
+Launchrail structures development as two movements. The **foundation** runs once per project: it turns an idea into hard constraints and recorded decisions. Then the **delivery loop** takes over — once per feature: size the work and plan it only as deeply as it needs (a small change goes straight from a grill to tickets; a larger one adds `wayfinder`, a spec, and design validation first), then hand the tickets to the project's **implementation loop** — the built-in Ralph loop by default, or another the project selects — to implement and verify before going around again for the next feature. Every stage leaves a committed artifact behind, and the next stage starts from that artifact, not from chat memory. Two commands cover the rail: **`/launchrail:launch`** plans — it reads the committed artifacts, detects where the project is, and routes to the stage's owner — and **`/launchrail:implement`** builds, driving ready tickets to verified merges.
 
 <p align="center">
   <img src="assets/how-launchrail-works.png" alt="How Launchrail works — the foundation runs once per project (Vision → Visual exploration → Complexity grill → Technical research → Architecture decisions); the delivery loop then repeats once per slice (Specify features into tickets → Ralph loop → Verification) before looping back for the next slice." width="880" />
@@ -55,7 +55,8 @@ From there, the day-to-day driver is not the CLI — it's the **`launch` skill**
 - **`project-alignment`** — the on-ramp for an existing codebase: infer a vision from the code, interview only the gaps, inventory the design system, then join the loop
 - **`vision-creation`** and **`design-validation`** — the Launchrail-owned stages of the pipeline
 - **`browser-smoke`** — drives a real browser journey and leaves a traceable evidence bundle (with the browser-testing module)
-- **`ralph`**, **`ralph-implement`**, **`resolving-merge-conflicts`** — the verification-gated implementation loop (with the ralph module)
+- **`implement`** — the one door to building: `/launchrail:implement` drives ready tickets to verified merges through the selected loop (a ticket number builds just that one)
+- **`ralph`**, **`ralph-implement`**, **`resolving-merge-conflicts`** — the verification-gated loop engine behind that door, installed by `init`
 
 The CLI is the maintenance surface you return to between sessions:
 
@@ -63,7 +64,7 @@ The CLI is the maintenance surface you return to between sessions:
 npx @wemuda/launchrail status                # versions, drift, pending migrations
 npx @wemuda/launchrail diff                  # preview upstream changes
 npx @wemuda/launchrail sync                  # apply managed updates + run migrations
-npx @wemuda/launchrail add browser-testing   # enable a module (also: add ralph)
+npx @wemuda/launchrail add browser-testing   # enable a module
 npx @wemuda/launchrail doctor                # repository and environment checks
 npx @wemuda/launchrail verify                # deterministic verification gate
 npx @wemuda/launchrail smoke                 # scaffold a browser-smoke evidence bundle

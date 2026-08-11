@@ -83,7 +83,7 @@ function claudeGeneratedMd(ctx: SeedContext): string {
     ? `
 ## The Ralph loop
 
-- Bounded implementation runs through the Ralph loop: the \`launchrail:ralph\` skill (watchable, checkpointed) or the \`ralph\` workflow in \`.claude/workflows/ralph.js\` (wide or long runs). Both are only ever started explicitly by the user.
+- Implementation starts with \`/launchrail:implement\` — all ready tickets, or one with \`/launchrail:implement <ticket>\`. It drives the Ralph loop: the \`launchrail:ralph\` skill (watchable, checkpointed) or the \`ralph\` workflow in \`.claude/workflows/ralph.js\` (wide or long runs). Only ever started explicitly by the user.
 - Tickets enter the loop with the \`ready-for-agent\` label and explicit \`Blocked by: #n\` edges; parked tickets carry \`needs-info\` plus their failure history.
 - A ticket counts done only when its PR is merged on the remote, the issue is closed, and \`npx @wemuda/launchrail verify\` is green — agent reports are claims, not evidence.
 - \`.claude/workflows/ralph.js\` is managed by Launchrail: override policy per run via workflow args (e.g. \`{ width: 1 }\`), never by editing the file.

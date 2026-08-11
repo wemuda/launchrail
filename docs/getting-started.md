@@ -34,6 +34,7 @@ The interview asks four things — project mode (spike / standard MVP / high-rig
 - `.launchrail-lock.json` — versions, ownership classes, checksums, applied migrations. Machine-managed; commit it, never hand-edit it.
 - `AGENTS.md` + `CLAUDE.md` — the agent operating contract (with your chosen conventions baked in) and the Claude Code entry point importing it. Seeded once; existing files are never overwritten.
 - `.launchrail/CLAUDE.generated.md` — managed workflow instructions, replaced on `sync` as modules change.
+- `.claude/workflows/ralph.js` — the built-in implementation loop's workflow form, managed ([ADR-0018](adr/0018-implement-front-door.md)): the default loop is present from day one, so `/launchrail:implement` works the moment tickets exist. (Selecting the Superpowers loop skips this and installs its plugin instead.)
 - `docs/adr/0000-template.md` — ADR template.
 - `.claude/settings.json` — declares both workflow plugin marketplaces (Launchrail's and Matt Pocock's) and enables their plugins via an additive merge ([ADR-0003](adr/0003-plugin-subscription-via-project-settings.md), extended by [ADR-0011](adr/0011-init-installs-plugin-via-claude-cli.md)), which is how the rest of the team gets offered the same skills when they first trust the folder.
 
@@ -61,7 +62,8 @@ git add -A && git commit -m "chore: initialize launchrail"
 From here the workflow lives in Claude Code, not the CLI:
 
 1. **Open Claude Code in the project.** `init` already installed the workflow plugins if the `claude` CLI was available; a session that was open during `init` needs `/reload-plugins` or a restart to see them. If `init` printed manual steps instead, run them (inside Claude Code: `/plugin` → Marketplaces → Add → the full `owner/repo` source, e.g. `wemuda/launchrail` — a bare name is rejected).
-2. **Run `/launchrail:launch`.** The conductor detects the project's stage and drives the workflow from there. On a fresh project that means running `/setup-matt-pocock-skills` (the skills plugin is preinstalled), then vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
+2. **Run `/launchrail:launch`.** The planning conductor detects the project's stage and drives the workflow from there. On a fresh project that means running `/setup-matt-pocock-skills` (the skills plugin is preinstalled), then vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
+3. **When tickets exist, run `/launchrail:implement`.** The one door to building: it drives every ready ticket to a verified merge through the project's selected loop — or just one (`/launchrail:implement 15`). That's the whole surface to remember: `launch` plans, `implement` builds.
 
 Teammates don't need the CLI at all: the committed `.claude/settings.json` makes Claude Code offer them both workflow plugins the first time they trust the project folder.
 
@@ -69,10 +71,10 @@ Teammates don't need the CLI at all: the committed `.claude/settings.json` makes
 
 ```bash
 npx @wemuda/launchrail add browser-testing   # Playwright baseline + smoke-journey contract (ADR-0004)
-npx @wemuda/launchrail add ralph             # the bounded autonomous Ralph implementation loop (ADR-0005)
+npx @wemuda/launchrail add ralph             # re-install the Ralph loop's materials (installed by init; ADR-0005/0018)
 ```
 
-Both update the manifest (preserving your comments), seed or manage their files, and extend the generated Claude instructions. `verify` runs the deterministic gate; `smoke` scaffolds an evidence bundle for an agentic browser-smoke run.
+Both update the manifest (preserving your comments), seed or manage their files, and extend the generated Claude instructions. `verify` runs the deterministic gate; `smoke` scaffolds an evidence bundle for an agentic browser-smoke run. The Ralph loop itself needs no `add` on the golden path — `init` installs it when it's the selected implementation loop, and `sync` brings older projects current.
 
 ## Updating to a new release
 
@@ -136,6 +138,6 @@ The file half of an update travels through git — teammates just `git pull`. Th
 
 ## The workflow
 
-With the plugin installed, the development loop runs vision → discovery → grill → research → ADRs → spec → design validation → tickets → bounded implementation (Ralph) → verification → release. The stage contract lives in the plugin's [workflow doc](../plugins/launchrail/docs/workflow.md).
+With the plugin installed, the development loop runs vision → discovery → grill → research → ADRs → spec → design validation → tickets → bounded implementation → verification → release. The stage contract lives in the plugin's [workflow doc](../plugins/launchrail/docs/workflow.md).
 
-To run it, invoke the `launch` skill (`/launchrail:launch`) — it detects which stage your project has reached and routes you to the right stage skill, or jumps straight to a stage you name (e.g. `launch deep-research`). You don't have to memorize the order; `launch` finds the frontier and, when it can't tell whether a stage is done, asks.
+Two commands run it. `/launchrail:launch` plans: it detects which stage your project has reached and routes you to the right stage skill, jumps straight to a stage you name (e.g. `launch deep-research`), and sizes each new feature once the foundation exists. `/launchrail:implement` builds: it drives the ready tickets to verified merges through the project's selected loop. You don't have to memorize the order — `launch` finds the frontier and, when it can't tell whether a stage is done, asks.

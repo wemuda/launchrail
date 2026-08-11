@@ -118,6 +118,60 @@ describe("launchrail sync", () => {
     expect(readLock().migrations).toContain("2026-08-plugin-declaration");
   });
 
+  test("wires the default loop into a pre-ADR-0018 project: manifest, workflow file, and regenerated instructions in one run", () => {
+    // Rewind to a project initialized before the loop shipped with init:
+    // no module flag, no workflow file, and generated instructions without
+    // the Ralph section.
+    const manifestPath = join(tmp.root, ".launchrail.yml");
+    writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace(/^\s*ralph: true\n/m, ""), "utf8");
+    rmSync(join(tmp.root, RALPH_WORKFLOW_PATH));
+    const generatedWithout = readFileSync(join(tmp.root, GENERATED), "utf8").replace(/## The Ralph loop[\s\S]*$/, "");
+    writeFileSync(join(tmp.root, GENERATED), generatedWithout);
+    editLockfile(tmp.root, (lock) => {
+      delete lock.files[RALPH_WORKFLOW_PATH];
+      lock.files[GENERATED] = { class: "managed", checksum: sha256(generatedWithout) };
+      lock.migrations = lock.migrations.filter((id) => id !== "2026-08-wire-default-implementation-loop");
+    });
+
+    const outcome = runSync({ cwd: tmp.root, dryRun: false });
+    expect(outcome.code).toBe(0);
+    const result = outcome.migrations.find((m) => m.id === "2026-08-wire-default-implementation-loop");
+    expect(result?.status).toBe("applied");
+    expect(readFileSync(manifestPath, "utf8")).toContain("ralph: true");
+    expect(existsSync(join(tmp.root, RALPH_WORKFLOW_PATH))).toBe(true);
+    expect(readLock().files[RALPH_WORKFLOW_PATH]).toMatchObject({ class: "managed" });
+    // The regenerated surface reflects the post-migration manifest in the
+    // same run — the Ralph section is back without a second sync.
+    expect(readFileSync(join(tmp.root, GENERATED), "utf8")).toContain("## The Ralph loop");
+
+    const second = runSync({ cwd: tmp.root, dryRun: false });
+    expect(second.migrations).toEqual([]);
+    expect(second.actions.every((a) => a.kind === "skip-unchanged")).toBe(true);
+  });
+
+  test("leaves a superpowers project alone: the wire migration is already satisfied", () => {
+    const manifestPath = join(tmp.root, ".launchrail.yml");
+    writeFileSync(
+      manifestPath,
+      readFileSync(manifestPath, "utf8")
+        .replace("implementationLoop: ralph", "implementationLoop: superpowers")
+        .replace(/^\s*ralph: true\n/m, ""),
+      "utf8",
+    );
+    rmSync(join(tmp.root, RALPH_WORKFLOW_PATH));
+    editLockfile(tmp.root, (lock) => {
+      delete lock.files[RALPH_WORKFLOW_PATH];
+      lock.migrations = lock.migrations.filter((id) => id !== "2026-08-wire-default-implementation-loop");
+    });
+
+    const outcome = runSync({ cwd: tmp.root, dryRun: false });
+    expect(outcome.code).toBe(0);
+    const result = outcome.migrations.find((m) => m.id === "2026-08-wire-default-implementation-loop");
+    expect(result?.status).toBe("already-satisfied");
+    expect(existsSync(join(tmp.root, RALPH_WORKFLOW_PATH))).toBe(false);
+    expect(readFileSync(manifestPath, "utf8")).not.toContain("ralph: true");
+  });
+
   test("a failing migration stops the run before files regenerate and stays recoverable", () => {
     simulateOlderToolchain();
     const registry: Migration[] = [

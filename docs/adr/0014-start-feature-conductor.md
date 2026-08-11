@@ -1,7 +1,7 @@
 # ADR-0014: A start-feature conductor drives the per-feature delivery loop
 
 ## Status
-Accepted
+Superseded by [ADR-0018](0018-implement-front-door.md) — the sizing decision and per-feature routing folded into `launch`; the `start-feature` skill is removed. (This ADR's own "revisit when" named exactly this consolidation.)
 
 ## Context
 `launch` ([ADR-0009](0009-launch-orchestrator-skill.md)) is the loop's conductor, but it is shaped around a *fresh* project moving once from idea to its first release: detect the frontier across the eleven stages and drive the first one that isn't done. Real projects spend most of their life *after* that first release, adding one feature at a time. That recurring work carries a decision `launch` doesn't model: **how much planning does this feature need?** A copy tweak and a new subsystem do not deserve the same grill → spec → design-validation → tickets pipeline. Today the user either over-plans small work or under-plans large work, and the sizing judgment lives only in people's heads — the workflow doc describes one path to the first MVP, not how a feature scales its planning.

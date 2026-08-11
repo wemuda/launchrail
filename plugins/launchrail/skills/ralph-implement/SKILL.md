@@ -1,6 +1,6 @@
 ---
 name: ralph-implement
-description: Implement a single ticket end to end under the Launchrail completion contract — TDD, the deterministic verification gate, browser smoke for user-facing changes, self-review, and conventional commits. Used by Ralph loop dispatches and equally valid for implementing one ticket by hand.
+description: Implement a single ticket end to end under the Launchrail completion contract — TDD, the deterministic verification gate, browser smoke for user-facing changes, self-review, and conventional commits. Used by Ralph loop dispatches and by /launchrail:implement's single-ticket mode.
 ---
 
 # Implement one ticket

@@ -13,3 +13,4 @@ testing:
   appUrl: null
 modules:
   core: true
+  ralph: true

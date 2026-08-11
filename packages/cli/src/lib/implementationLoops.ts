@@ -30,8 +30,9 @@ export interface ImplementationLoopProvider {
   /**
    * The Claude Code plugin this loop needs, when it lives outside the launchrail
    * plugin. `null` for `ralph`, whose skills ship in the launchrail plugin and
-   * whose workflow file installs via `launchrail add ralph`. When present, init
-   * installs and declares it alongside the core roster and doctor checks it.
+   * whose workflow file init installs (`launchrail sync` brings older projects
+   * current). When present, init installs and declares it alongside the core
+   * roster and doctor checks it.
    */
   declaration: PluginDeclaration | null;
   /** Short line init/doctor/conductor print so the user knows how to run this loop. */
@@ -45,7 +46,7 @@ export const IMPLEMENTATION_LOOP_PROVIDERS: Record<ImplementationLoop, Implement
     hint: "Launchrail's verification-gated loop",
     entry: "launchrail:ralph",
     declaration: null,
-    setupHint: "Run `launchrail add ralph`, then start `launchrail:ralph` when the ready tickets exist.",
+    setupHint: "Start building with /launchrail:implement when the ready tickets exist (add a ticket number to build just one).",
   },
   superpowers: {
     id: "superpowers",
@@ -60,7 +61,7 @@ export const IMPLEMENTATION_LOOP_PROVIDERS: Record<ImplementationLoop, Implement
       label: "Superpowers",
     },
     setupHint:
-      "Drive the ready tickets through Superpowers' execution skills (superpowers:executing-plans + superpowers:test-driven-development), then superpowers:finishing-a-development-branch. `launchrail verify` still gates every merge.",
+      "Start building with /launchrail:implement — it drives the ready tickets through Superpowers' execution skills. `launchrail verify` still gates every merge.",
   },
 };
 

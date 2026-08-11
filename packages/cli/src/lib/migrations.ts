@@ -1,5 +1,10 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { applyPluginDeclaration, CLAUDE_SETTINGS_PATH, planPluginDeclaration } from "./claudeSettings.js";
 import type { Lockfile } from "./lockfile.js";
+import { MANIFEST_FILENAME, parseManifest, setModuleEnabled } from "./manifest.js";
+import { RALPH_MODULE, RALPH_WORKFLOW_PATH, ralphFiles } from "./ralph.js";
+import { applyPlan, planWrites } from "./writer.js";
 
 export interface MigrationContext {
   cwd: string;
@@ -52,6 +57,42 @@ export const MIGRATIONS: Migration[] = [
         changes: [`${CLAUDE_SETTINGS_PATH} — ${settings.detail}`],
         apply: () => {
           applyPluginDeclaration(ctx.cwd, settings);
+        },
+      };
+    },
+  },
+  {
+    id: "2026-08-wire-default-implementation-loop",
+    description:
+      "install the built-in implementation loop's materials when the manifest selects ralph, so /launchrail:implement works without `launchrail add ralph` (ADR-0018)",
+    plan(ctx) {
+      const none = { changes: [], apply: () => {} };
+      const manifestPath = join(ctx.cwd, MANIFEST_FILENAME);
+      if (!existsSync(manifestPath)) return none;
+      const source = readFileSync(manifestPath, "utf8");
+      const parsed = parseManifest(source);
+      // An invalid manifest is sync's own precondition failure, not this
+      // migration's; a project that selected another loop needs nothing.
+      if (!parsed.manifest || parsed.manifest.implementationLoop !== "ralph") return none;
+
+      const changes: string[] = [];
+      const manifestUpdate = setModuleEnabled(source, RALPH_MODULE, {});
+      if (manifestUpdate.changed) changes.push(`${MANIFEST_FILENAME} — enable the ralph module`);
+      const actions = planWrites(ctx.cwd, ralphFiles(), ctx.lockfile);
+      for (const action of actions) {
+        if (action.kind === "create" || action.kind === "update") {
+          changes.push(`${action.spec.relPath} — ${action.detail}`);
+        }
+        if (action.kind === "conflict") {
+          changes.push(`${RALPH_WORKFLOW_PATH} — local modifications kept (eject or revert to receive updates)`);
+        }
+      }
+      if (changes.length === 0) return none;
+      return {
+        changes,
+        apply: () => {
+          if (manifestUpdate.changed) writeFileSync(manifestPath, manifestUpdate.source, "utf8");
+          applyPlan(ctx.cwd, actions, ctx.lockfile);
         },
       };
     },

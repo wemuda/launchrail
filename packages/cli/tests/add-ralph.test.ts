@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runAdd } from "../src/commands/add.js";
@@ -7,7 +7,7 @@ import { runInit } from "../src/commands/init.js";
 import { sha256 } from "../src/lib/checksum.js";
 import { parseManifest } from "../src/lib/manifest.js";
 import { RALPH_WORKFLOW_PATH, ralphWorkflowContent } from "../src/lib/ralph.js";
-import { makeTmpRepo, type TmpRepo } from "./helpers.js";
+import { editLockfile, makeTmpRepo, type TmpRepo } from "./helpers.js";
 
 let tmp: TmpRepo;
 beforeEach(async () => {
@@ -20,7 +20,21 @@ function addRalph(overrides: Partial<Parameters<typeof runAdd>[0]> = {}) {
   return runAdd({ cwd: tmp.root, module: "ralph", dryRun: false, yes: true, ...overrides });
 }
 
+/**
+ * Rewind to a pre-ADR-0018 project: init used to leave the ralph module off
+ * and the workflow file uninstalled — the population `add ralph` now serves.
+ */
+function stripRalph(): void {
+  const manifestPath = join(tmp.root, ".launchrail.yml");
+  writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace(/^\s*ralph: true\n/m, ""), "utf8");
+  rmSync(join(tmp.root, RALPH_WORKFLOW_PATH));
+  editLockfile(tmp.root, (lock) => {
+    delete lock.files[RALPH_WORKFLOW_PATH];
+  });
+}
+
 describe("launchrail add ralph", () => {
+  beforeEach(() => stripRalph());
   test("writes the Ralph loop workflow and enables the module", async () => {
     const outcome = await addRalph();
     expect(outcome.code).toBe(0);
@@ -141,9 +155,15 @@ describe("launchrail add ralph", () => {
 });
 
 describe("doctor with the ralph module", () => {
-  test("skips ralph checks when the module is disabled", () => {
+  test("skips ralph checks when the module is disabled, but flags the uninstalled default loop", () => {
+    stripRalph();
     const outcome = runDoctor(tmp.root);
     expect(outcome.checks.some((c) => c.name.startsWith("ralph"))).toBe(false);
+    // The selected loop's materials being absent is the pothole ADR-0018
+    // closes — doctor points at sync instead of leaving it to be discovered.
+    const loop = outcome.checks.find((c) => c.name === "implementation loop");
+    expect(loop?.status).toBe("warn");
+    expect(loop?.message).toContain("launchrail sync");
   });
 
   test("fails when the workflow file is missing, warns on tracker and empty gate", async () => {

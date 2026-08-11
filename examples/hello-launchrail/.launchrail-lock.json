@@ -1,18 +1,22 @@
 {
   "schemaVersion": 1,
-  "launchrailVersion": "1.2.0",
+  "launchrailVersion": "1.7.0",
   "files": {
+    ".claude/workflows/ralph.js": {
+      "class": "managed",
+      "checksum": "cda427fff21dc32ed4c474e1d0db1d444880b31f8f582e705643de9c845955a5"
+    },
     ".launchrail.yml": {
       "class": "seeded",
       "checksum": "c232f03a67ea91c4b16bf56f648e51c6a22a00c9d1f71d7def6431ea46164c4d"
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "cab4d30616edf8f7628ad21a5eca77351dd41fcdc046266d0e21cf02b865061a"
+      "checksum": "c9b4ed63b21773744b9f77e69ace91db14f6d65a4134334538544af9e3118e17"
     },
     "AGENTS.md": {
       "class": "seeded",
-      "checksum": "af8ee5300ca0eece61b8c24718ed8899e96eb401e7d143a4be1919d9534ef8a1"
+      "checksum": "2b9c94dcd177cfdfc52def80bf58fbe2e1102be7ddfb564cc36634253a1fc011"
     },
     "CLAUDE.md": {
       "class": "seeded",
@@ -25,7 +29,8 @@
   },
   "migrations": [
     "2026-08-plugin-declaration",
-    "2026-08-upstream-plugin-declarations"
+    "2026-08-upstream-plugin-declarations",
+    "2026-08-wire-default-implementation-loop"
   ],
   "decisions": {
     "mode": "standard-mvp",
