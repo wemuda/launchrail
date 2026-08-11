@@ -16,6 +16,7 @@
 [How it works](#how-it-works) ·
 [Getting started](docs/getting-started.md) ·
 [Using it](#using-it-in-your-project) ·
+[Updating](#updating-a-project) ·
 [Ownership model](#the-ownership-model) ·
 [Repository layout](#repository-layout) ·
 [Contributing](#contributing) ·
@@ -47,8 +48,6 @@ One command sets the rails:
 npx @wemuda/launchrail init
 ```
 
-_Not on npm yet — until the first publish, run the CLI from a checkout; see [getting started](docs/getting-started.md#installing)._
-
 `init` interviews you (or takes `--yes`), runs `git init` if the directory isn't a repository yet, seeds `AGENTS.md` and ADR conventions without touching existing content, subscribes the repository to the workflow's Claude Code plugins through `.claude/settings.json` — so every collaborator who opens the project in Claude Code gets the same skills — and, when the `claude` CLI is on your PATH, installs those plugins for you on the spot — Launchrail's own and Matt Pocock's skills ([ADR-0011](docs/adr/0011-init-installs-plugin-via-claude-cli.md)). Adopting an existing project is a first-class path: your files are kept, and a `CLAUDE.md` you already have is additively wired to the workflow imports rather than replaced ([ADR-0012](docs/adr/0012-init-wires-imports-into-existing-claude-md.md)). The interview asks whether the project is new or existing and records it as the manifest's `origin`; for an existing project, `launch` takes an **alignment on-ramp** — inferring a draft vision from the code, interviewing only the gaps, and inventorying your existing design system — instead of starting from a blank vision ([ADR-0013](docs/adr/0013-existing-project-alignment.md)).
 
 From there, the day-to-day driver is not the CLI — it's the **`launch` skill** inside Claude Code: open the project and run `/launchrail:launch`. Invoke it (or just ask "what's next?") and it reads your committed artifacts, works out where the project is — no vision yet, mid-grill, spec validated, tickets ready — and runs or routes to the next stage's owner. Give it a stage name (`launch design-validation`) to jump straight there. The plugin carries the rest of the workflow too:
@@ -72,6 +71,26 @@ npx @wemuda/launchrail eject <module|file>   # opt out of management (vendor mod
 ```
 
 Initialized projects carry two files: `.launchrail.yml` (configuration) and `.launchrail-lock.json` (versions, checksums, applied migrations; committed to the repo). Full walkthrough: [docs/getting-started.md](docs/getting-started.md). Committed, unedited example of what `init` produces: [examples/hello-launchrail](examples/hello-launchrail).
+
+## Updating a project
+
+Each release versions the CLI and the Claude Code plugin in lockstep, but a project consumes them through two different mechanisms — and `sync` deliberately handles only one of them. Updating to a new release is two moves, in this order:
+
+```bash
+# 1. The plugin (the skills): inside Claude Code run /plugin and update there,
+#    or from the terminal:
+claude plugin update launchrail@launchrail
+
+# 2. The project files: preview what the new release changes, then apply it
+npx @wemuda/launchrail@latest diff
+npx @wemuda/launchrail@latest sync
+
+# 3. sync output is a normal working-tree change — review and commit it
+git diff
+git add -A && git commit -m "chore: launchrail sync"
+```
+
+The `@latest` is load-bearing: templates ship inside the CLI and every comparison is local, so a stale `npx` cache will report "everything up to date" against old templates. Plugin before `sync` also matters: the managed instructions a newer CLI writes can reference workflow stages whose skills only exist in the newer plugin. `sync` itself is safe to run at any point — seeded and project-owned files are never touched, and a managed file you've edited keeps your edits. Step-by-step detail, including how migrations and conflicts behave: [docs/getting-started.md](docs/getting-started.md#updating-to-a-new-release).
 
 ## The ownership model
 
@@ -119,7 +138,7 @@ pnpm --filter @wemuda/launchrail exec launchrail --help
 
 ## Status
 
-The toolchain is stable and versioned. The full surface — `init`/`doctor`, the workflow plugin, browser testing, the Ralph loop, and the sync engine — is covered by 164 tests, including integration tests against real temporary Git repositories. Releases are automated: Conventional Commits drive release-please, the CLI and plugin version in lockstep, and the changelog is generated from the commit history ([ADR-0008](docs/adr/0008-release-automation.md), [docs/releasing.md](docs/releasing.md)). The npm publish flips on with the first release token. Shipped history lives in [CHANGELOG.md](CHANGELOG.md).
+The toolchain is stable and versioned. The full surface — `init`/`doctor`, the workflow plugin, browser testing, the Ralph loop, and the sync engine — is covered by 164 tests, including integration tests against real temporary Git repositories. Releases are automated: Conventional Commits drive release-please, the CLI and plugin version in lockstep, and the changelog is generated from the commit history ([ADR-0008](docs/adr/0008-release-automation.md), [docs/releasing.md](docs/releasing.md)). The CLI is published to npm as [`@wemuda/launchrail`](https://www.npmjs.com/package/@wemuda/launchrail). Shipped history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
