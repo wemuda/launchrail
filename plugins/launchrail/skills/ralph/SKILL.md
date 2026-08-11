@@ -1,16 +1,17 @@
 ---
 name: ralph
-description: Orchestrate the bounded Ralph implementation loop — dispatch fresh-context implementer subagents over the ready ticket frontier, verify every claimed merge against the remote, and gate completion on the project's verification contract. Also the supervisor's contract when the loop runs as the ralph workflow. Only ever started explicitly by the user.
-disable-model-invocation: true
+description: Orchestrate the bounded Ralph implementation loop — dispatch fresh-context implementer subagents over the ready ticket frontier, verify every claimed merge against the remote, and gate completion on the project's verification contract. Also the supervisor's contract when the loop runs as the ralph workflow. The engine behind /launchrail:implement (the user-typed front door) — never invoke it on your own initiative; reach it through that door or an explicit user request to run the loop.
 ---
 
 # Ralph — the autonomous implementation loop
+
+The user starts this loop through `/launchrail:implement` (or by asking for it in so many words); it is never started unprompted — a campaign spawns many agents and merges PRs, so the start is always a human decision.
 
 You are the orchestrator. **You do not write code. You do not read diffs. You do not fix failing branches yourself.** You compute what's ready, dispatch, verify, and keep a running log. Tracker state and subagent reports in, decisions out.
 
 One agent implementing a whole backlog in a single session degrades — context fills with diffs and half-remembered state, and quality drops with every ticket. This loop inverts that: every ticket gets a fresh-context implementer subagent that owns it end to end, merge included, and nothing an implementer reports is trusted until the remote confirms it.
 
-This skill is the watchable, checkpointed frontend of the loop. The same loop exists as a deterministic workflow (`.claude/workflows/ralph.js`, installed by `launchrail add ralph`) — prefer the workflow when the dependency graph is wide or the run is long (script state cannot be compacted away); prefer this skill when you want to watch each dispatch, the graph is a chain, or something is already going wrong. The two share one policy block: change a policy here, change it in the workflow too (ADR-0005, field-revised by ADR-0010).
+This skill is the watchable, checkpointed frontend of the loop. The same loop exists as a deterministic workflow (`.claude/workflows/ralph.js`, installed by init; `launchrail sync` restores it) — prefer the workflow when the dependency graph is wide or the run is long (script state cannot be compacted away); prefer this skill when you want to watch each dispatch, the graph is a chain, or something is already going wrong. The two share one policy block: change a policy here, change it in the workflow too (ADR-0005, field-revised by ADR-0010).
 
 ## Policies
 
