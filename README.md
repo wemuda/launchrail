@@ -18,7 +18,6 @@
 [Using it](#using-it-in-your-project) ·
 [Ownership model](#the-ownership-model) ·
 [Repository layout](#repository-layout) ·
-[Roadmap](ROADMAP.md) ·
 [Contributing](#contributing) ·
 [Credits](#credits)
 
@@ -120,9 +119,7 @@ pnpm --filter @wemuda/launchrail exec launchrail --help
 
 ## Status
 
-The toolchain is stable and versioned. The full surface — `init`/`doctor`, the workflow plugin, browser testing, the Ralph loop, and the sync engine — is covered by 164 tests, including integration tests against real temporary Git repositories. Releases are automated: Conventional Commits drive release-please, the CLI and plugin version in lockstep, and the changelog is generated from the commit history ([ADR-0008](docs/adr/0008-release-automation.md), [docs/releasing.md](docs/releasing.md)). The npm publish flips on with the first release token.
-
-[ROADMAP.md](ROADMAP.md) tracks what's next; shipped history lives in [CHANGELOG.md](CHANGELOG.md).
+The toolchain is stable and versioned. The full surface — `init`/`doctor`, the workflow plugin, browser testing, the Ralph loop, and the sync engine — is covered by 164 tests, including integration tests against real temporary Git repositories. Releases are automated: Conventional Commits drive release-please, the CLI and plugin version in lockstep, and the changelog is generated from the commit history ([ADR-0008](docs/adr/0008-release-automation.md), [docs/releasing.md](docs/releasing.md)). The npm publish flips on with the first release token. Shipped history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 

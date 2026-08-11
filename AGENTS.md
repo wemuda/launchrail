@@ -31,7 +31,6 @@ The Launchrail **toolchain monorepo**: the `@wemuda/launchrail` CLI, the Claude 
 ## Commit conventions
 
 - Conventional Commits ([ADR-0002](docs/adr/0002-conventional-commits.md)): `type(scope): summary` — types `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `build`, `ci`; scope is a package or area (`cli`, `plugin`, `adr`) when it adds clarity.
-- [ROADMAP.md](ROADMAP.md) is a living document: update it in the same commit that changes what exists, what's in progress, or what's missing.
 
 ## Commands
 
