@@ -59,4 +59,4 @@ The manifest's `mode` (`.launchrail.yml`) calibrates rigor, not the stage order:
 
 - `spike` — stages 2–5 and 8 may be skipped deliberately; record the skip in the vision's non-goals.
 - `standard-mvp` — the default path above.
-- `high-rigor` — no skips; ADRs required for every stage-5 decision, and design validation covers error and edge states, not just happy paths.
+- `high-rigor` — no skips; ADRs required for every stage-6 decision, and design validation covers error and edge states, not just happy paths.
