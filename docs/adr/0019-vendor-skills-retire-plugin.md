@@ -1,0 +1,45 @@
+# ADR-0019: Vendor workflow skills as managed files; retire the marketplace plugin
+
+## Status
+Accepted — supersedes [ADR-0003](0003-plugin-subscription-via-project-settings.md) (plugin subscription via project settings) and [ADR-0011](0011-init-installs-plugin-via-claude-cli.md) (init installs plugins via the `claude` CLI); amends [ADR-0018](0018-implement-front-door.md) (the front-door command spelling under vendoring)
+
+## Context
+Launchrail distributed its workflow skills as a Claude Code plugin: a committed `.claude/settings.json` declaration (ADR-0003) plus a direct `claude plugin install` from `init` (ADR-0011). A cloud dogfood run — Launchrail on an adopted project (fixback) opened in Claude Code on the web — showed that this distribution model cannot reach the environments the workflow increasingly runs in.
+
+1. **Cloud/web sessions never get the plugin.** Claude Code on the web runs in an ephemeral, freshly-cloned container. The committed declaration (ADR-0003) only acts on a folder's *first* trust, which the web flow has no equivalent of; and `init`'s CLI install (ADR-0011) runs on a developer's own machine, not inside the container. Observed directly: with `launchrail@launchrail` enabled in a committed `.claude/settings.json`, `/launchrail:implement` is "Unknown command" in a web session and `~/.claude/plugins` is empty. The only skills reachable there are the ones already vendored into the repo (Matt Pocock's set, committed via their own installer) — so the fallback a user reached for was a generic upstream stub, not the Launchrail contract.
+
+2. **The plugin binds distribution to one vendor.** The marketplace/plugin mechanism is Claude-specific. The skills themselves are agent-neutral — each ships an `agents/*.yaml` beside its `SKILL.md` — so delivering them through a Claude-only plugin blocks other coding agents (Codex and the like) from consuming the same repo-local instructions.
+
+3. **Two halves, one lockstep, skew bugs.** A release versions the plugin (skills) and the CLI (templates/migrations) together but ships them through different channels, forcing the documented "update the plugin first, then `sync`" dance and a whole class of drift (`getting-started`'s "why the plugin updates first").
+
+The `claude` CLI *does* run headlessly in the container (verified: `claude plugin marketplace add` + `install` succeed there), so a SessionStart-hook install was a real option — but it pays a marketplace clone + install on every ephemeral boot, stays Claude-only, and preserves the two-halves skew. The property the workflow actually wants — every collaborator and every session, local or cloud, on any agent, has the same skills the instant they have the repo — is exactly what git already gives files in the tree.
+
+## Decision
+1. **Skills ship as files in the consuming repo, not as a plugin.** `init` and `sync` write the workflow's skills into `.claude/skills/` as **managed** files: checksummed in the lockfile, replaced on `sync`, local edits reported as conflicts ([ADR-0006](0006-sync-engine.md)), opt-out via `eject`. The CLI bundles the skill tree as package assets so it works offline, like every other template.
+
+2. **The CLI is the single source of truth.** The skill sources live in the toolchain repo and are the only authoritative copy. Launchrail's own skills plus a **pinned snapshot of the Matt Pocock skills the workflow composes** are bundled and vendored together. The snapshot ships with its upstream MIT `LICENSE` and copyright notice — redistribution is permitted and the attribution travels with the copy. "Vendor everything as managed" (the chosen option) means Launchrail owns keeping that snapshot current: it is refreshed deliberately in the toolchain repo and delivered to consumers through the same `sync` as everything else.
+
+3. **The marketplace plugin is retired.** `.claude-plugin/marketplace.json` and the plugin manifest are removed; `init` stops writing the plugin declaration (reversing ADR-0003) and stops the `claude plugin` roster install (reversing ADR-0011). `doctor`'s plugin-install check becomes a vendored-skills check (present + checksums current). A migration removes the launchrail/mattpocock declaration keys Launchrail previously added to consumers' `.claude/settings.json` — additively, touching only those keys.
+
+4. **Flat namespace; Launchrail curates collisions.** Repo-local skills are invoked bare (`/launch`, `/implement`, `/ralph`) — vendored skills carry no `launchrail:` prefix. Every internal `launchrail:<name>` cross-reference in skill bodies, `workflow.md`, and docs is rewritten to its bare name. The single real collision — Launchrail's `implement` front door (ADR-0018) versus Matt Pocock's generic `implement` stub — resolves in Launchrail's favor *by curation*: the front door is the canonical `/implement`, and the upstream stub is simply not vendored. That is ADR-0018's own "one door for building" intent, now enforced at the source instead of by namespace separation. ADR-0018's `/launchrail:implement` spelling becomes `/implement`; the front-door concept and its `disable-model-invocation` gate are unchanged.
+
+5. **A migration carries existing consumers across.** `2026-08-vendor-workflow-skills` — idempotent, dry-runnable, checksum-guarded — writes the vendored skill set into `.claude/skills/` and strips the launchrail/mattpocock plugin keys from `.claude/settings.json`. Existing projects converge on their next `sync`.
+
+## Alternatives considered
+- **SessionStart hook that installs the plugin roster.** Verified to work in-container, but pays a marketplace clone + install on every ephemeral boot, stays Claude-only, and preserves the two-halves version skew. Rejected: it makes the cloud case work without fixing why the plugin is the wrong carrier.
+- **Vendor only Launchrail's own skills; leave Matt Pocock's to their installer.** Cleanest ownership boundary, but a fresh clone isn't cloud-ready until someone runs `/setup-matt-pocock-skills` — reintroducing the "missing dependency at the finish line" failure ADR-0011 existed to remove. Rejected in favor of one self-contained vendored set.
+- **Keep the plugin *and* vendor.** Two authoritative copies of every skill guarantees drift. Rejected: a single source of truth is the point.
+- **Hyphen-prefixed vendored names (`/launchrail-launch`) to preserve grouping.** Sidesteps the `implement` clash mechanically, but reads as a fake namespace and rewrites every reference anyway. Rejected: curation resolves the one real collision without the ceremony.
+
+## Consequences
+- **Cloud, local, and CI become identical**, and distribution is agent-neutral: any agent that reads the repo (Claude, Codex, …) gets the same skills with no install step. After one teammate's `init`/`sync`, everyone else onboards with a `git pull`.
+- **One update path.** `sync` moves skills and templates together; the "plugin updates first" dance and its skew bugs are gone.
+- **Launchrail becomes Matt Pocock's redistributor** for the vendored subset — a deliberate, ongoing maintenance commitment (refresh the pinned snapshot; keep the MIT notice attached). AGENTS.md's "compose over mirroring upstream" line gains a licensed-vendoring carve-out.
+- **More visible churn in consumer repos:** every skill-touching release lands as managed-file diffs on the next `sync` — reviewable and honest, but real.
+- **The `launchrail:` prefix is gone.** Muscle memory and any external docs pointing at `/launchrail:<skill>` move to bare names; the front doors are `/launch` and `/implement`.
+- **`disable-model-invocation` and all other frontmatter carry over unchanged**, so the user-starts-the-loop guarantee (ADR-0018) survives vendoring.
+
+## Revisit when
+- Claude Code (or the ecosystem) gains a repo-committed, agent-neutral, install-free skill-distribution mechanism that also works in ephemeral sessions — then files-in-tree may no longer be the simplest carrier.
+- Maintaining the pinned Matt Pocock snapshot becomes a real burden (upstream churn outpaces deliberate refreshes) — reconsider vendoring upstream versus a thinner bootstrap.
+- A consuming project needs skills under a namespace to avoid collisions with its own — then bare naming needs revisiting.
