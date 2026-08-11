@@ -2,7 +2,7 @@ import type { PluginDeclaration } from "./claudeSettings.js";
 
 /**
  * The implementation loop is Launchrail's stage 10 — the engine that turns
- * ready tickets into verified, merged code (ADR-0016). Launchrail owns both
+ * ready tickets into verified, merged code (ADR-0017). Launchrail owns both
  * edges of that loop regardless of which engine runs between them:
  *
  *   - input:  tickets with the `ready-for-agent` label and `Blocked by: #n` edges

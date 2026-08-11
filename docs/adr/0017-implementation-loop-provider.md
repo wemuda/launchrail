@@ -1,4 +1,4 @@
-# ADR-0016: The implementation loop is a provider, not a fixed stage
+# ADR-0017: The implementation loop is a provider, not a fixed stage
 
 ## Status
 Accepted

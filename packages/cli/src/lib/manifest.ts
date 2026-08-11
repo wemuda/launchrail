@@ -34,7 +34,7 @@ export interface Manifest {
   };
   testing: Record<TestingKey, string | null>;
   modules: Record<string, boolean>;
-  /** Which stage-10 loop drives ready tickets to verified merges (ADR-0016). */
+  /** Which stage-10 loop drives ready tickets to verified merges (ADR-0017). */
   implementationLoop: ImplementationLoop;
 }
 
@@ -123,7 +123,7 @@ export function validateManifest(data: unknown): ManifestParseResult {
   }
 
   // Optional with a default so manifests written before the loop became
-  // selectable stay valid (ADR-0016); an explicit but unknown value still errors.
+  // selectable stay valid (ADR-0017); an explicit but unknown value still errors.
   let implementationLoop: ImplementationLoop = DEFAULT_IMPLEMENTATION_LOOP;
   if (data.implementationLoop !== undefined) {
     if (

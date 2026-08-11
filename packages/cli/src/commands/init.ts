@@ -207,7 +207,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   }
   // Base declaration (launchrail + Matt Pocock) for the early-exit paths that
   // run before the manifest is known; recomputed with the selected loop's
-  // plugin once the manifest resolves below (ADR-0016).
+  // plugin once the manifest resolves below (ADR-0017).
   let settings = planPluginDeclaration(opts.cwd);
   const claudeImports = planClaudeImports(opts.cwd);
   const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
@@ -231,7 +231,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
   }
 
-  // The selected implementation loop (stage 10, ADR-0016) may ship its own
+  // The selected implementation loop (stage 10, ADR-0017) may ship its own
   // Claude Code plugin. Fold it into the roster Launchrail declares and installs
   // so a teammate opening the project gets the same loop, exactly as they get
   // launchrail + Matt Pocock. `ralph` (the default) adds nothing here.

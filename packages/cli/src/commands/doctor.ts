@@ -112,7 +112,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
 
   // The declared/installed roster includes the selected implementation loop's
   // plugin when it has one (superpowers), so a project that chose it is checked
-  // for it exactly like the core plugins (ADR-0016).
+  // for it exactly like the core plugins (ADR-0017).
   const loopDeclarations = manifest ? implementationLoopDeclarations(manifest.implementationLoop) : [];
   const effectiveDeclarations = [...PLUGIN_DECLARATIONS, ...loopDeclarations];
   const effectivePlugins = [...WORKFLOW_PLUGINS, ...loopDeclarations.map(toWorkflowPlugin)];
