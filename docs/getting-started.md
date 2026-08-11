@@ -10,19 +10,13 @@ How to install Launchrail into a project and live with it day to day. For what L
 
 ## Installing
 
-> **Not on npm yet.** The publish flips on with the first release token (see [releasing](releasing.md)). Until then, run the CLI from a checkout of this repo:
->
-> ```bash
-> git clone https://github.com/wemuda/launchrail && cd launchrail
-> pnpm install && pnpm build
-> node packages/cli/dist/index.js --help   # use this path in place of `npx @wemuda/launchrail`
-> ```
-
-Once published, no install step is needed — every command runs through `npx`:
+There is no install step — the CLI is published to npm as [`@wemuda/launchrail`](https://www.npmjs.com/package/@wemuda/launchrail) and every command runs through `npx`:
 
 ```bash
 npx @wemuda/launchrail init
 ```
+
+(Working on Launchrail itself? Run it from a checkout instead: `pnpm install && pnpm build`, then `node packages/cli/dist/index.js` in place of `npx @wemuda/launchrail`.)
 
 ## Initializing a project
 
@@ -80,19 +74,65 @@ npx @wemuda/launchrail add ralph             # the bounded autonomous Ralph impl
 
 Both update the manifest (preserving your comments), seed or manage their files, and extend the generated Claude instructions. `verify` runs the deterministic gate; `smoke` scaffolds an evidence bundle for an agentic browser-smoke run.
 
-## Staying current
+## Updating to a new release
 
-```bash
-npx @wemuda/launchrail status   # drift, available updates, pending migrations, upstream advisories
-npx @wemuda/launchrail diff     # preview upstream changes as unified diffs
-npx @wemuda/launchrail sync     # apply managed updates + ordered, idempotent migrations
+The whole update is this, in this order:
+
+```text
+# 1. In Claude Code — update the plugin, then reload:
+/plugin              # → launchrail → update (and mattpocock-skills, if it has one)
+/reload-plugins
+
+# 2. In the terminal, from the project root — apply the release's files and migrations:
+npx -y @wemuda/launchrail@latest sync
+
+# 3. Commit, and optionally confirm health:
+git add -A && git commit -m "chore: sync launchrail to 1.7.0"
+npx -y @wemuda/launchrail@latest doctor
 ```
 
-`sync` only replaces managed files whose checksums match the lockfile — local edits to a managed file are reported as conflicts, never overwritten ([ADR-0006](adr/0006-sync-engine.md)). To keep local edits permanently:
+That's it. The next `/launchrail:launch` re-detects your position against the release's stage map, so anything the release added — a new stage, a reworked skill — either shows up as the next thing to do or is already behind your frontier. What each release contains is in the [CHANGELOG](../CHANGELOG.md).
+
+The rest of this section is the why and the edge cases.
+
+### Why the plugin updates first
+
+A release versions two things in lockstep: the **plugin** (the `/launchrail:*` skills) and the **CLI** (the managed files and migrations `sync` applies). They update through different mechanisms — `sync` never touches plugins — and the order matters: the managed instructions a newer CLI writes can name workflow stages whose skills only exist in the newer plugin. Sync the files while an old plugin is still installed and `.launchrail/CLAUDE.generated.md` describes a loop your session can't run. Plugin first (or both in the same sitting) keeps the halves consistent.
+
+No Claude Code session open? `claude plugin update launchrail@launchrail` from the terminal does the same thing, and re-running `npx -y @wemuda/launchrail@latest init` also refreshes already-installed plugins as part of its idempotent pass ([ADR-0011](adr/0011-init-installs-plugin-via-claude-cli.md)).
+
+### Why `@latest` matters
+
+The templates your project is compared against ship *inside* the CLI — no network check happens — and `npx` caches downloads. A stale cached CLI happily reports "everything up to date" against last month's templates. `@latest` forces `npx` to resolve the newest published release every time (`-y` just skips the install confirmation).
+
+`status` shows the gap directly: its first line reads like `launchrail 1.7.0 — lockfile written by 1.5.0` — the CLI you're running versus the version that last wrote the project, recorded as `launchrailVersion` in `.launchrail-lock.json`. `sync` is what closes it.
+
+### Previewing before you apply
+
+All read-only:
 
 ```bash
-npx @wemuda/launchrail eject <module|file>   # vendor mode: Launchrail never writes that path again
+npx -y @wemuda/launchrail@latest status         # summary: outdated files, pending migrations, advisories
+npx -y @wemuda/launchrail@latest diff           # the same changes as unified diffs
+npx -y @wemuda/launchrail@latest sync --dry-run # the full plan, migrations included
 ```
+
+### What sync will and won't do
+
+([ADR-0006](adr/0006-sync-engine.md))
+
+- **Managed files** (e.g. `.launchrail/CLAUDE.generated.md`) are replaced with the new release's content — unless you've edited them locally, in which case your version is kept and the file is reported as a conflict. Revert the local edits to receive updates, or opt the file out of management permanently:
+
+  ```bash
+  npx -y @wemuda/launchrail@latest eject <module|file>   # vendor mode: Launchrail never writes that path again
+  ```
+
+- **Seeded files** (`AGENTS.md`, `CLAUDE.md`, the ADR template) and **project-owned files** are never touched, on any run.
+- **Migrations** — structural changes like moving a file or rewriting a manifest field — run first, in order, idempotently. A failed migration stops the run and leaves the repository recoverable; nothing after it is attempted.
+
+### Teammates
+
+The file half of an update travels through git — teammates just `git pull`. The plugin half is per machine: each person updates their own through `/plugin` (the committed `.claude/settings.json` already points everyone at the same marketplaces).
 
 ## The workflow
 
