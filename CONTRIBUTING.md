@@ -32,8 +32,7 @@ A pull request that violates one of these will be declined regardless of how use
 
 1. **Discuss first for anything structural.** Open an issue before large changes. Meaningful decisions become ADRs in [docs/adr/](docs/adr/) (numbered `NNNN-short-title.md`, using the [template](docs/adr/0000-template.md)) — ADRs for meaningful decisions, not every dependency.
 2. **Write tests with the change.** File-manipulation logic gets snapshot/fixture tests; CLI behavior gets integration tests against temporary Git repositories (see `packages/cli/tests/` for the pattern). Anything that writes files in a consuming repo needs dry-run coverage.
-3. **Keep [ROADMAP.md](ROADMAP.md) true.** It's a living document — update it in the same commit that changes what exists, what's in progress, or what's missing.
-4. **Stay lightweight.** Prefer composing upstream tools over reimplementing them. No empty directories, no ceremony ahead of need, no speculative abstraction.
+3. **Stay lightweight.** Prefer composing upstream tools over reimplementing them. No empty directories, no ceremony ahead of need, no speculative abstraction.
 
 ## Commits
 
@@ -43,7 +42,7 @@ A pull request that violates one of these will be declined regardless of how use
 
 - Target `master`. CI must pass (build + tests on Node 22).
 - Keep PRs focused; separate refactors from behavior changes.
-- The definition of done: the change matches the relevant ADR (or updates it), build and tests pass, file-writing behavior has dry-run coverage, and the roadmap still tells the truth. Evidence over assertion.
+- The definition of done: the change matches the relevant ADR (or updates it), build and tests pass, and file-writing behavior has dry-run coverage. Evidence over assertion.
 
 ## Security issues
 
