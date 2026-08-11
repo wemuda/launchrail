@@ -48,6 +48,7 @@ Alignment is an on-ramp, not a second workflow: everything from the vision onwar
 
 - **No duplicate skills.** Where the table names an upstream skill, use it. Launchrail does not wrap, fork, or re-prompt `grill-with-docs`, the research skill, `wayfinder`, `to-spec`, or `to-tickets`. The `discovery` skill is Launchrail-owned framing that *drives* the research skill for depth — it composes it, it does not reimplement it.
 - **Discovery diverges, the grill converges.** Discovery runs before the grill and widens the option space; the grill takes that landscape and narrows it. Don't let discovery pick winners (that's the grill), and don't let the grill narrow options discovery never surfaced — diverge before you converge.
+- **Some owners are user-typed by design.** A few stage owners are `disable-model-invocation`: stage 0's `/setup-matt-pocock-skills` and stage 7's `wayfinder` / `to-spec` upstream, and the Ralph loop by Launchrail's own choice ([ADR-0005](../../../docs/adr/0005-ralph-two-frontends-one-policy.md)). The `launch` conductor cannot call these — it prepares a handoff: confirm the inputs are committed, hand over the exact fully-argumented command (never a bare invocation, which sends the skill re-deriving what the inputs already settle), and resume when the artifact lands. A `disable-model-invocation` refusal is a handoff cue, never licence to reverse-engineer the skill.
 - **The grill feeds research.** Run the grill before technical research and hand the research skill the grill's surviving constraints as its brief — research without grill constraints answers questions nobody asked.
 - **Artifacts gate stages.** Each stage starts from the previous stage's committed artifact, not from chat memory. If the artifact is missing, go back one stage instead of improvising.
 - **Everything the workflow produces is project-owned.** Vision, discovery and research notes, ADRs, specs, and tickets belong to the project; Launchrail tooling never overwrites them.
@@ -58,4 +59,4 @@ The manifest's `mode` (`.launchrail.yml`) calibrates rigor, not the stage order:
 
 - `spike` — stages 2–5 and 8 may be skipped deliberately; record the skip in the vision's non-goals.
 - `standard-mvp` — the default path above.
-- `high-rigor` — no skips; ADRs required for every stage-5 decision, and design validation covers error and edge states, not just happy paths.
+- `high-rigor` — no skips; ADRs required for every stage-6 decision, and design validation covers error and edge states, not just happy paths.
