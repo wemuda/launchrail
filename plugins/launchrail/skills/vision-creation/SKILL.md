@@ -5,7 +5,7 @@ description: Turn a raw product idea into a committed docs/vision.md capturing p
 
 # Vision creation
 
-Produce `docs/vision.md`: a short, honest statement of what this product is, who it serves, and what it deliberately is not. It is the first artifact of the Launchrail loop and the input to design exploration and the complexity grill.
+Produce `docs/vision.md`: a short, honest statement of what this product is, who it serves, and what it deliberately is not. It is the first artifact of the Launchrail loop and the input to design exploration, discovery research, and the complexity grill.
 
 ## Ground rules
 
@@ -30,7 +30,7 @@ Produce `docs/vision.md`: a short, honest statement of what this product is, who
 5. **Present and iterate** until the user approves.
 6. **Sync the agent contract.** If the seeded `AGENTS.md` still carries the TODO under `## Project purpose`, replace it with a one-paragraph distillation of the approved vision — what this is, who it serves, what it is not. Touch only that section: `AGENTS.md` belongs to the project, and the rest of it is not this skill's business.
 7. **Commit** `docs/vision.md` and the `AGENTS.md` update together (respect the project's commit conventions).
-8. **Hand off.** Point the user at the next stages of the loop: visual exploration in Claude Design to make the intent concrete, then the complexity grill (`grill-with-docs`) to attack the assumptions just recorded. See the plugin's `docs/workflow.md` for the full stage order.
+8. **Hand off.** Point the user at the next stages of the loop: visual exploration in Claude Design to make the intent concrete, discovery research (`launchrail:discovery`) to map the real options for the vision's hard parts, then the complexity grill (`grill-with-docs`) to attack the assumptions just recorded. See the plugin's `docs/workflow.md` for the full stage order.
 
 ## Template
 
