@@ -125,6 +125,12 @@ const GRAPH_SCHEMA = {
         },
       },
     },
+    notTickets: {
+      type: 'array',
+      items: { type: 'integer' },
+      description:
+        'Issue numbers wearing ready-for-agent that are plainly not implementable tickets (a published spec, research notes, an epic) — a labeling error to surface, not work to dispatch.',
+    },
   },
 }
 
@@ -232,8 +238,17 @@ Report merged: true only when (1) and (2) both hold. A PR description or comment
 const graphPrompt = (pre) => `List the open, ready tickets for a Ralph loop run. Change nothing on the tracker.
 Tracker access: ${pre.trackerAccess}
 Include every open ticket labeled ready-for-agent, excluding any labeled needs-info.
+An open issue wearing ready-for-agent that is plainly not an implementable ticket — a published spec, research notes, an epic — is a labeling error: leave it out of tickets and report its number in notTickets instead. When in doubt, include it as a ticket.
 For each, report its number, its exact title, and its "Blocked by" line copied VERBATIM (the whole line, e.g. "**Blocked by:** #11, #9"), or "" when it has none. If the tracker records blocking through native relations instead of a body line, render those relations as one "Blocked by: #n, #m" line and nothing else.
 Do NOT interpret, resolve, or filter the edges — copy the characters and let the caller parse the #n. Getting a blocker wrong dispatches a ticket before its dependency lands.`
+
+// A non-ticket wearing ready-for-agent (a published spec, research notes) is excluded from
+// the frontier but never silently: the label is the bug, and the supervisor should fix it.
+function warnNotTickets(graph) {
+  for (const n of graph?.notTickets ?? []) {
+    log(`#${n} wears ready-for-agent but is not an implementable ticket — excluded from the frontier; relabel it (e.g. spec)`)
+  }
+}
 
 // Blocking edges are parsed here, deterministically, from the verbatim line — never by a
 // model. A single misread edge silently builds a ticket on a dependency that hasn't landed.
@@ -372,6 +387,7 @@ log(
 )
 let graph = await agent(graphPrompt(pre), { label: 'read-graph', phase: 'Graph', schema: GRAPH_SCHEMA, model: 'haiku', effort: 'low' })
 if (!graph) throw new Error('graph agent died — refusing to start')
+warnNotTickets(graph)
 let tickets = parseGraph(graph)
 log(`${tickets.length} ready ticket(s) on the tracker`)
 
@@ -410,6 +426,7 @@ while (rounds < POLICY.maxRounds) {
   if (POLICY.refreshGraph && frontier(tickets, closedBefore).length > 0) {
     graph = await agent(graphPrompt(pre), { label: `read-graph:r${rounds}`, phase: 'Graph', schema: GRAPH_SCHEMA, model: 'haiku', effort: 'low' })
     if (graph) {
+      warnNotTickets(graph)
       const fresh = parseGraph(graph)
       for (const t of fresh) {
         if (!tickets.some((x) => x.number === t.number)) tickets.push(t)

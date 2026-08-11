@@ -58,16 +58,16 @@ Walk the chosen path, invoking each owner by its exact name and gating on its co
 
 - **wayfinder** (Matt Pocock) — break the feature into a navigable plan; feed its output to the spec.
 - **grill** → Matt Pocock `grill-with-docs`, feature-scoped; its surviving constraints are the spec's brief.
-- **spec** → Matt Pocock `to-spec`, committed under `docs/specs/`.
-- **design validation** → `launchrail:design-validation` (spec + Claude Design → revised spec carrying a `## Design validation` section).
-- **tickets** → Matt Pocock `to-tickets`. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up the output if it lacks them — the implementation loop depends on both, whichever one the project selected.
+- **spec** → Matt Pocock `to-spec`, committed under `docs/specs/`. `to-spec` is **user-typed** (`disable-model-invocation`): you can't call it — hand the user the exact, fully-argumented command naming the feature's committed inputs (grill constraints, wayfinder plan, ADRs) so it builds on them instead of re-exploring, then resume when the spec lands. A `disable-model-invocation` refusal is a handoff cue, never a reason to reverse-engineer the skill (see [`docs/workflow.md`](../../docs/workflow.md)).
+- **design validation** → `launchrail:design-validation` — validates the spec at a confirmed fidelity level (recorded skip, flow diagrams, screen mockups, or Claude Design; ADR-0016) and leaves the revised spec carrying a `## Design validation` section.
+- **tickets** → Matt Pocock `to-tickets`. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up the output if it lacks them — the implementation loop depends on both, whichever one the project selected. Only tickets take `ready-for-agent`: an issue publishing the spec itself wears a different label (e.g. `spec`), or the loop will dispatch the document as work.
 
 ## Step 5 — Hand off to the selected implementation loop
 
 Once ready tickets exist, the feature is ready to build. Read `.launchrail.yml` `implementationLoop` (default `ralph`) and hand off to that loop — never pick one for the user, and never start it yourself. Launchrail owns both edges regardless of the loop: `ready-for-agent` tickets with `Blocked by: #n` edges go in, and Step 6's `launchrail verify` gate stands between every merge and done.
 
 - `ralph` → explain the Ralph loop and let the user start it — `launchrail:ralph` (watchable) or the `ralph` workflow for wide or long runs (needs `launchrail add ralph`).
-- `superpowers` → drive the ready tickets through `superpowers:executing-plans` with `superpowers:test-driven-development`, closing each branch with `superpowers:finishing-a-development-branch`. `init` installs and declares the Superpowers plugin when selected; the verification gate is unchanged (ADR-0016).
+- `superpowers` → drive the ready tickets through `superpowers:executing-plans` with `superpowers:test-driven-development`, closing each branch with `superpowers:finishing-a-development-branch`. `init` installs and declares the Superpowers plugin when selected; the verification gate is unchanged (ADR-0017).
 
 ## Step 6 — Verify, then go around again
 

@@ -7,7 +7,7 @@
 **An updatable development system for taking a software idea from product intent to a verified release.**
 
 [![CI](https://github.com/wemuda/launchrail/actions/workflows/ci.yml/badge.svg)](https://github.com/wemuda/launchrail/actions/workflows/ci.yml)
-[![Status: pre-release](https://img.shields.io/badge/status-pre--release-orange)](ROADMAP.md)
+[![Release](https://img.shields.io/github/v/release/wemuda/launchrail?label=release&color=2088FF)](https://github.com/wemuda/launchrail/releases)
 [![Node >= 22](https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white)](package.json)
 [![pnpm workspace](https://img.shields.io/badge/pnpm-workspace-F69220?logo=pnpm&logoColor=white)](pnpm-workspace.yaml)
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-FE5196?logo=conventionalcommits&logoColor=white)](docs/adr/0002-conventional-commits.md)
@@ -18,15 +18,12 @@
 [Using it](#using-it-in-your-project) ·
 [Ownership model](#the-ownership-model) ·
 [Repository layout](#repository-layout) ·
-[Roadmap](ROADMAP.md) ·
 [Contributing](#contributing) ·
 [Credits](#credits)
 
 </div>
 
 ---
-
-> **Status:** Pre-release. All six roadmap phases are implemented; nothing is published to npm yet.
 
 This repository is the Launchrail **toolchain**: the CLI, Claude Code plugin, templates, and migrations that initialize other repositories and keep them current. It is not an application framework and it does not replace Claude Code, Claude Design, [Matt Pocock's skills](https://github.com/mattpocock/skills), GitHub, Playwright, or a project's chosen stack. It is the shared rail that connects them.
 
@@ -49,6 +46,8 @@ One command sets the rails:
 ```bash
 npx @wemuda/launchrail init
 ```
+
+_Not on npm yet — until the first publish, run the CLI from a checkout; see [getting started](docs/getting-started.md#installing)._
 
 `init` interviews you (or takes `--yes`), runs `git init` if the directory isn't a repository yet, seeds `AGENTS.md` and ADR conventions without touching existing content, subscribes the repository to the workflow's Claude Code plugins through `.claude/settings.json` — so every collaborator who opens the project in Claude Code gets the same skills — and, when the `claude` CLI is on your PATH, installs those plugins for you on the spot — Launchrail's own and Matt Pocock's skills ([ADR-0011](docs/adr/0011-init-installs-plugin-via-claude-cli.md)). Adopting an existing project is a first-class path: your files are kept, and a `CLAUDE.md` you already have is additively wired to the workflow imports rather than replaced ([ADR-0012](docs/adr/0012-init-wires-imports-into-existing-claude-md.md)). The interview asks whether the project is new or existing and records it as the manifest's `origin`; for an existing project, `launch` takes an **alignment on-ramp** — inferring a draft vision from the code, interviewing only the gaps, and inventorying your existing design system — instead of starting from a blank vision ([ADR-0013](docs/adr/0013-existing-project-alignment.md)).
 
@@ -118,9 +117,9 @@ pnpm build
 pnpm --filter @wemuda/launchrail exec launchrail --help
 ```
 
-## Roadmap
+## Status
 
-See [ROADMAP.md](ROADMAP.md), a living checklist of what exists, what's in progress, and what's missing. All six phases — `init` + `doctor`, the core workflow plugin, browser testing, Ralph orchestration, the sync engine, and open-source readiness — are implemented and covered by 164 tests. The Ralph loop has run for real against a Wemuda project, and its lessons are folded back into the toolchain (ADR-0010). What stands between here and a first release: the dogfood case study on a real project and flipping on the npm publish.
+The toolchain is stable and versioned. The full surface — `init`/`doctor`, the workflow plugin, browser testing, the Ralph loop, and the sync engine — is covered by 164 tests, including integration tests against real temporary Git repositories. Releases are automated: Conventional Commits drive release-please, the CLI and plugin version in lockstep, and the changelog is generated from the commit history ([ADR-0008](docs/adr/0008-release-automation.md), [docs/releasing.md](docs/releasing.md)). The npm publish flips on with the first release token. Shipped history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
