@@ -1,4 +1,4 @@
-import type { WorkflowPlugin } from "./claudeCli.js";
+import type { PluginDeclaration } from "./claudeSettings.js";
 
 /**
  * The implementation loop is Launchrail's stage 10 — the engine that turns
@@ -10,9 +10,9 @@ import type { WorkflowPlugin } from "./claudeCli.js";
  *
  * Which engine fills the middle is the project's choice, recorded in the
  * manifest's `implementationLoop`. `ralph` is the built-in default; `superpowers`
- * (obra/superpowers) is a selectable, experimental alternative that owns the
- * same slot with its own TDD/execution skills. This module is the single source
- * of truth for that closed set and each provider's routing metadata.
+ * (obra/superpowers) is a fully-wired alternative that owns the same slot with
+ * its own TDD/execution skills. This module is the single source of truth for
+ * that closed set and each provider's routing and plugin metadata.
  */
 export const IMPLEMENTATION_LOOPS = ["ralph", "superpowers"] as const;
 export type ImplementationLoop = (typeof IMPLEMENTATION_LOOPS)[number];
@@ -25,20 +25,15 @@ export interface ImplementationLoopProvider {
   label: string;
   /** One-line hint shown beside the wizard option. */
   hint: string;
-  /**
-   * Not yet a first-class, deeply-wired provider: `init` records the choice and
-   * offers install, and the conductor hands off with an honest note, but its
-   * internal stage-10 skills are not pinned into managed routing (ADR-0016).
-   */
-  experimental: boolean;
-  /** How the conductor's stage 10 hands off — an invokable skill or a short description. */
+  /** How the conductor's stage 10 hands off — the concrete skill(s) it routes to. */
   entry: string;
   /**
-   * The Claude Code plugin this loop needs installed when it lives outside the
-   * launchrail plugin. `null` for `ralph`, whose skills ship in the launchrail
-   * plugin and whose workflow file installs via `launchrail add ralph`.
+   * The Claude Code plugin this loop needs, when it lives outside the launchrail
+   * plugin. `null` for `ralph`, whose skills ship in the launchrail plugin and
+   * whose workflow file installs via `launchrail add ralph`. When present, init
+   * installs and declares it alongside the core roster and doctor checks it.
    */
-  plugin: WorkflowPlugin | null;
+  declaration: PluginDeclaration | null;
   /** Short line init/doctor/conductor print so the user knows how to run this loop. */
   setupHint: string;
 }
@@ -48,30 +43,33 @@ export const IMPLEMENTATION_LOOP_PROVIDERS: Record<ImplementationLoop, Implement
     id: "ralph",
     label: "Ralph (built-in)",
     hint: "Launchrail's verification-gated loop",
-    experimental: false,
     entry: "launchrail:ralph",
-    plugin: null,
+    declaration: null,
     setupHint: "Run `launchrail add ralph`, then start `launchrail:ralph` when the ready tickets exist.",
   },
   superpowers: {
     id: "superpowers",
-    label: "Superpowers (experimental)",
+    label: "Superpowers",
     hint: "obra/superpowers' TDD/execution loop in place of Ralph",
-    experimental: true,
-    entry: "the Superpowers execution skills (brainstorming → writing-plans → TDD → code review)",
-    // Best-effort install target; the exact marketplace/id may need adjusting as
-    // obra/superpowers evolves. On failure, init falls back to printing manual
-    // guidance (the same path shipped plugins use), so a wrong guess self-reports.
-    plugin: {
-      marketplace: "obra/superpowers",
-      id: "superpowers@superpowers",
+    entry:
+      "superpowers:executing-plans + superpowers:test-driven-development, closing with superpowers:finishing-a-development-branch",
+    declaration: {
+      marketplace: "superpowers-dev",
+      repo: "obra/superpowers",
+      pluginKey: "superpowers@superpowers-dev",
       label: "Superpowers",
     },
     setupHint:
-      "Experimental: install obra/superpowers, then drive its execution skills on the ready tickets. `launchrail verify` still gates every merge.",
+      "Drive the ready tickets through Superpowers' execution skills (superpowers:executing-plans + superpowers:test-driven-development), then superpowers:finishing-a-development-branch. `launchrail verify` still gates every merge.",
   },
 };
 
 export function implementationLoopProvider(loop: ImplementationLoop): ImplementationLoopProvider {
   return IMPLEMENTATION_LOOP_PROVIDERS[loop];
+}
+
+/** The plugin declaration(s) a loop adds to the roster — empty for the built-in `ralph`. */
+export function implementationLoopDeclarations(loop: ImplementationLoop): PluginDeclaration[] {
+  const { declaration } = IMPLEMENTATION_LOOP_PROVIDERS[loop];
+  return declaration ? [declaration] : [];
 }

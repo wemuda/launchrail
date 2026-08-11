@@ -2,10 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
-import { listInstalledPluginIds, WORKFLOW_PLUGINS } from "../lib/claudeCli.js";
+import { listInstalledPluginIds, toWorkflowPlugin, WORKFLOW_PLUGINS } from "../lib/claudeCli.js";
 import { missingImports } from "../lib/claudeImports.js";
-import { CLAUDE_SETTINGS_PATH, declarationState } from "../lib/claudeSettings.js";
-import { implementationLoopProvider } from "../lib/implementationLoops.js";
+import { CLAUDE_SETTINGS_PATH, declarationState, PLUGIN_DECLARATIONS } from "../lib/claudeSettings.js";
+import { implementationLoopDeclarations, implementationLoopProvider } from "../lib/implementationLoops.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
@@ -110,7 +110,14 @@ export function runDoctor(cwd: string): DoctorOutcome {
   if (detection.hasMattPocockSetup) add("pass", "Matt Pocock setup", "docs/agents/ present");
   else add("warn", "Matt Pocock setup", "docs/agents/ not found — run /setup-matt-pocock-skills in Claude Code (init preinstalls the skills plugin)");
 
-  const declaration = declarationState(cwd);
+  // The declared/installed roster includes the selected implementation loop's
+  // plugin when it has one (superpowers), so a project that chose it is checked
+  // for it exactly like the core plugins (ADR-0016).
+  const loopDeclarations = manifest ? implementationLoopDeclarations(manifest.implementationLoop) : [];
+  const effectiveDeclarations = [...PLUGIN_DECLARATIONS, ...loopDeclarations];
+  const effectivePlugins = [...WORKFLOW_PLUGINS, ...loopDeclarations.map(toWorkflowPlugin)];
+
+  const declaration = declarationState(cwd, effectiveDeclarations);
   if (declaration === "declared") {
     add("pass", "plugin declaration", `${CLAUDE_SETTINGS_PATH} declares the workflow plugins`);
   } else if (declaration === "invalid-json") {
@@ -121,9 +128,9 @@ export function runDoctor(cwd: string): DoctorOutcome {
 
   const installed = listInstalledPluginIds(cwd);
   if (installed.state === "ok") {
-    const missing = WORKFLOW_PLUGINS.filter((wp) => !installed.ids.includes(wp.id));
+    const missing = effectivePlugins.filter((wp) => !installed.ids.includes(wp.id));
     if (missing.length === 0) {
-      add("pass", "plugin install", `${WORKFLOW_PLUGINS.map((wp) => wp.id).join(", ")} installed in Claude Code`);
+      add("pass", "plugin install", `${effectivePlugins.map((wp) => wp.id).join(", ")} installed in Claude Code`);
     } else {
       add(
         "warn",
@@ -144,23 +151,11 @@ export function runDoctor(cwd: string): DoctorOutcome {
   }
 
   if (manifest) {
+    // Whether the loop's plugin is actually present is covered by the
+    // declaration/install checks above (its plugin is in the effective roster);
+    // here just report the selection and how stage 10 hands off.
     const provider = implementationLoopProvider(manifest.implementationLoop);
-    if (!provider.experimental && provider.plugin === null) {
-      // The built-in default (ralph): its own module checks below verify the
-      // workflow file is actually installed; here just report the selection.
-      add("pass", "implementation loop", provider.label);
-    } else if (installed.state === "ok" && provider.plugin) {
-      const present = installed.ids.includes(provider.plugin.id);
-      add(
-        present ? "pass" : "warn",
-        "implementation loop",
-        present
-          ? `${provider.label} — ${provider.plugin.id} installed`
-          : `${provider.label} — ${provider.setupHint}`,
-      );
-    } else {
-      add("warn", "implementation loop", `${provider.label} — ${provider.setupHint}`);
-    }
+    add("pass", "implementation loop", `${provider.label} → ${provider.entry}`);
   }
 
   if (manifest?.modules[BROWSER_TESTING_MODULE]) {

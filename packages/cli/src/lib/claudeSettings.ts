@@ -43,7 +43,10 @@ interface Settings {
   [key: string]: unknown;
 }
 
-function readSettings(root: string): { settings: Settings | null; state: DeclarationState } {
+function readSettings(
+  root: string,
+  declarations: PluginDeclaration[],
+): { settings: Settings | null; state: DeclarationState } {
   const path = join(root, CLAUDE_SETTINGS_PATH);
   if (!existsSync(path)) return { settings: null, state: "no-file" };
   let data: unknown;
@@ -56,7 +59,7 @@ function readSettings(root: string): { settings: Settings | null; state: Declara
     return { settings: null, state: "invalid-json" };
   }
   const settings = data as Settings;
-  const declared = PLUGIN_DECLARATIONS.every(
+  const declared = declarations.every(
     (d) =>
       settings.extraKnownMarketplaces?.[d.marketplace] !== undefined &&
       settings.enabledPlugins?.[d.pluginKey] !== undefined,
@@ -64,8 +67,8 @@ function readSettings(root: string): { settings: Settings | null; state: Declara
   return { settings, state: declared ? "declared" : "undeclared" };
 }
 
-export function declarationState(root: string): DeclarationState {
-  return readSettings(root).state;
+export function declarationState(root: string, declarations: PluginDeclaration[] = PLUGIN_DECLARATIONS): DeclarationState {
+  return readSettings(root, declarations).state;
 }
 
 export type SettingsPlanKind = "create" | "merge" | "skip-declared" | "skip-invalid";
@@ -77,8 +80,11 @@ export interface SettingsPlan {
   content: string | null;
 }
 
-export function planPluginDeclaration(root: string): SettingsPlan {
-  const { settings, state } = readSettings(root);
+export function planPluginDeclaration(
+  root: string,
+  declarations: PluginDeclaration[] = PLUGIN_DECLARATIONS,
+): SettingsPlan {
+  const { settings, state } = readSettings(root, declarations);
   if (state === "invalid-json") {
     return { kind: "skip-invalid", detail: "unparseable JSON — not touching it", content: null };
   }
@@ -89,7 +95,7 @@ export function planPluginDeclaration(root: string): SettingsPlan {
   const merged: Settings = settings ? { ...settings } : {};
   merged.extraKnownMarketplaces = { ...merged.extraKnownMarketplaces };
   merged.enabledPlugins = { ...merged.enabledPlugins };
-  for (const d of PLUGIN_DECLARATIONS) {
+  for (const d of declarations) {
     if (merged.extraKnownMarketplaces[d.marketplace] === undefined) {
       merged.extraKnownMarketplaces[d.marketplace] = { source: { source: "github", repo: d.repo } };
     }

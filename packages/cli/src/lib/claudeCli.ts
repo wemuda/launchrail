@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { PLUGIN_DECLARATIONS } from "./claudeSettings.js";
+import { PLUGIN_DECLARATIONS, type PluginDeclaration } from "./claudeSettings.js";
 
 /**
  * The committed declaration (ADR-0003) makes Claude Code offer the plugin when
@@ -23,12 +23,13 @@ export interface WorkflowPlugin {
   label: string;
 }
 
+/** A plugin declaration as the install commands see it: `marketplace add <repo>`, `plugin install <pluginKey>`. */
+export function toWorkflowPlugin(d: PluginDeclaration): WorkflowPlugin {
+  return { marketplace: d.repo, id: d.pluginKey, label: d.label };
+}
+
 /** Every Claude Code plugin the Launchrail workflow depends on — one roster with the committed declaration. */
-export const WORKFLOW_PLUGINS: WorkflowPlugin[] = PLUGIN_DECLARATIONS.map((d) => ({
-  marketplace: d.repo,
-  id: d.pluginKey,
-  label: d.label,
-}));
+export const WORKFLOW_PLUGINS: WorkflowPlugin[] = PLUGIN_DECLARATIONS.map(toWorkflowPlugin);
 
 const RUN_OPTS = { encoding: "utf8" as const, timeout: 180_000 };
 

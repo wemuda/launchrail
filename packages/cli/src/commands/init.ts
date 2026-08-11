@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
-import { detectClaudeCli, installPlugin, WORKFLOW_PLUGINS, type WorkflowPlugin } from "../lib/claudeCli.js";
+import { detectClaudeCli, installPlugin, toWorkflowPlugin, WORKFLOW_PLUGINS, type WorkflowPlugin } from "../lib/claudeCli.js";
 import {
   applyClaudeImports,
   planClaudeImports,
@@ -12,11 +12,13 @@ import {
   applyPluginDeclaration,
   CLAUDE_SETTINGS_PATH,
   planPluginDeclaration,
+  PLUGIN_DECLARATIONS,
   type SettingsPlan,
 } from "../lib/claudeSettings.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
 import {
   DEFAULT_IMPLEMENTATION_LOOP,
+  implementationLoopDeclarations,
   implementationLoopProvider,
   type ImplementationLoop,
 } from "../lib/implementationLoops.js";
@@ -148,7 +150,7 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
             },
             {
               value: "superpowers",
-              label: "Superpowers (experimental)",
+              label: "Superpowers",
               hint: "obra/superpowers' TDD/execution loop instead of Ralph",
             },
           ],
@@ -203,7 +205,10 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       detection.isGitRepo = true;
     }
   }
-  const settings = planPluginDeclaration(opts.cwd);
+  // Base declaration (launchrail + Matt Pocock) for the early-exit paths that
+  // run before the manifest is known; recomputed with the selected loop's
+  // plugin once the manifest resolves below (ADR-0016).
+  let settings = planPluginDeclaration(opts.cwd);
   const claudeImports = planClaudeImports(opts.cwd);
   const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
 
@@ -225,6 +230,17 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.error("launchrail: non-interactive session — re-run with --yes to accept defaults.");
     return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
   }
+
+  // The selected implementation loop (stage 10, ADR-0016) may ship its own
+  // Claude Code plugin. Fold it into the roster Launchrail declares and installs
+  // so a teammate opening the project gets the same loop, exactly as they get
+  // launchrail + Matt Pocock. `ralph` (the default) adds nothing here.
+  const loopProvider = implementationLoopProvider(manifest.implementationLoop);
+  const providerDeclarations = implementationLoopDeclarations(manifest.implementationLoop);
+  if (providerDeclarations.length > 0) {
+    settings = planPluginDeclaration(opts.cwd, [...PLUGIN_DECLARATIONS, ...providerDeclarations]);
+  }
+  const installTargets: WorkflowPlugin[] = [...WORKFLOW_PLUGINS, ...providerDeclarations.map(toWorkflowPlugin)];
 
   // Adopting a project that already exists (not a fresh Launchrail init): make
   // the safe-write model explicit — existing files are kept, and Launchrail
@@ -277,15 +293,14 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       const version = detectClaudeCli(opts.cwd);
       console.log(
         version
-          ? `  install   ${WORKFLOW_PLUGINS.map((wp) => wp.id).join(" + ")} into Claude Code  (claude CLI ${version} detected)`
+          ? `  install   ${installTargets.map((wp) => wp.id).join(" + ")} into Claude Code  (claude CLI ${version} detected)`
           : "  manual    Claude Code plugin install  (claude CLI not found — instructions will be printed)",
       );
     }
-    const dryLoop = implementationLoopProvider(manifest.implementationLoop);
     console.log(
-      dryLoop.plugin
-        ? `  loop      implementation loop: ${dryLoop.label}  (would install ${dryLoop.plugin.id})`
-        : `  loop      implementation loop: ${dryLoop.label}  (${dryLoop.setupHint})`,
+      loopProvider.declaration
+        ? `  loop      implementation loop: ${loopProvider.label}  (declares + installs ${loopProvider.declaration.pluginKey})`
+        : `  loop      implementation loop: ${loopProvider.label}  (${loopProvider.setupHint})`,
     );
     console.log("\nDry run — nothing was written.");
     return { code: 0, actions, settings, claudeImports, plugin: "dry-run" };
@@ -335,7 +350,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     } else {
       console.log("\nInstalling the Claude Code plugins the workflow needs (first run clones marketplaces)…");
       let fresh = 0;
-      for (const wp of WORKFLOW_PLUGINS) {
+      for (const wp of installTargets) {
         const result = installPlugin(opts.cwd, wp);
         if (result.state === "installed") {
           if (result.detail !== "up-to-date") fresh += 1;
@@ -358,31 +373,6 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     }
   }
 
-  // The selected implementation loop is stage 10 (ADR-0016). A non-default
-  // provider may ship in its own Claude Code plugin; install it best-effort
-  // beside the core roster. It is experimental, so a failure never fails init —
-  // it just prints how to add it. Its outcome stays out of `plugin`, which
-  // summarizes the always-required workflow roster.
-  const loopProvider = implementationLoopProvider(manifest.implementationLoop);
-  if (loopProvider.plugin && !opts.skipPluginInstall) {
-    console.log(`\nImplementation loop: ${loopProvider.label}.`);
-    if (detectClaudeCli(opts.cwd) === null) {
-      console.log(
-        `  Install it in Claude Code:  claude plugin marketplace add ${loopProvider.plugin.marketplace} && claude plugin install ${loopProvider.plugin.id}`,
-      );
-    } else {
-      const result = installPlugin(opts.cwd, loopProvider.plugin);
-      if (result.state === "installed") {
-        console.log(`  ✓ ${loopProvider.plugin.label} (${loopProvider.plugin.id})`);
-      } else {
-        console.log(`  ⚠ ${loopProvider.plugin.label} could not be installed automatically — add it manually:`);
-        console.log(`      claude plugin marketplace add ${loopProvider.plugin.marketplace}`);
-        console.log(`      claude plugin install ${loopProvider.plugin.id}`);
-      }
-    }
-    console.log(`  ${loopProvider.setupHint}`);
-  }
-
   const pluginReady = plugin === "installed" || plugin === "already-installed";
   console.log("\nYou're set up — from here the workflow runs inside Claude Code:");
   console.log('  1. Commit the result: git add -A && git commit -m "chore: initialize launchrail"');
@@ -390,7 +380,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("  2. Open Claude Code in this project — the workflow plugins and their skills are ready.");
     console.log("     (Session already open? Run /reload-plugins, or restart Claude Code.)");
   } else {
-    const toInstall = plugin === "failed" ? failedPlugins : WORKFLOW_PLUGINS;
+    const toInstall = plugin === "failed" ? failedPlugins : installTargets;
     console.log("  2. Install the workflow plugins into Claude Code:");
     for (const wp of toInstall) {
       console.log(`       claude plugin marketplace add ${wp.marketplace}`);

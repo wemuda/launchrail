@@ -67,7 +67,7 @@ Walk the chosen path, invoking each owner by its exact name and gating on its co
 Once ready tickets exist, the feature is ready to build. Read `.launchrail.yml` `implementationLoop` (default `ralph`) and hand off to that loop — never pick one for the user, and never start it yourself. Launchrail owns both edges regardless of the loop: `ready-for-agent` tickets with `Blocked by: #n` edges go in, and Step 6's `launchrail verify` gate stands between every merge and done.
 
 - `ralph` → explain the Ralph loop and let the user start it — `launchrail:ralph` (watchable) or the `ralph` workflow for wide or long runs (needs `launchrail add ralph`).
-- `superpowers` → hand off to obra/superpowers' execution skills (experimental — say so, and point the user at its setup). The verification gate is unchanged (ADR-0016).
+- `superpowers` → drive the ready tickets through `superpowers:executing-plans` with `superpowers:test-driven-development`, closing each branch with `superpowers:finishing-a-development-branch`. `init` installs and declares the Superpowers plugin when selected; the verification gate is unchanged (ADR-0016).
 
 ## Step 6 — Verify, then go around again
 
