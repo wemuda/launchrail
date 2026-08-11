@@ -15,6 +15,11 @@ import {
   type SettingsPlan,
 } from "../lib/claudeSettings.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
+import {
+  DEFAULT_IMPLEMENTATION_LOOP,
+  implementationLoopProvider,
+  type ImplementationLoop,
+} from "../lib/implementationLoops.js";
 import { emptyLockfile, readLockfile, writeLockfile } from "../lib/lockfile.js";
 import { migrationIds } from "../lib/migrations.js";
 import {
@@ -78,6 +83,7 @@ function defaultManifestFor(detection: RepoDetection): Manifest {
     },
     testing: defaultTesting(detection),
     modules: { core: true },
+    implementationLoop: DEFAULT_IMPLEMENTATION_LOOP,
   };
 }
 
@@ -130,6 +136,23 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
           initialValue: defaults.testing.unitCommand ?? "",
           placeholder: "e.g. pnpm test",
         }),
+      implementationLoop: () =>
+        p.select({
+          message: "Implementation loop (drives ready tickets to verified merges)",
+          initialValue: defaults.implementationLoop as string,
+          options: [
+            {
+              value: "ralph",
+              label: "Ralph",
+              hint: "built-in, verification-gated (recommended); `launchrail add ralph`",
+            },
+            {
+              value: "superpowers",
+              label: "Superpowers (experimental)",
+              hint: "obra/superpowers' TDD/execution loop instead of Ralph",
+            },
+          ],
+        }),
     },
     {
       onCancel: () => {
@@ -150,6 +173,7 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
       unitCommand: answers.unitCommand.trim() === "" ? null : answers.unitCommand.trim(),
     },
     modules: { core: true },
+    implementationLoop: answers.implementationLoop as ImplementationLoop,
   };
 }
 
@@ -257,6 +281,12 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
           : "  manual    Claude Code plugin install  (claude CLI not found — instructions will be printed)",
       );
     }
+    const dryLoop = implementationLoopProvider(manifest.implementationLoop);
+    console.log(
+      dryLoop.plugin
+        ? `  loop      implementation loop: ${dryLoop.label}  (would install ${dryLoop.plugin.id})`
+        : `  loop      implementation loop: ${dryLoop.label}  (${dryLoop.setupHint})`,
+    );
     console.log("\nDry run — nothing was written.");
     return { code: 0, actions, settings, claudeImports, plugin: "dry-run" };
   }
@@ -276,6 +306,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     issueTracker: manifest.issueTracker,
     conventionalCommits: manifest.conventions.conventionalCommits,
     unitCommand: manifest.testing.unitCommand,
+    implementationLoop: manifest.implementationLoop,
   };
   if (JSON.stringify(lockfile) !== lockBefore || !existing.lockfile) {
     writeLockfile(opts.cwd, lockfile);
@@ -327,6 +358,31 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     }
   }
 
+  // The selected implementation loop is stage 10 (ADR-0016). A non-default
+  // provider may ship in its own Claude Code plugin; install it best-effort
+  // beside the core roster. It is experimental, so a failure never fails init —
+  // it just prints how to add it. Its outcome stays out of `plugin`, which
+  // summarizes the always-required workflow roster.
+  const loopProvider = implementationLoopProvider(manifest.implementationLoop);
+  if (loopProvider.plugin && !opts.skipPluginInstall) {
+    console.log(`\nImplementation loop: ${loopProvider.label}.`);
+    if (detectClaudeCli(opts.cwd) === null) {
+      console.log(
+        `  Install it in Claude Code:  claude plugin marketplace add ${loopProvider.plugin.marketplace} && claude plugin install ${loopProvider.plugin.id}`,
+      );
+    } else {
+      const result = installPlugin(opts.cwd, loopProvider.plugin);
+      if (result.state === "installed") {
+        console.log(`  ✓ ${loopProvider.plugin.label} (${loopProvider.plugin.id})`);
+      } else {
+        console.log(`  ⚠ ${loopProvider.plugin.label} could not be installed automatically — add it manually:`);
+        console.log(`      claude plugin marketplace add ${loopProvider.plugin.marketplace}`);
+        console.log(`      claude plugin install ${loopProvider.plugin.id}`);
+      }
+    }
+    console.log(`  ${loopProvider.setupHint}`);
+  }
+
   const pluginReady = plugin === "installed" || plugin === "already-installed";
   console.log("\nYou're set up — from here the workflow runs inside Claude Code:");
   console.log('  1. Commit the result: git add -A && git commit -m "chore: initialize launchrail"');
@@ -345,6 +401,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("      Claude Code offers them by itself the first time this folder is trusted.)");
   }
   console.log("  3. Run /launchrail:launch — it detects the project's stage and drives the workflow from there.");
+  console.log(`     Implementation loop (stage 10): ${loopProvider.label}. ${loopProvider.setupHint}`);
   if (manifest.origin === "existing") {
     console.log("     For an existing project it starts by aligning your code with Launchrail's artifacts:");
     console.log("     it infers a vision from what you already have, asks about the gaps, and inventories your");

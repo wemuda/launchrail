@@ -5,6 +5,7 @@ import { sha256 } from "../lib/checksum.js";
 import { listInstalledPluginIds, WORKFLOW_PLUGINS } from "../lib/claudeCli.js";
 import { missingImports } from "../lib/claudeImports.js";
 import { CLAUDE_SETTINGS_PATH, declarationState } from "../lib/claudeSettings.js";
+import { implementationLoopProvider } from "../lib/implementationLoops.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
@@ -140,6 +141,26 @@ export function runDoctor(cwd: string): DoctorOutcome {
     );
   } else {
     add("warn", "plugin install", "could not read `claude plugin list --json`");
+  }
+
+  if (manifest) {
+    const provider = implementationLoopProvider(manifest.implementationLoop);
+    if (!provider.experimental && provider.plugin === null) {
+      // The built-in default (ralph): its own module checks below verify the
+      // workflow file is actually installed; here just report the selection.
+      add("pass", "implementation loop", provider.label);
+    } else if (installed.state === "ok" && provider.plugin) {
+      const present = installed.ids.includes(provider.plugin.id);
+      add(
+        present ? "pass" : "warn",
+        "implementation loop",
+        present
+          ? `${provider.label} — ${provider.plugin.id} installed`
+          : `${provider.label} — ${provider.setupHint}`,
+      );
+    } else {
+      add("warn", "implementation loop", `${provider.label} — ${provider.setupHint}`);
+    }
   }
 
   if (manifest?.modules[BROWSER_TESTING_MODULE]) {

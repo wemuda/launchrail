@@ -1,4 +1,9 @@
 import { parse, parseDocument, stringify } from "yaml";
+import {
+  DEFAULT_IMPLEMENTATION_LOOP,
+  IMPLEMENTATION_LOOPS,
+  type ImplementationLoop,
+} from "./implementationLoops.js";
 
 export const MANIFEST_FILENAME = ".launchrail.yml";
 
@@ -29,6 +34,8 @@ export interface Manifest {
   };
   testing: Record<TestingKey, string | null>;
   modules: Record<string, boolean>;
+  /** Which stage-10 loop drives ready tickets to verified merges (ADR-0016). */
+  implementationLoop: ImplementationLoop;
 }
 
 export interface ManifestParseResult {
@@ -115,6 +122,20 @@ export function validateManifest(data: unknown): ManifestParseResult {
     }
   }
 
+  // Optional with a default so manifests written before the loop became
+  // selectable stay valid (ADR-0016); an explicit but unknown value still errors.
+  let implementationLoop: ImplementationLoop = DEFAULT_IMPLEMENTATION_LOOP;
+  if (data.implementationLoop !== undefined) {
+    if (
+      typeof data.implementationLoop === "string" &&
+      (IMPLEMENTATION_LOOPS as readonly string[]).includes(data.implementationLoop)
+    ) {
+      implementationLoop = data.implementationLoop as ImplementationLoop;
+    } else {
+      errors.push(`implementationLoop must be one of: ${IMPLEMENTATION_LOOPS.join(", ")}`);
+    }
+  }
+
   if (errors.length > 0) return { manifest: null, errors };
   return {
     manifest: {
@@ -125,6 +146,7 @@ export function validateManifest(data: unknown): ManifestParseResult {
       conventions: { conventionalCommits },
       testing,
       modules,
+      implementationLoop,
     },
     errors: [],
   };

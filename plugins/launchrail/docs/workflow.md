@@ -26,7 +26,7 @@ Invoke the `launch` skill (or just say where you are and ask what's next). It de
 | 8 | Design validation | Launchrail `design-validation` skill | Spec + Claude Design | Revised spec with `## Design validation` section |
 | 9 | Tickets | Matt Pocock's `to-tickets` | Validated spec | Tickets in the project's tracker |
 
-After stage 9, bounded implementation is the Ralph loop: `launchrail add ralph` installs it, and the `ralph` skill (watchable) or the `ralph` workflow (wide/long runs) drives the tickets to verified merges — gated by `launchrail verify` and, where the browser-testing module is enabled, browser smoke evidence. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up `to-tickets` output if it lacks them.
+After stage 9, bounded implementation is **the project's selected implementation loop** — stage 10, chosen in `.launchrail.yml` as `implementationLoop` (default `ralph`, ADR-0016). Whichever loop runs, Launchrail owns both edges: tickets enter carrying the `ready-for-agent` label and `Blocked by: #n` edges (touch up `to-tickets` output if it lacks them), and every merge is gated by `launchrail verify` plus, where the browser-testing module is enabled, browser smoke evidence — the loop implements, Launchrail verifies. The built-in default is the Ralph loop: `launchrail add ralph` installs it, and the `ralph` skill (watchable) or the `ralph` workflow (wide/long runs) drives the tickets to verified merges. `superpowers` (obra/superpowers, experimental) is a selectable alternative that fills the same slot with its own TDD/execution skills under the same input and verification contract.
 
 ## Sizing the work in the delivery loop
 
@@ -36,7 +36,7 @@ The stages above take a fresh project to its first release. After that, the deli
 - **Semi feature** — a grill, `to-spec`, optionally design validation, then `to-tickets`.
 - **Small feature** — a grill straight to `to-tickets`.
 
-Every size ends the same way: the Ralph loop implements and verifies the resulting tickets. Sizing changes *how many* planning stages a feature needs, never *who owns* them — the stage table above is still the contract. The `launchrail:start-feature` skill conducts exactly this: it sizes a feature and routes it through the matching path, composing the same owners ([ADR-0014](../../../docs/adr/0014-start-feature-conductor.md)).
+Every size ends the same way: the project's selected implementation loop (default Ralph) implements the resulting tickets, gated by `launchrail verify`. Sizing changes *how many* planning stages a feature needs, never *who owns* them — the stage table above is still the contract. The `launchrail:start-feature` skill conducts exactly this: it sizes a feature and routes it through the matching path, composing the same owners ([ADR-0014](../../../docs/adr/0014-start-feature-conductor.md)).
 
 ## Adopting an existing project
 

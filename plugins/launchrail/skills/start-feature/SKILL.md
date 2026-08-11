@@ -1,11 +1,11 @@
 ---
 name: start-feature
-description: Start a new feature on an already-founded project and drive it through the delivery loop. Sizes the feature (large / semi / small), then routes to the planning subset that size needs — complexity grill, wayfinder, to-spec, design validation, to-tickets — before handing off to the Ralph loop and verification. Use to begin or continue one feature once the project's foundation (vision, ADRs) exists. It composes the stage owners and never reimplements them; for a brand-new project with no vision yet, use launch instead.
+description: Start a new feature on an already-founded project and drive it through the delivery loop. Sizes the feature (large / semi / small), then routes to the planning subset that size needs — complexity grill, wayfinder, to-spec, design validation, to-tickets — before handing off to the project's selected implementation loop (Ralph by default) and verification. Use to begin or continue one feature once the project's foundation (vision, ADRs) exists. It composes the stage owners and never reimplements them; for a brand-new project with no vision yet, use launch instead.
 ---
 
 # Start feature — the delivery-loop conductor
 
-Sibling to `launch`. Where `launch` takes a fresh project from idea to its first release, **start-feature drives one feature through the delivery loop** on a project whose foundation already exists. You are the **conductor**: size the feature, run or route to the planning skills the size calls for, then hand off to the Ralph loop and verification. Every stage is owned by exactly one tool — a Launchrail skill, an upstream Matt Pocock skill, or a CLI command. Route to them; never reimplement them.
+Sibling to `launch`. Where `launch` takes a fresh project from idea to its first release, **start-feature drives one feature through the delivery loop** on a project whose foundation already exists. You are the **conductor**: size the feature, run or route to the planning skills the size calls for, then hand off to the project's selected implementation loop (Ralph by default) and verification. Every stage is owned by exactly one tool — a Launchrail skill, an upstream Matt Pocock skill, or a CLI command. Route to them; never reimplement them.
 
 ## When this skill, when `launch`
 
@@ -19,7 +19,7 @@ Sibling to `launch`. Where `launch` takes a fresh project from idea to its first
 - **Artifacts gate stages, not chat memory.** A stage counts done only when its committed artifact exists — read the repository, don't trust this session.
 - **Sizing and detection are read-only.** Every write happens inside the skill or CLI command you route to.
 - **Everything the loop produces is project-owned** — feature spec, ADRs, tickets. Launchrail tooling never overwrites them.
-- **Never start Ralph unprompted.** The Ralph loop (`launchrail:ralph`) is user-invoked only. Route to it and explain; do not launch it yourself.
+- **Never start the implementation loop unprompted.** Stage 10 is user-invoked only, whichever loop the project selected (`.launchrail.yml` `implementationLoop`; default `ralph`). Route to it and explain; do not launch it yourself.
 
 ## Step 1 — Frame the feature
 
@@ -60,11 +60,14 @@ Walk the chosen path, invoking each owner by its exact name and gating on its co
 - **grill** → Matt Pocock `grill-with-docs`, feature-scoped; its surviving constraints are the spec's brief.
 - **spec** → Matt Pocock `to-spec`, committed under `docs/specs/`.
 - **design validation** → `launchrail:design-validation` (spec + Claude Design → revised spec carrying a `## Design validation` section).
-- **tickets** → Matt Pocock `to-tickets`. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up the output if it lacks them — the Ralph loop depends on both.
+- **tickets** → Matt Pocock `to-tickets`. Tickets must carry `Blocked by: #n` edges and the `ready-for-agent` label; touch up the output if it lacks them — the implementation loop depends on both, whichever one the project selected.
 
-## Step 5 — Hand off to the Ralph loop
+## Step 5 — Hand off to the selected implementation loop
 
-Once ready tickets exist, the feature is ready to build. Explain the Ralph loop and let the user start it themselves — `launchrail:ralph` (watchable) or the `ralph` workflow for wide or long runs (needs `launchrail add ralph`). Never start it yourself.
+Once ready tickets exist, the feature is ready to build. Read `.launchrail.yml` `implementationLoop` (default `ralph`) and hand off to that loop — never pick one for the user, and never start it yourself. Launchrail owns both edges regardless of the loop: `ready-for-agent` tickets with `Blocked by: #n` edges go in, and Step 6's `launchrail verify` gate stands between every merge and done.
+
+- `ralph` → explain the Ralph loop and let the user start it — `launchrail:ralph` (watchable) or the `ralph` workflow for wide or long runs (needs `launchrail add ralph`).
+- `superpowers` → hand off to obra/superpowers' execution skills (experimental — say so, and point the user at its setup). The verification gate is unchanged (ADR-0016).
 
 ## Step 6 — Verify, then go around again
 
@@ -76,7 +79,7 @@ Accept any of these as a direct jump (case-insensitive):
 
 - `size` — size the described feature and stop: recommend a path, route nowhere.
 - `grill` / `spec` / `validate` / `tickets` — jump to that owner for this feature (sanity-check its inputs exist first; offer to start earlier if one is missing).
-- `implement` / `ralph` — hand off to the Ralph loop (explicit start).
+- `implement` / `ralph` / `loop` — hand off to the selected implementation loop (explicit start).
 - `verify` / `smoke` — the verification gate.
 
 ## Always leave a map

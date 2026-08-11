@@ -15,6 +15,7 @@ const manifest: Manifest = {
     appUrl: "http://localhost:3000",
   },
   modules: { core: true },
+  implementationLoop: "ralph",
 };
 
 describe("manifest", () => {
@@ -68,7 +69,22 @@ describe("manifest", () => {
         appUrl: null,
       },
       modules: { core: true },
+      implementationLoop: "ralph",
     });
+  });
+
+  test("implementationLoop round-trips and defaults to ralph when absent (older manifests stay valid)", () => {
+    const chosen = parseManifest("schemaVersion: 1\nmode: standard-mvp\nimplementationLoop: superpowers\n");
+    expect(chosen.errors).toEqual([]);
+    expect(chosen.manifest?.implementationLoop).toBe("superpowers");
+    const absent = parseManifest("schemaVersion: 1\nmode: standard-mvp\n");
+    expect(absent.manifest?.implementationLoop).toBe("ralph");
+  });
+
+  test("rejects unknown implementationLoop", () => {
+    const parsed = parseManifest("schemaVersion: 1\nmode: spike\nimplementationLoop: turbo\n");
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.join(" ")).toContain("implementationLoop must be one of");
   });
 
   test("accepts a manifest written before the testing fields existed", () => {
