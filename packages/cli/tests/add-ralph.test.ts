@@ -70,6 +70,15 @@ describe("launchrail add ralph", () => {
     expect(content).toContain("launchrail:resolving-merge-conflicts");
   });
 
+  test("the workflow carries the max-merges cap", () => {
+    const content = ralphWorkflowContent();
+    // Cap policy: 0 = uncapped; batches never exceed the remainder, so a run
+    // cannot overshoot; hitting the cap is reported, not silent.
+    expect(content).toContain("max: A.max ?? 0");
+    expect(content).toContain("Math.min(POLICY.width, capLeft)");
+    expect(content).toContain("maxReached");
+  });
+
   test("the workflow carries the ADR-0010 field-revision mechanics", () => {
     const content = ralphWorkflowContent();
     // Blocking edges cross the model boundary verbatim and are parsed in script code.

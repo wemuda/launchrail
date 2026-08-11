@@ -7,7 +7,7 @@ How a project moves from idea to verified, released software through committed a
 Two commands cover the whole rail:
 
 - **`/launchrail:launch`** — plan. It detects which stage the project has reached from its committed artifacts and runs or routes to that stage's owner; it takes a stage name (`vision`, `discovery`, `design-validation`, …) to jump straight there, and it sizes each new feature once the foundation exists ([ADR-0009](../../../docs/adr/0009-launch-orchestrator-skill.md), [ADR-0018](../../../docs/adr/0018-implement-front-door.md)).
-- **`/launchrail:implement`** — build. The single entry point for stage 10: it drives ready tickets to verified merges through the project's selected loop, whole frontier or one ticket at a time.
+- **`/launchrail:implement`** — build. The single entry point for stage 10: it drives ready tickets to verified merges through the project's selected loop — the whole frontier, a spec's tickets, the next N ("max 5"), or one ticket at a time.
 
 ## Prerequisites
 
