@@ -66,8 +66,8 @@ describe("launchrail add ralph", () => {
     expect(content).toContain("export const meta");
     expect(content).toContain("name: 'ralph'");
     expect(content).toContain("npx @wemuda/launchrail verify");
-    expect(content).toContain("launchrail:ralph-implement");
-    expect(content).toContain("launchrail:resolving-merge-conflicts");
+    expect(content).toContain("launch-ralph-implement");
+    expect(content).toContain("launch-resolving-merge-conflicts");
   });
 
   test("the workflow carries the max-merges cap", () => {

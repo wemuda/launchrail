@@ -24,7 +24,7 @@ The Launchrail **toolchain monorepo**: the `@wemuda/launchrail` CLI, the Claude 
 
 - TypeScript, Node ≥ 22, ESM only. pnpm workspace under `packages/*`.
 - Meaningful decisions become ADRs in `docs/adr/`, numbered `NNNN-short-title.md`, using [docs/adr/0000-template.md](docs/adr/0000-template.md). ADRs for meaningful decisions, not every dependency.
-- Prefer composing upstream tools ([Matt Pocock skills](https://github.com/mattpocock/skills), Claude Design, Playwright, Ralph Wiggum plugin) over reimplementing or mirroring them.
+- Prefer composing upstream tools ([Matt Pocock skills](https://github.com/mattpocock/skills), Claude Design, Playwright, Ralph Wiggum plugin) over reimplementing or mirroring them. **One deliberate exception:** the workflow's upstream skills are *vendored* as a pinned, MIT-attributed snapshot under `packages/cli/assets/skills/vendor/` so they reach cloud and non-Claude agents as plain files ([ADR-0019](docs/adr/0019-vendor-skills-retire-plugin.md)). That is a licensed, refreshed mirror maintained through the vendoring pipeline — not a hand-fork — and it does not license reimplementing upstream logic elsewhere.
 - Stay lightweight: no empty directories, no ceremony ahead of need, no speculative abstraction.
 - File-manipulation logic gets snapshot/fixture tests; CLI behavior gets integration tests against temporary Git repositories.
 

@@ -4,13 +4,13 @@
 // The Ralph loop as a deterministic workflow: the plan, the frontier bookkeeping,
 // and every intermediate report live in script variables — not in any context window —
 // so long or wide runs cannot compact away their own state. The watchable, checkpointed
-// variant of the same loop is the launchrail:ralph skill; the two share one policy block,
+// variant of the same loop is the launch-ralph skill; the two share one policy block,
 // and a policy change belongs in both places (ADR-0005, field-revised by ADR-0010).
 export const meta = {
   name: 'ralph',
   description: 'Autonomous Ralph loop: implement ready tickets with fresh-context subagents, verification-gated',
   whenToUse:
-    'Run the Ralph implementation loop over the ticket backlog when the dependency graph is wide or the run is long. Scope a run via args: { only: [9, 10], width: 2 }, just [9, 10], or { max: 5 } to stop after 5 verified merges ("the next five" — the frontier picks which, in dependency order). Args must be JSON — resolve any natural-language scope to ticket numbers and a cap before launching. For a watchable, checkpointed run (or when something is already going wrong), use the launchrail:ralph skill instead.',
+    'Run the Ralph implementation loop over the ticket backlog when the dependency graph is wide or the run is long. Scope a run via args: { only: [9, 10], width: 2 }, just [9, 10], or { max: 5 } to stop after 5 verified merges ("the next five" — the frontier picks which, in dependency order). Args must be JSON — resolve any natural-language scope to ticket numbers and a cap before launching. For a watchable, checkpointed run (or when something is already going wrong), use the launch-ralph skill instead.',
   phases: [
     { title: 'Preflight', detail: 'read project config, sync the base, run the verification gate' },
     { title: 'Graph', detail: 'list ready tickets and their blocking edges, verbatim' },
@@ -22,7 +22,7 @@ export const meta = {
 }
 
 // ---------------------------------------------------------------------------
-// Policy — the launchrail:ralph policy block, as code. Override via args.
+// Policy — the launch-ralph policy block, as code. Override via args.
 // ---------------------------------------------------------------------------
 
 // args may arrive as an object ({ only, width, ... }), a bare array of ticket numbers,
@@ -218,8 +218,8 @@ Steps, in order:
 2. Read the ticket and everything it links (spec sections, ADRs, journeys). Report status "already-done" if it is already closed.
 3. Label the ticket ralph:building so a lost session leaves a trace.
 4. Branch from a fresh sync of ${pre.base}: ralph/${ticket.number}-<short-slug>.
-5. Implement by invoking the launchrail:ralph-implement skill — it owns the per-ticket contract: TDD, the verification gate, browser smoke for user-facing changes, self-review via /code-review, commit conventions.
-6. Pre-PR sync: merge the latest ${pre.base} into your branch. Conflicts are ordinary work — resolve them with the launchrail:resolving-merge-conflicts skill and re-run the verification gate if anything changed.
+5. Implement by invoking the launch-ralph-implement skill — it owns the per-ticket contract: TDD, the verification gate, browser smoke for user-facing changes, self-review via /code-review, commit conventions.
+6. Pre-PR sync: merge the latest ${pre.base} into your branch. Conflicts are ordinary work — resolve them with the launch-resolving-merge-conflicts skill and re-run the verification gate if anything changed.
 7. Open a PR titled from the ticket, with "Closes #${ticket.number}" in the body. Never open a second PR if one already exists — adopt it. Opening against an up-to-date base means CI tests the state that will actually land.
 8. Wait for CI if the repository has it, spacing polls with the Monitor tool or a background sleep — never a foreground sleep, never a busy loop; treat ~20 minutes as the budget and report status "ci-timeout" beyond it. Fix what your branch broke and push. If a failure reproduces on ${pre.base} itself, report "ci-red" and stop — that is systemic, not this ticket's problem.
 9. Immediately before merging, re-sync with ${pre.base} once more (retry up to 3 times if the base keeps moving), then squash-merge. Squash-merge does not reliably fire "Closes" — read the issue back, close it explicitly if it is still open, and remove the ralph:building label. Never push to ${pre.base} directly; the PR is the only door.
@@ -488,7 +488,7 @@ const release = await agent(
 2. Run the verification gate: npx @wemuda/launchrail verify. Report the actual exit code.
 ${
     pre.browserTesting && merged.length > 0
-      ? `3. The browser-testing module is enabled: start the app (node scripts/dev.mjs --background), scaffold an evidence bundle (npx @wemuda/launchrail smoke), and drive the smoke journeys from docs/testing/smoke-journeys.md per the launchrail:browser-smoke skill. Report the bundle path. A journey you could not complete is a failure, never a pass.`
+      ? `3. The browser-testing module is enabled: start the app (node scripts/dev.mjs --background), scaffold an evidence bundle (npx @wemuda/launchrail smoke), and drive the smoke journeys from docs/testing/smoke-journeys.md per the launch-browser-smoke skill. Report the bundle path. A journey you could not complete is a failure, never a pass.`
       : ''
   }
 verified means: the verification gate exited 0${pre.browserTesting && merged.length > 0 ? ' AND no smoke journey failed' : ''}.`,

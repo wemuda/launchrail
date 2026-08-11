@@ -6,7 +6,7 @@ How to install Launchrail into a project and live with it day to day. For what L
 
 - Node ≥ 22
 - A git repository (`init` runs `git init` for you when the directory isn't one — the safe-write model leans on git history)
-- [Claude Code](https://claude.com/claude-code) if you want the workflow plugin and skills (the CLI works without it)
+- [Claude Code](https://claude.com/claude-code) if you want to run the workflow skills (the CLI works without it, and the vendored skills are plain files any repo-reading agent can use)
 
 ## Installing
 
@@ -34,11 +34,11 @@ The interview asks four things — project mode (spike / standard MVP / high-rig
 - `.launchrail-lock.json` — versions, ownership classes, checksums, applied migrations. Machine-managed; commit it, never hand-edit it.
 - `AGENTS.md` + `CLAUDE.md` — the agent operating contract (with your chosen conventions baked in) and the Claude Code entry point importing it. Seeded once; existing files are never overwritten.
 - `.launchrail/CLAUDE.generated.md` — managed workflow instructions, replaced on `sync` as modules change.
-- `.claude/workflows/ralph.js` — the built-in implementation loop's workflow form, managed ([ADR-0018](adr/0018-implement-front-door.md)): the default loop is present from day one, so `/launchrail:implement` works the moment tickets exist. (Selecting the Superpowers loop skips this and installs its plugin instead.)
+- `.claude/workflows/ralph.js` — the built-in implementation loop's workflow form, managed ([ADR-0018](adr/0018-implement-front-door.md)): the default loop is present from day one, so `/launch-implement` works the moment tickets exist. (Selecting the Superpowers loop skips this and installs its plugin instead.)
 - `docs/adr/0000-template.md` — ADR template.
-- `.claude/settings.json` — declares both workflow plugin marketplaces (Launchrail's and Matt Pocock's) and enables their plugins via an additive merge ([ADR-0003](adr/0003-plugin-subscription-via-project-settings.md), extended by [ADR-0011](adr/0011-init-installs-plugin-via-claude-cli.md)), which is how the rest of the team gets offered the same skills when they first trust the folder.
+- `.claude/skills/` — the workflow skills, vendored as **managed files** ([ADR-0019](adr/0019-vendor-skills-retire-plugin.md)): Launchrail's own (`launch-*`) plus a pinned, MIT-attributed snapshot of Matt Pocock's skills (bare upstream names), and a `NOTICE-mattpocock.md` carrying the license. Committed to the repo, so the whole team — and every session, cloud or local, on any agent — has them after a `git pull`. (`.claude/settings.json` is touched only if you select an external loop like Superpowers, which still ships as a plugin.)
 
-Finally, when the `claude` CLI is on your `PATH`, `init` **installs every Claude Code plugin the workflow needs** — Launchrail's own (`launchrail@launchrail` from `wemuda/launchrail`) and Matt Pocock's skills (`mattpocock-skills@mattpocock` from `mattpocock/skills`) — via `claude plugin marketplace add` + `claude plugin install` ([ADR-0011](adr/0011-init-installs-plugin-via-claude-cli.md)). Already installed? `init` updates them to the marketplace's latest instead, so re-running it is also how you refresh the plugins. No CLI, or an install fails? `init` prints the exact commands instead. Opt out with `--skip-plugin-install` (or `LAUNCHRAIL_SKIP_CLAUDE_CLI=1`).
+There is no plugin to install — the skills are on disk the moment `init` finishes, and re-running `init` (or `sync`) is how you refresh them. The one exception is the implementation loop: if you pick **Superpowers** instead of the default **Ralph**, that engine still ships as a Claude Code plugin, so `init` installs it via the `claude` CLI when it's on your `PATH` (and prints the exact commands when it isn't). Opt out of that install with `--skip-plugin-install` (or `LAUNCHRAIL_SKIP_CLAUDE_CLI=1`).
 
 Re-running `init` is idempotent — it reports "everything already up to date" rather than duplicating or clobbering. See [examples/hello-launchrail](../examples/hello-launchrail) for a committed, unedited example of the result.
 
@@ -46,7 +46,7 @@ Re-running `init` is idempotent — it reports "everything already up to date" r
 
 Running `init` inside a mid-development project that already uses AI works the same way, and nothing you own is overwritten. Your `AGENTS.md` and `CLAUDE.md` are kept as-is (`keep` in the plan). The one thing `init` does add is linkage: if you already have a `CLAUDE.md`, it **additively prepends the two workflow imports** — `@AGENTS.md` and `@.launchrail/CLAUDE.generated.md` — to the top of your file, leaving the rest byte-for-byte ([ADR-0012](adr/0012-init-wires-imports-into-existing-claude-md.md)). Without them, the managed workflow instructions Launchrail writes to `.launchrail/CLAUDE.generated.md` would sit on disk unread. The merge is idempotent (an import already present is never duplicated), so a project onboarded before this behavior existed is brought current by simply re-running `init`, and `doctor` warns if either import is missing.
 
-The interview also asks whether this is a **new or existing project** and records the answer as `origin` in `.launchrail.yml` — it defaults to `existing` when it detects a `package.json` or existing agent files. That answer changes how the workflow starts: for an existing project, `/launchrail:launch` takes the **alignment on-ramp** ([ADR-0013](adr/0013-existing-project-alignment.md)) instead of a blank vision. The `project-alignment` skill inventories what your codebase already has, infers a draft vision from the code, interviews you only about the gaps (the real target user, the bet, the success signal), and detects your existing design system as the baseline for later design stages — then hands to `vision-creation` to commit and routes you to the first real gap. Everything after the vision is the same loop; alignment just gets an adopted project onto the rail without re-asking what the code already answers.
+The interview also asks whether this is a **new or existing project** and records the answer as `origin` in `.launchrail.yml` — it defaults to `existing` when it detects a `package.json` or existing agent files. That answer changes how the workflow starts: for an existing project, `/launch` takes the **alignment on-ramp** ([ADR-0013](adr/0013-existing-project-alignment.md)) instead of a blank vision. The `project-alignment` skill inventories what your codebase already has, infers a draft vision from the code, interviews you only about the gaps (the real target user, the bet, the success signal), and detects your existing design system as the baseline for later design stages — then hands to `vision-creation` to commit and routes you to the first real gap. Everything after the vision is the same loop; alignment just gets an adopted project onto the rail without re-asking what the code already answers.
 
 Then validate and commit:
 
@@ -55,17 +55,17 @@ npx @wemuda/launchrail doctor
 git add -A && git commit -m "chore: initialize launchrail"
 ```
 
-`doctor` checks the manifest, lockfile, checksum drift, pending migrations, plugin declaration, and environment, and exits non-zero on failures (warnings don't fail it).
+`doctor` checks the manifest, lockfile, checksum drift, pending migrations, vendored skills, and environment, and exits non-zero on failures (warnings don't fail it).
 
 ## Handing off to Claude Code
 
 From here the workflow lives in Claude Code, not the CLI:
 
-1. **Open Claude Code in the project.** `init` already installed the workflow plugins if the `claude` CLI was available; a session that was open during `init` needs `/reload-plugins` or a restart to see them. If `init` printed manual steps instead, run them (inside Claude Code: `/plugin` → Marketplaces → Add → the full `owner/repo` source, e.g. `wemuda/launchrail` — a bare name is rejected).
-2. **Run `/launchrail:launch`.** The planning conductor detects the project's stage and drives the workflow from there. On a fresh project that means running `/setup-matt-pocock-skills` (the skills plugin is preinstalled), then vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
-3. **When tickets exist, run `/launchrail:implement`.** The one door to building: it drives every ready ticket to a verified merge through the project's selected loop — or just one (`/launchrail:implement 15`), or a bounded slice of the backlog ("the next 5 of spec #2" — it resolves the scope against the tracker, tells you what it resolved, and stops after five verified merges). That's the whole surface to remember: `launch` plans, `implement` builds.
+1. **Open Claude Code (or another agent) in the project.** The skills are already in `.claude/skills/` — nothing to install. (A Claude Code session that was open during `init` may need `/reload-plugins` or a restart to pick up the new files.)
+2. **Run `/launch`.** The planning conductor detects the project's stage and drives the workflow from there. On a fresh project that means running `/setup-matt-pocock-skills` (vendored — run once to configure the issue tracker, labels, and domain docs), then vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
+3. **When tickets exist, run `/launch-implement`.** The one door to building: it drives every ready ticket to a verified merge through the project's selected loop — or just one (`/launch-implement 15`), or a bounded slice of the backlog ("the next 5 of spec #2" — it resolves the scope against the tracker, tells you what it resolved, and stops after five verified merges). That's the whole surface to remember: `launch` plans, `launch-implement` builds.
 
-Teammates don't need the CLI at all: the committed `.claude/settings.json` makes Claude Code offer them both workflow plugins the first time they trust the project folder.
+Teammates don't need the CLI at all: the skills are committed files, so a `git pull` gives everyone the same workflow — no install, no per-machine plugin state.
 
 ## Adding modules
 
@@ -78,30 +78,20 @@ Both update the manifest (preserving your comments), seed or manage their files,
 
 ## Updating to a new release
 
-The whole update is this, in this order:
+The whole update is:
 
-```text
-# 1. In Claude Code — update the plugin, then reload:
-/plugin              # → launchrail → update (and mattpocock-skills, if it has one)
-/reload-plugins
-
-# 2. In the terminal, from the project root — apply the release's files and migrations:
+```bash
+# From the project root — apply the release's files (skills included) and migrations:
 npx -y @wemuda/launchrail@latest sync
 
-# 3. Commit, and optionally confirm health:
-git add -A && git commit -m "chore: sync launchrail to 1.7.0"
+# Commit, and optionally confirm health:
+git add -A && git commit -m "chore: sync launchrail"
 npx -y @wemuda/launchrail@latest doctor
 ```
 
-That's it. The next `/launchrail:launch` re-detects your position against the release's stage map, so anything the release added — a new stage, a reworked skill — either shows up as the next thing to do or is already behind your frontier. What each release contains is in the [CHANGELOG](../CHANGELOG.md).
+That's it — one command. Because the skills are managed files, `sync` updates them alongside the templates and migrations in a single pass: there is no separate plugin step, and no plugin-vs-CLI version skew to sequence. The next `/launch` re-detects your position against the release's stage map, so anything the release added — a new stage, a reworked skill — either shows up as the next thing to do or is already behind your frontier. What each release contains is in the [CHANGELOG](../CHANGELOG.md).
 
 The rest of this section is the why and the edge cases.
-
-### Why the plugin updates first
-
-A release versions two things in lockstep: the **plugin** (the `/launchrail:*` skills) and the **CLI** (the managed files and migrations `sync` applies). They update through different mechanisms — `sync` never touches plugins — and the order matters: the managed instructions a newer CLI writes can name workflow stages whose skills only exist in the newer plugin. Sync the files while an old plugin is still installed and `.launchrail/CLAUDE.generated.md` describes a loop your session can't run. Plugin first (or both in the same sitting) keeps the halves consistent.
-
-No Claude Code session open? `claude plugin update launchrail@launchrail` from the terminal does the same thing, and re-running `npx -y @wemuda/launchrail@latest init` also refreshes already-installed plugins as part of its idempotent pass ([ADR-0011](adr/0011-init-installs-plugin-via-claude-cli.md)).
 
 ### Why `@latest` matters
 
@@ -134,10 +124,10 @@ npx -y @wemuda/launchrail@latest sync --dry-run # the full plan, migrations incl
 
 ### Teammates
 
-The file half of an update travels through git — teammates just `git pull`. The plugin half is per machine: each person updates their own through `/plugin` (the committed `.claude/settings.json` already points everyone at the same marketplaces).
+The whole update travels through git — the skills are managed files, so teammates just `git pull`. (One exception: if the project uses the **Superpowers** loop, that external plugin is still per-machine — each person updates it through `/plugin`.)
 
 ## The workflow
 
-With the plugin installed, the development loop runs vision → discovery → grill → research → ADRs → spec → design validation → tickets → bounded implementation → verification → release. The stage contract lives in the plugin's [workflow doc](../plugins/launchrail/docs/workflow.md).
+With the skills vendored into `.claude/skills/`, the development loop runs vision → discovery → grill → research → ADRs → spec → design validation → tickets → bounded implementation → verification → release. The stage contract lives in the [workflow doc](../packages/cli/assets/skills/launchrail/launch/workflow.md) (vendored into projects as `.claude/skills/launch/workflow.md`).
 
-Two commands run it. `/launchrail:launch` plans: it detects which stage your project has reached and routes you to the right stage skill, jumps straight to a stage you name (e.g. `launch deep-research`), and sizes each new feature once the foundation exists. `/launchrail:implement` builds: it drives the ready tickets to verified merges through the project's selected loop. You don't have to memorize the order — `launch` finds the frontier and, when it can't tell whether a stage is done, asks.
+Two commands run it. `/launch` plans: it detects which stage your project has reached and routes you to the right stage skill, jumps straight to a stage you name (e.g. `launch deep-research`), and sizes each new feature once the foundation exists. `/launch-implement` builds: it drives the ready tickets to verified merges through the project's selected loop. You don't have to memorize the order — `launch` finds the frontier and, when it can't tell whether a stage is done, asks.
