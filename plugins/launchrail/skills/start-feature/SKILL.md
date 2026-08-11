@@ -31,7 +31,7 @@ Size is the one decision this skill adds. Read the feature's shape, **propose a 
 
 | Size | Looks like | Planning path |
 |---|---|---|
-| **Large** | A new subsystem or cross-cutting change; real unknowns; decisions worth an ADR; breaks into many tickets | `wayfinder` → grill → `to-spec` → design validation → `to-tickets` |
+| **Large** | A new subsystem or cross-cutting change; real unknowns; decisions worth an ADR; breaks into many tickets | discovery *(new tech only)* → `wayfinder` → grill → `to-spec` → design validation → `to-tickets` |
 | **Semi** | A self-contained feature with some design surface; a handful of tickets; moderate unknowns | grill → `to-spec` → design validation *(optional)* → `to-tickets` |
 | **Small** | A well-understood change; little or no design surface; one or few tickets | grill → `to-tickets` |
 
@@ -39,6 +39,7 @@ Judgment calls:
 
 - The grill here is **feature-scoped**, not the project-wide foundation grill — same skill (`grill-with-docs`), narrower brief.
 - **wayfinder** earns its place only when the feature is big enough to need breaking down; for semi and small, go straight to the grill.
+- **discovery** — the divergent option-space scan (foundation stage 3) earns a place on a feature only when it opens genuinely new tech territory: a new vendor category, storage engine, or integration the project hasn't used. A feature that stays within the chosen stack skips it — the options are already settled.
 - **design validation** is for features with real UI surface — expected on large when it touches the interface, optional on semi, skipped on small.
 - If the grill or spec surfaces a genuine architecture decision, record an **ADR** (`docs/adr/`) before tickets — a feature can move the architecture too.
 - Between two sizes, pick the smaller and say why. It's cheaper to add a stage than to over-plan a small change.

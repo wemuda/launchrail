@@ -24,7 +24,7 @@ The Launchrail loop is written for a project that starts from an idea. A project
    - If it's missing or template-only, **draft an inferred vision** from the inventory: what the product appears to be, who it seems to serve, what it does today, and the assumptions and non-goals the code implies. Mark clearly what is inferred vs. observed, and list the open questions the code can't resolve (the real target user, the bet, the success signal).
    - **Interview the user on those gaps only** — a few questions at a time, in their language. Don't re-ask what you inferred with confidence; confirm it.
    - **Hand the result to `launchrail:vision-creation`** to finalize and commit as a *revision* — it owns the template, the commit, and the `AGENTS.md` project-purpose sync. The interview is already done; it should confirm and commit, not re-interview from scratch.
-4. **Detect the design system.** Look for an existing one: design tokens, a theme or Tailwind config, a component library, Storybook, a CSS framework, or Figma links in the docs. If a real design system exists, record it as the **baseline** for visual exploration (stage 2) and design validation (stage 7) — link it from the vision — so those stages extend what's there instead of exploring from zero. If none exists, note it as a genuine stage-2 gap.
+4. **Detect the design system.** Look for an existing one: design tokens, a theme or Tailwind config, a component library, Storybook, a CSS framework, or Figma links in the docs. If a real design system exists, record it as the **baseline** for visual exploration (stage 2) and design validation (stage 8) — link it from the vision — so those stages extend what's there instead of exploring from zero. If none exists, note it as a genuine stage-2 gap.
 5. **Map the remaining artifacts, don't manufacture them.** For ADRs, the MVP spec, tickets, and the verification setup, record present/partial/missing in the alignment map. Do not back-fill them here — each has an owning stage. Where a project already has, say, architecture docs or a test suite, note that the corresponding stage is largely satisfied so `launch` doesn't send the user to redo it.
 6. **Report and hand back.** Present the alignment map: what's already aligned, what you inferred and the user confirmed, and the real gaps in loop order. Then route to `launchrail:launch` to drive the first real gap. Leave the user a clear picture of where their existing project sits on the rail and what's next.
 
@@ -36,10 +36,10 @@ How each Launchrail artifact shows up in an existing project, and what to do:
 |---|---|---|---|
 | Vision (`docs/vision.md`) | The file; else infer from README, deps, routes/models | Revise where thin | Infer a draft, gap-interview, hand to `vision-creation` |
 | Design system | Tokens, theme/Tailwind config, component lib, Storybook, Figma links | Record as the baseline; link from the vision | Note as a stage-2 gap |
-| Architecture decisions (`docs/adr/`) | ADRs beyond the template; or de-facto decisions in code/docs | Note stage 5 as largely satisfied | Note as a gap; capture load-bearing existing decisions as ADRs later |
-| MVP spec (`docs/specs/`) | Spec docs, PRDs, design docs | Note stage 6 as partial/satisfied | Real gap — owned by the spec stage |
-| Tickets | The tracker in `.launchrail.yml` (issues/backlog) | Note stage 8 as partial | Real gap — owned by `to-tickets` |
-| Verification | Test suite, CI config, Playwright | Wire `testing` commands in `.launchrail.yml`; note stage 10 partial | Note as a gap |
+| Architecture decisions (`docs/adr/`) | ADRs beyond the template; or de-facto decisions in code/docs | Note stage 6 as largely satisfied | Note as a gap; capture load-bearing existing decisions as ADRs later |
+| MVP spec (`docs/specs/`) | Spec docs, PRDs, design docs | Note stage 7 as partial/satisfied | Real gap — owned by the spec stage |
+| Tickets | The tracker in `.launchrail.yml` (issues/backlog) | Note stage 9 as partial | Real gap — owned by `to-tickets` |
+| Verification | Test suite, CI config, Playwright | Wire `testing` commands in `.launchrail.yml`; note stage 11 partial | Note as a gap |
 
 ## What this skill does not do
 
