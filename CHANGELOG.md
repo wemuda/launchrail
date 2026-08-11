@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.7.0](https://github.com/wemuda/launchrail/compare/v1.6.0...v1.7.0) (2026-08-11)
+
+
+### Features
+
+* **plugin:** add divergent discovery research stage before the grill ([7270e25](https://github.com/wemuda/launchrail/commit/7270e25ef58ed0a3c8705a22593802b0491ad3d7))
+* **plugin:** scale design validation through a four-level fidelity ladder ([678fb06](https://github.com/wemuda/launchrail/commit/678fb06a6da503d131437e6ea0780c07cdfa05e3))
+
+
+### Bug Fixes
+
+* **plugin:** correct stale ADR stage ref and defer harness in spec handoff ([a160d3f](https://github.com/wemuda/launchrail/commit/a160d3fa49e20f855f330bd10b9c3b13871c862d))
+* **plugin:** hand off user-typed spec gate instead of calling it ([47bedec](https://github.com/wemuda/launchrail/commit/47bedec6ea24a65d6bb2c2f720ed8642b82f1710))
+* **plugin:** route by spec surface at stage 7 and guard ready-for-agent ([c5d897c](https://github.com/wemuda/launchrail/commit/c5d897c1898573926fa6e2a2978cbba523a54918))
+
 ## [1.6.0](https://github.com/wemuda/launchrail/compare/v1.5.0...v1.6.0) (2026-08-10)
 
 

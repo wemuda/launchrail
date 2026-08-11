@@ -1,5 +1,5 @@
 {
   "name": "launchrail",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "The Launchrail workflow for Claude Code: one `launch` command that detects your stage and routes the whole loop — vision creation, discovery research, complexity grill, technical research, design validation, the bounded Ralph loop, browser smoke testing, and release verification."
 }
