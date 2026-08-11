@@ -10,7 +10,7 @@ How to install Launchrail into a project and live with it day to day. For what L
 
 ## Installing
 
-> **Pre-release note:** `@wemuda/launchrail` is not on npm yet ([roadmap](../ROADMAP.md)). Until it is, run the CLI from a checkout of this repo:
+> **Not on npm yet.** The publish flips on with the first release token ([roadmap](../ROADMAP.md)). Until then, run the CLI from a checkout of this repo:
 >
 > ```bash
 > git clone https://github.com/wemuda/launchrail && cd launchrail
