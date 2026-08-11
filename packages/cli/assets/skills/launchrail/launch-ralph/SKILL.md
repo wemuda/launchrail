@@ -1,11 +1,11 @@
 ---
-name: ralph
-description: Orchestrate the bounded Ralph implementation loop — dispatch fresh-context implementer subagents over the ready ticket frontier, verify every claimed merge against the remote, and gate completion on the project's verification contract. Also the supervisor's contract when the loop runs as the ralph workflow. The engine behind /launchrail:implement (the user-typed front door) — never invoke it on your own initiative; reach it through that door or an explicit user request to run the loop.
+name: launch-ralph
+description: Orchestrate the bounded Ralph implementation loop — dispatch fresh-context implementer subagents over the ready ticket frontier, verify every claimed merge against the remote, and gate completion on the project's verification contract. Also the supervisor's contract when the loop runs as the ralph workflow. The engine behind /launch-implement (the user-typed front door) — never invoke it on your own initiative; reach it through that door or an explicit user request to run the loop.
 ---
 
 # Ralph — the autonomous implementation loop
 
-The user starts this loop through `/launchrail:implement` (or by asking for it in so many words); it is never started unprompted — a campaign spawns many agents and merges PRs, so the start is always a human decision.
+The user starts this loop through `/launch-implement` (or by asking for it in so many words); it is never started unprompted — a campaign spawns many agents and merges PRs, so the start is always a human decision.
 
 You are the orchestrator. **You do not write code. You do not read diffs. You do not fix failing branches yourself.** You compute what's ready, dispatch, verify, and keep a running log. Tracker state and subagent reports in, decisions out.
 
@@ -21,7 +21,7 @@ This skill is the watchable, checkpointed frontend of the loop. The same loop ex
 - **Deferrals are not attempts.** An implementer that stops at its dependency gate (a declared blocker had not actually landed) hands the attempt back and is retried after the blocker lands — capped at 2 deferrals, then it counts as a real failure.
 - **Max rounds: 25** — a backstop, not a target; deferral rounds spend from it too. Stop and report if the frontier hasn't drained.
 - **Checkpoints: none** by default — run to completion, report once. The user may ask for a pause after each round instead.
-- **Review gate:** the implementer's own self-review via `/code-review`, inside `launchrail:ralph-implement`.
+- **Review gate:** the implementer's own self-review via `/code-review`, inside `launch-ralph-implement`.
 - **Verification gate:** `npx @wemuda/launchrail verify` — per ticket before the PR, and once more on the final base before the loop may report success.
 - **Merge ordering: optimistic, arbitrated by the remote.** Implementers re-sync immediately before merging and retry up to 3 times if the base moved. No merge locks.
 - **Labels:** tickets enter as `ready-for-agent`, are marked `ralph:building` while owned, and leave as closed or `needs-info` (parked).
@@ -49,8 +49,8 @@ Each implementer prompt is self-contained — assume it knows nothing about this
 2. Read the ticket and everything it links (spec sections, ADRs, journeys), plus `AGENTS.md`/`CLAUDE.md`. If the ticket is already closed, report "already-done" and stop.
 3. Label the ticket `ralph:building` so a lost session leaves a trace.
 4. Branch from a fresh sync of the base: `ralph/<n>-<short-slug>`.
-5. Implement by invoking the **`launchrail:ralph-implement`** skill — it owns TDD, the verification gate, browser smoke for user-facing changes, self-review via `/code-review`, and commit conventions. Name the skill; do not paraphrase it.
-6. Pre-PR sync: merge the latest base into the branch; resolve conflicts with the **`launchrail:resolving-merge-conflicts`** skill; re-run the verification gate if anything changed.
+5. Implement by invoking the **`launch-ralph-implement`** skill — it owns TDD, the verification gate, browser smoke for user-facing changes, self-review via `/code-review`, and commit conventions. Name the skill; do not paraphrase it.
+6. Pre-PR sync: merge the latest base into the branch; resolve conflicts with the **`launch-resolving-merge-conflicts`** skill; re-run the verification gate if anything changed.
 7. Open a PR titled from the ticket with `Closes #<n>` in the body. Never open a second PR for a ticket — adopt an existing one. Opening against an up-to-date base means CI tests the state that will actually land.
 8. Wait for CI if the repository has it — space polls with the Monitor tool or a background sleep, never a foreground sleep or busy loop; ~20 minutes is the budget. Fix what the branch broke and push; a failure that reproduces on the base itself is "ci-red" — systemic, not this ticket's problem. Re-sync immediately before merging (up to 3 retries if the base moves), then squash-merge. Squash-merge does not reliably fire `Closes` — read the issue back, close it explicitly if still open, and remove `ralph:building`.
 
@@ -85,14 +85,14 @@ When the Ralph loop runs as the `ralph` workflow instead of through this skill, 
 When the frontier drains (or max rounds / a stop condition hits):
 
 1. Sync a fresh base and run `npx @wemuda/launchrail verify`. **The loop may not report success while this fails** — report "unverified" with the failures instead.
-2. If `.launchrail.yml` has `modules.browser-testing: true` and any merged ticket changed user-facing behavior, dispatch one smoke run per the `launchrail:browser-smoke` skill and reference its evidence bundle (`artifacts/verification/<run-id>/`).
+2. If `.launchrail.yml` has `modules.browser-testing: true` and any merged ticket changed user-facing behavior, dispatch one smoke run per the `launch-browser-smoke` skill and reference its evidence bundle (`artifacts/verification/<run-id>/`).
 3. Report the release evidence summary: merged tickets (PR and merge commit each), parked tickets with their failure histories, stuck tickets and what blocks them, follow-ups implementers punted, and the verification outcome with its evidence. Evidence over assertion — link what was run, never summarize what wasn't.
 
 ## Rules
 
 - Fresh context per dispatch, per retry. No exceptions.
 - Never implement, review, or repair code in the orchestrator session — dispatch instead.
-- Name the skills (`launchrail:ralph-implement`, `launchrail:resolving-merge-conflicts`, `launchrail:browser-smoke`); never paraphrase their contents into a prompt.
+- Name the skills (`launch-ralph-implement`, `launch-resolving-merge-conflicts`, `launch-browser-smoke`); never paraphrase their contents into a prompt.
 - Blocking edges are parsed from the verbatim `Blocked by` line, by you — never resolved by a model in between.
 - Nothing counts as merged until the remote says so; nothing counts as done until `verify` is green.
 - A deferral is not a failure; a failure is never silently retried without its summary.

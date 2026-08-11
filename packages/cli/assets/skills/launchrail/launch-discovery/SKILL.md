@@ -1,5 +1,5 @@
 ---
-name: discovery
+name: launch-discovery
 description: The divergent option-space scan that runs before the complexity grill. Given the vision and the intended stack, it maps the real landscape of libraries, frameworks, vendors, hosted services, and patterns available for the hard parts of the product — enumerating the alternatives with their trade-offs rather than locking onto the first choice — and commits a landscape/options map that becomes the grill's input. Use after the vision (and visual exploration) and before the grill, or when the user asks to explore the tech landscape, survey vendors/libraries, or do discovery research. It composes Matt Pocock's research skill for depth on any single thread; it does not pick winners — the grill does that.
 ---
 

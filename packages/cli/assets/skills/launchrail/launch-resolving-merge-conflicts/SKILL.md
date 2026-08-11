@@ -1,5 +1,5 @@
 ---
-name: resolving-merge-conflicts
+name: launch-resolving-merge-conflicts
 description: Resolve merge conflicts without losing either side's behavior — the named protocol for parallel implementers landing against a moving base. Use when a merge or rebase reports conflicts, especially inside the Ralph loop.
 ---
 

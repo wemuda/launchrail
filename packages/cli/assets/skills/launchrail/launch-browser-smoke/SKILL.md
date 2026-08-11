@@ -1,5 +1,5 @@
 ---
-name: browser-smoke
+name: launch-browser-smoke
 description: Drive the running app through its defined smoke journeys in a real browser and produce a Launchrail evidence bundle. Use when user-facing work needs verification beyond deterministic tests, when the user asks to smoke-test the app, or before declaring user-facing work done in a project with the browser-testing module enabled (.launchrail.yml modules.browser-testing).
 ---
 

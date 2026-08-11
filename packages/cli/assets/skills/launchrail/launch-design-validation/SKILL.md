@@ -1,5 +1,5 @@
 ---
-name: design-validation
+name: launch-design-validation
 description: Validate an approved spec visually before implementation — at a confirmed fidelity level (recorded skip, flow-diagram artifact, screen-mockup artifact, or Claude Design), feed the findings back into a revised spec, and produce a handoff note for ticket creation. Use when a spec in docs/specs/ is drafted and the user wants design validation, a visual review, or pre-implementation sign-off.
 ---
 
@@ -9,7 +9,7 @@ Coordinate the loop **spec → visual pass at the right fidelity → revised spe
 
 ## The fidelity ladder
 
-The stage runs at one of four levels, chosen per spec ([ADR-0016](../../../../docs/adr/0016-design-validation-fidelity-ladder.md)):
+The stage runs at one of four levels, chosen per spec ([ADR-0016](https://github.com/wemuda/launchrail/blob/master/docs/adr/0016-design-validation-fidelity-ladder.md)):
 
 | Level | What gets made | Made by |
 |---|---|---|
@@ -41,4 +41,4 @@ Every level answers the same question — does the specified behavior survive co
 5. **Harvest findings.** For each flow record: what the design confirmed, what it contradicted in the spec, and what the spec turned out to be silent on. Ambiguities count as findings. Findings at a low level are also a signal — if the diagrams alone surface deep uncertainty, recommend re-running a flow at a higher level before revising.
 6. **Revise the spec.** Apply the accepted findings to the spec in place. If a finding invalidates an ADR, update or supersede that ADR in the same change. Note rejected findings and why in the handoff note, so the question does not resurface every review.
 7. **Write the handoff note** at the end of the spec (section `## Design validation`) with: date, the level that ran, flows validated, links to the artifact pages / design artifacts, accepted changes, rejected findings with reasons, and open questions. This section is the evidence that validation happened — the ticket stage (`to-tickets`) reads the spec as validated only if it is present.
-8. **Hand off.** Confirm with the user that the revised spec is approved, commit it (respect the project's commit conventions), and point them at ticket creation as the next stage. See the plugin's `docs/workflow.md` for the full stage order.
+8. **Hand off.** Confirm with the user that the revised spec is approved, commit it (respect the project's commit conventions), and point them at ticket creation as the next stage. See [`workflow.md`](../launch/workflow.md) for the full stage order.
