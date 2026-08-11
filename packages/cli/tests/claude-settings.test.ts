@@ -39,6 +39,31 @@ describe("plugin declaration in .claude/settings.json", () => {
     expect(declarationState(tmp.root)).toBe("declared");
   });
 
+  test("selecting the superpowers loop declares its plugin alongside the core roster", async () => {
+    writeFileSync(
+      join(tmp.root, ".launchrail.yml"),
+      "schemaVersion: 1\nmode: standard-mvp\nimplementationLoop: superpowers\n",
+    );
+    const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(outcome.code).toBe(0);
+    const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
+    expect(settings.extraKnownMarketplaces["superpowers-dev"].source).toEqual({
+      source: "github",
+      repo: "obra/superpowers",
+    });
+    expect(settings.enabledPlugins["superpowers@superpowers-dev"]).toBe(true);
+    // The core roster is still declared too.
+    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(true);
+    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBe(true);
+  });
+
+  test("the default ralph loop adds no extra plugin to the declaration", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
+    expect(settings.enabledPlugins["superpowers@superpowers-dev"]).toBeUndefined();
+    expect(Object.keys(settings.enabledPlugins)).toEqual(["launchrail@launchrail", "mattpocock-skills@mattpocock"]);
+  });
+
   test("merges into existing settings without touching unrelated keys", async () => {
     writeSettings({
       permissions: { allow: ["Bash(pnpm test)"] },

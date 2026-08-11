@@ -1,0 +1,41 @@
+# ADR-0017: The implementation loop is a provider, not a fixed stage
+
+## Status
+Accepted
+
+## Context
+Launchrail's rail runs Vision → … → Tickets (stages 1–9), then **Implementation** (stage 10): the loop that turns ready tickets into verified, merged code. Stage 10 is hard-wired to one owner, **the Ralph loop** — `launchrail:ralph` plus the managed `.claude/workflows/ralph.js` (ADR-0005). Both conductors name it directly (`launch` stage map, `start-feature` step 5), and `workflow.md` describes stage 10 as Ralph.
+
+That coupling is fine as long as Ralph is the only loop anyone would run. But the value proposition is that Launchrail is *where the developer launches* — the single conductor over every delivery loop — and some teams already have an implementation methodology they prefer over Ralph. [Superpowers](https://github.com/obra/superpowers) (obra) is the concrete example: a mature execution library (brainstorming → writing-plans → **TDD** → systematic-debugging → code-review → finishing-branches). A developer who lives in Superpowers shouldn't have to leave the rail to use it, and Launchrail shouldn't fork its foundation to accommodate it.
+
+The tempting framing — "let the wizard pick Matt Pocock **or** Superpowers as the skills provider" — is a category error. Matt Pocock's skills own Launchrail's *planning* stages (grill, research, spec, tickets); Superpowers ships **no** vision/grill/research/spec/tickets skill. They barely overlap. Superpowers competes with **Ralph**, not with Matt Pocock — it owns the *implementation* half of the loop, the exact slot stage 10 fills. So the real seam is not "swap the planner"; it is "**swap the implementation loop**," and it lives at one place: the handoff after stage 9.
+
+## Decision
+Make **the implementation loop a provider the project selects**, recorded in the manifest as `implementationLoop`. Everything through stage 9 is unchanged. Stage 10 stops naming Ralph directly and instead routes to the selected provider.
+
+- **Providers.** `ralph` (built-in, the default) and `superpowers` (selectable, **experimental** in this iteration). The set is a closed enum in `lib/implementationLoops.ts`, the single source of truth for each provider's label, wizard hint, stage-10 entry, and any Claude Code plugin it needs.
+- **The contract that keeps loops swappable — Launchrail owns both edges.** Whichever loop runs, Launchrail owns the boundary on each side of it:
+  - **Input:** tickets carrying the `ready-for-agent` label and explicit `Blocked by: #n` edges (already the standard `to-tickets` output).
+  - **Gate:** every ticket reaches a merge that passes **`launchrail verify`** — plus browser-smoke evidence where the browser-testing module is enabled.
+
+  The provider does the *implementing*; **verification stays Launchrail's**, so "evidence over assertion" (the definition of done) holds no matter which engine runs between tickets and merge. A loop is a valid provider exactly when it honors this input/gate contract.
+- **Where the choice lives.** A new typed manifest field, `implementationLoop: "ralph" | "superpowers"`, single-select like `mode`/`origin`. It is **optional-with-default (`ralph`)** in the validator, so every manifest written before this ADR stays valid and no lockfile migration is required. `init` writes it explicitly; the wizard adds one question.
+- **Routing.** The stage-10 rows in `launch` and `start-feature` read `implementationLoop` and hand off to that provider's entry, under the unchanged rule that the loop is **never started unprompted**. `doctor` reports the configured loop and how stage 10 hands off.
+- **Both providers are first-class.** A provider that ships its own Claude Code plugin folds into the roster Launchrail already installs and declares: when a project selects `superpowers`, `init` installs `superpowers@superpowers-dev` (marketplace `obra/superpowers`) alongside launchrail + Matt Pocock **and declares it in `.claude/settings.json`**, so a teammate opening the project gets the same loop with no extra step. The conductors route stage 10 to its concrete skills — `superpowers:executing-plans` + `superpowers:test-driven-development`, closing with `superpowers:finishing-a-development-branch` — and `doctor`'s declaration/install checks cover its plugin exactly as they cover the core roster. Ralph remains the default; its skills ship in the launchrail plugin and its workflow file installs via `launchrail add ralph`, so it adds nothing to the plugin roster.
+
+## Alternatives considered
+- **Provider-swap the planning stages (Matt Pocock ↔ Superpowers).** Rejected: false equivalence. Superpowers owns no planning stage; swapping it in would leave stages 3–9 unowned. The libraries are complementary (Pocock plans, Superpowers implements), not alternative — this is exactly the "assume the field is the one option you already had in mind" trap ADR-0015 was written about.
+- **Generalize the `modules` map instead of a typed field.** Rejected: the implementation loop is a single-select (you run one loop), not a set of independent on/off capabilities. A typed enum matches `mode`/`origin`, drives routing directly, and can't express the invalid "ralph and superpowers both on" state a boolean map would allow. Ralph's *files* still install through `launchrail add ralph` and its `modules.ralph` flag — the provider field selects the loop; the module installs the built-in one's assets.
+- **Ship Superpowers as experimental first (install best-effort, skills unmapped), promote after a dogfood.** Rejected: it leaves a selectable option half-wired — a teammate opening a `superpowers` project wouldn't get the plugin declared, and the conductor would hand off to vague prose instead of named skills. The wiring is cheap and the facts are knowable from the repo (marketplace `superpowers-dev`, plugin `superpowers@superpowers-dev`, skills `executing-plans`/`test-driven-development`/`finishing-a-development-branch`), so it ships fully wired.
+- **Leave stage 10 hard-wired to Ralph.** Rejected: it makes Launchrail's "one conductor over your whole loop" claim false for any team with an existing implementation methodology, and the seam is cheap and well-bounded (one handoff point, both edges already Launchrail-owned via the ticket and verify contracts).
+
+## Consequences
+- Launchrail can conduct a loop it does not own, without forking the foundation: the planning spine (Launchrail + Matt Pocock) is untouched, and only the stage-10 handoff becomes provider-aware.
+- One new manifest field and one new wizard question; older manifests keep working via the default, so `sync` needs no migration for this change.
+- The invariant "`launchrail verify` gates every merge" is now the *defining* contract of a provider, not an incidental Ralph property — it must stay true for any loop added later, and `doctor`/the conductors are written to assume it.
+- Selecting `superpowers` pins Launchrail to obra/superpowers' current plugin identity (marketplace `superpowers-dev`, id `superpowers@superpowers-dev`) and skill names; if upstream renames them, the provider registry entry in `lib/implementationLoops.ts` — the single place they live — needs updating, and `doctor`'s install check will flag the mismatch in the meantime.
+- The plugin declaration/install roster is now a function of the manifest, not a constant. `planPluginDeclaration`, `declarationState`, and the doctor checks take the effective declaration list; the base roster (launchrail + Matt Pocock) is the default argument, so existing call sites are unchanged.
+- `workflow.md`, the `launch` stage map, and `start-feature` step 5 stop reading as "Ralph is stage 10" and start reading as "the selected loop is stage 10, Ralph by default."
+
+## Revisit when
+A third provider is wanted (two providers justify the registry; a third earns a stronger abstraction over install/declare/route/doctor instead of the current thin per-provider metadata), or Superpowers' plugin identity or skill names change upstream (update the single registry entry), or real use shows a loop needs more than the ticket-in / verify-out contract to hand off cleanly (e.g. a loop that wants the spec, not just tickets) — at which point the contract, not just the registry, has to grow.

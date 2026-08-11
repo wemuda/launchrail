@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
-import { detectClaudeCli, installPlugin, WORKFLOW_PLUGINS, type WorkflowPlugin } from "../lib/claudeCli.js";
+import { detectClaudeCli, installPlugin, toWorkflowPlugin, WORKFLOW_PLUGINS, type WorkflowPlugin } from "../lib/claudeCli.js";
 import {
   applyClaudeImports,
   planClaudeImports,
@@ -12,9 +12,16 @@ import {
   applyPluginDeclaration,
   CLAUDE_SETTINGS_PATH,
   planPluginDeclaration,
+  PLUGIN_DECLARATIONS,
   type SettingsPlan,
 } from "../lib/claudeSettings.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
+import {
+  DEFAULT_IMPLEMENTATION_LOOP,
+  implementationLoopDeclarations,
+  implementationLoopProvider,
+  type ImplementationLoop,
+} from "../lib/implementationLoops.js";
 import { emptyLockfile, readLockfile, writeLockfile } from "../lib/lockfile.js";
 import { migrationIds } from "../lib/migrations.js";
 import {
@@ -78,6 +85,7 @@ function defaultManifestFor(detection: RepoDetection): Manifest {
     },
     testing: defaultTesting(detection),
     modules: { core: true },
+    implementationLoop: DEFAULT_IMPLEMENTATION_LOOP,
   };
 }
 
@@ -130,6 +138,23 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
           initialValue: defaults.testing.unitCommand ?? "",
           placeholder: "e.g. pnpm test",
         }),
+      implementationLoop: () =>
+        p.select({
+          message: "Implementation loop (drives ready tickets to verified merges)",
+          initialValue: defaults.implementationLoop as string,
+          options: [
+            {
+              value: "ralph",
+              label: "Ralph",
+              hint: "built-in, verification-gated (recommended); `launchrail add ralph`",
+            },
+            {
+              value: "superpowers",
+              label: "Superpowers",
+              hint: "obra/superpowers' TDD/execution loop instead of Ralph",
+            },
+          ],
+        }),
     },
     {
       onCancel: () => {
@@ -150,6 +175,7 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
       unitCommand: answers.unitCommand.trim() === "" ? null : answers.unitCommand.trim(),
     },
     modules: { core: true },
+    implementationLoop: answers.implementationLoop as ImplementationLoop,
   };
 }
 
@@ -179,7 +205,10 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       detection.isGitRepo = true;
     }
   }
-  const settings = planPluginDeclaration(opts.cwd);
+  // Base declaration (launchrail + Matt Pocock) for the early-exit paths that
+  // run before the manifest is known; recomputed with the selected loop's
+  // plugin once the manifest resolves below (ADR-0017).
+  let settings = planPluginDeclaration(opts.cwd);
   const claudeImports = planClaudeImports(opts.cwd);
   const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
 
@@ -201,6 +230,17 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.error("launchrail: non-interactive session — re-run with --yes to accept defaults.");
     return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
   }
+
+  // The selected implementation loop (stage 10, ADR-0017) may ship its own
+  // Claude Code plugin. Fold it into the roster Launchrail declares and installs
+  // so a teammate opening the project gets the same loop, exactly as they get
+  // launchrail + Matt Pocock. `ralph` (the default) adds nothing here.
+  const loopProvider = implementationLoopProvider(manifest.implementationLoop);
+  const providerDeclarations = implementationLoopDeclarations(manifest.implementationLoop);
+  if (providerDeclarations.length > 0) {
+    settings = planPluginDeclaration(opts.cwd, [...PLUGIN_DECLARATIONS, ...providerDeclarations]);
+  }
+  const installTargets: WorkflowPlugin[] = [...WORKFLOW_PLUGINS, ...providerDeclarations.map(toWorkflowPlugin)];
 
   // Adopting a project that already exists (not a fresh Launchrail init): make
   // the safe-write model explicit — existing files are kept, and Launchrail
@@ -253,10 +293,15 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       const version = detectClaudeCli(opts.cwd);
       console.log(
         version
-          ? `  install   ${WORKFLOW_PLUGINS.map((wp) => wp.id).join(" + ")} into Claude Code  (claude CLI ${version} detected)`
+          ? `  install   ${installTargets.map((wp) => wp.id).join(" + ")} into Claude Code  (claude CLI ${version} detected)`
           : "  manual    Claude Code plugin install  (claude CLI not found — instructions will be printed)",
       );
     }
+    console.log(
+      loopProvider.declaration
+        ? `  loop      implementation loop: ${loopProvider.label}  (declares + installs ${loopProvider.declaration.pluginKey})`
+        : `  loop      implementation loop: ${loopProvider.label}  (${loopProvider.setupHint})`,
+    );
     console.log("\nDry run — nothing was written.");
     return { code: 0, actions, settings, claudeImports, plugin: "dry-run" };
   }
@@ -276,6 +321,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     issueTracker: manifest.issueTracker,
     conventionalCommits: manifest.conventions.conventionalCommits,
     unitCommand: manifest.testing.unitCommand,
+    implementationLoop: manifest.implementationLoop,
   };
   if (JSON.stringify(lockfile) !== lockBefore || !existing.lockfile) {
     writeLockfile(opts.cwd, lockfile);
@@ -304,7 +350,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     } else {
       console.log("\nInstalling the Claude Code plugins the workflow needs (first run clones marketplaces)…");
       let fresh = 0;
-      for (const wp of WORKFLOW_PLUGINS) {
+      for (const wp of installTargets) {
         const result = installPlugin(opts.cwd, wp);
         if (result.state === "installed") {
           if (result.detail !== "up-to-date") fresh += 1;
@@ -334,7 +380,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("  2. Open Claude Code in this project — the workflow plugins and their skills are ready.");
     console.log("     (Session already open? Run /reload-plugins, or restart Claude Code.)");
   } else {
-    const toInstall = plugin === "failed" ? failedPlugins : WORKFLOW_PLUGINS;
+    const toInstall = plugin === "failed" ? failedPlugins : installTargets;
     console.log("  2. Install the workflow plugins into Claude Code:");
     for (const wp of toInstall) {
       console.log(`       claude plugin marketplace add ${wp.marketplace}`);
@@ -345,6 +391,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("      Claude Code offers them by itself the first time this folder is trusted.)");
   }
   console.log("  3. Run /launchrail:launch — it detects the project's stage and drives the workflow from there.");
+  console.log(`     Implementation loop (stage 10): ${loopProvider.label}. ${loopProvider.setupHint}`);
   if (manifest.origin === "existing") {
     console.log("     For an existing project it starts by aligning your code with Launchrail's artifacts:");
     console.log("     it infers a vision from what you already have, asks about the gaps, and inventories your");

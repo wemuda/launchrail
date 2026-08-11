@@ -123,6 +123,13 @@ describe("launchrail init", () => {
     expect(lock.decisions.mode).toBe("spike");
   });
 
+  test("defaults the implementation loop to ralph and records it", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8")).toContain("implementationLoop: ralph");
+    const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
+    expect(lock.decisions.implementationLoop).toBe("ralph");
+  });
+
   test("defaults a blank repo to the 'new' origin", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8")).toContain("origin: new");
