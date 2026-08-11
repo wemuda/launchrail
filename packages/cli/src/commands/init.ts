@@ -36,6 +36,7 @@ import {
   type Origin,
 } from "../lib/manifest.js";
 import { seedFiles } from "../lib/seeds.js";
+import { skillFiles } from "../lib/skills.js";
 import { ACTION_LABEL, applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
 import { VERSION } from "../version.js";
 
@@ -47,8 +48,8 @@ export interface InitOptions {
   skipPluginInstall?: boolean;
 }
 
-/** How the Claude Code plugin install ended up. */
-export type PluginHandoff = "installed" | "already-installed" | "failed" | "no-cli" | "skipped" | "dry-run";
+/** How the Claude Code plugin install ended up. "none" = nothing to install (the default, ralph — skills are vendored). */
+export type PluginHandoff = "installed" | "already-installed" | "failed" | "no-cli" | "skipped" | "none" | "dry-run";
 
 export interface InitOutcome {
   code: number;
@@ -266,6 +267,9 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const specs: FileSpec[] = [
     { relPath: MANIFEST_FILENAME, content: serializeManifest(manifest), ownership: "seeded" },
     ...seedFiles({ projectName: detection.projectName, manifest, launchrailVersion: VERSION }),
+    // The workflow skills are vendored as managed files (ADR-0019): they travel
+    // with the repo, so cloud and non-Claude agents get them with no plugin.
+    ...skillFiles(),
     // The built-in loop's materials install with init when its module is on
     // (fresh manifests enable it whenever the loop is `ralph`, ADR-0018). An
     // existing manifest without the module is brought current by sync's
@@ -302,21 +306,19 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     if (!detection.isGitRepo) {
       console.log("  git-init  .  (not a git repository — init will run `git init` first)");
     }
-    if (opts.skipPluginInstall) {
-      console.log("  skip      Claude Code plugin install  (--skip-plugin-install)");
+    if (installTargets.length === 0) {
+      console.log("  ok        no plugin install — the workflow skills are vendored into .claude/skills/");
+    } else if (opts.skipPluginInstall) {
+      console.log(`  skip      ${loopProvider.label} loop plugin install  (--skip-plugin-install)`);
     } else {
       const version = detectClaudeCli(opts.cwd);
       console.log(
         version
           ? `  install   ${installTargets.map((wp) => wp.id).join(" + ")} into Claude Code  (claude CLI ${version} detected)`
-          : "  manual    Claude Code plugin install  (claude CLI not found — instructions will be printed)",
+          : `  manual    ${loopProvider.label} loop plugin install  (claude CLI not found — instructions will be printed)`,
       );
     }
-    console.log(
-      loopProvider.declaration
-        ? `  loop      implementation loop: ${loopProvider.label}  (declares + installs ${loopProvider.declaration.pluginKey})`
-        : `  loop      implementation loop: ${loopProvider.label}  (${loopProvider.setupHint})`,
-    );
+    console.log(`  loop      implementation loop: ${loopProvider.label}  (${loopProvider.setupHint})`);
     console.log("\nDry run — nothing was written.");
     return { code: 0, actions, settings, claudeImports, plugin: "dry-run" };
   }
@@ -356,14 +358,14 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("\n⚠ Not a git repository. Run `git init` before letting agents work here — Launchrail relies on git for safe writes.");
   }
 
-  let plugin: PluginHandoff = "skipped";
+  let plugin: PluginHandoff = installTargets.length === 0 ? "none" : "skipped";
   const failedPlugins: WorkflowPlugin[] = [];
-  if (!opts.skipPluginInstall) {
+  if (installTargets.length > 0 && !opts.skipPluginInstall) {
     const version = detectClaudeCli(opts.cwd);
     if (version === null) {
       plugin = "no-cli";
     } else {
-      console.log("\nInstalling the Claude Code plugins the workflow needs (first run clones marketplaces)…");
+      console.log(`\nInstalling the ${loopProvider.label} loop plugin (first run clones the marketplace)…`);
       let fresh = 0;
       for (const wp of installTargets) {
         const result = installPlugin(opts.cwd, wp);
@@ -388,34 +390,33 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     }
   }
 
-  const pluginReady = plugin === "installed" || plugin === "already-installed";
-  console.log("\nYou're set up — from here the workflow runs inside Claude Code:");
+  console.log("\nYou're set up — the workflow skills are vendored into .claude/skills/ (managed by Launchrail):");
   console.log('  1. Commit the result: git add -A && git commit -m "chore: initialize launchrail"');
-  if (pluginReady) {
-    console.log("  2. Open Claude Code in this project — the workflow plugins and their skills are ready.");
-    console.log("     (Session already open? Run /reload-plugins, or restart Claude Code.)");
-  } else {
-    const toInstall = plugin === "failed" ? failedPlugins : installTargets;
-    console.log("  2. Install the workflow plugins into Claude Code:");
-    for (const wp of toInstall) {
-      console.log(`       claude plugin marketplace add ${wp.marketplace}`);
-      console.log(`       claude plugin install ${wp.id}`);
+  console.log("  2. Open Claude Code (or another agent) here — the skills are ready to invoke, no plugin install.");
+  if (installTargets.length > 0) {
+    const ready = plugin === "installed" || plugin === "already-installed";
+    if (ready) {
+      console.log(`     Your ${loopProvider.label} loop plugin is installed too.`);
+      console.log("     (Session already open? Run /reload-plugins, or restart Claude Code.)");
+    } else {
+      const toInstall = plugin === "failed" ? failedPlugins : installTargets;
+      console.log(`     Your implementation loop (${loopProvider.label}) ships as a plugin — install it in Claude Code:`);
+      for (const wp of toInstall) {
+        console.log(`       claude plugin marketplace add ${wp.marketplace}`);
+        console.log(`       claude plugin install ${wp.id}`);
+      }
     }
-    console.log("     (No claude CLI? Inside Claude Code run /plugin → Marketplaces → Add, and enter the");
-    console.log(`      owner/repo sources above. ${CLAUDE_SETTINGS_PATH} also declares these plugins, so`);
-    console.log("      Claude Code offers them by itself the first time this folder is trusted.)");
   }
-  console.log("  3. Run /launchrail:launch — it detects the project's stage and drives the workflow from there.");
+  console.log("  3. Run /launch — it detects the project's stage and drives the workflow from there.");
   console.log(`     Implementation loop (stage 10): ${loopProvider.label}. ${loopProvider.setupHint}`);
   if (manifest.origin === "existing") {
     console.log("     For an existing project it starts by aligning your code with Launchrail's artifacts:");
     console.log("     it infers a vision from what you already have, asks about the gaps, and inventories your");
-    console.log("     design system — rather than starting from a blank vision. Run /setup-matt-pocock-skills");
-    console.log("     first (the skills are already installed).");
+    console.log("     design system — rather than a blank vision. Run /setup-matt-pocock-skills first");
+    console.log("     (vendored in .claude/skills/).");
   } else {
-    console.log("     On a fresh project that means running /setup-matt-pocock-skills (the skills are already");
-    console.log("     installed), then vision creation, which also replaces the seeded AGENTS.md project-purpose");
-    console.log("     TODO. No seeded file needs filling in by hand.");
+    console.log("     On a fresh project that means running /setup-matt-pocock-skills (vendored in .claude/skills/),");
+    console.log("     then vision creation, which also replaces the seeded AGENTS.md project-purpose TODO.");
   }
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
   return { code: 0, actions, settings, claudeImports, plugin };

@@ -1,6 +1,12 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { applyPluginDeclaration, CLAUDE_SETTINGS_PATH, planPluginDeclaration } from "./claudeSettings.js";
+import {
+  applyPluginDeclaration,
+  applyRemovePluginDeclaration,
+  CLAUDE_SETTINGS_PATH,
+  planPluginDeclaration,
+  planRemovePluginDeclaration,
+} from "./claudeSettings.js";
 import type { Lockfile } from "./lockfile.js";
 import { MANIFEST_FILENAME, parseManifest, setModuleEnabled } from "./manifest.js";
 import { RALPH_MODULE, RALPH_WORKFLOW_PATH, ralphFiles } from "./ralph.js";
@@ -62,9 +68,27 @@ export const MIGRATIONS: Migration[] = [
     },
   },
   {
+    id: "2026-08-vendor-workflow-skills",
+    description: `vendor the workflow skills as managed files under .claude/skills/ and remove the retired plugin declarations from ${CLAUDE_SETTINGS_PATH} (ADR-0019)`,
+    plan(ctx) {
+      // The skill files themselves flow through the regular managed-file surface
+      // (sync regenerates it after migrations run); this migration only performs
+      // the structural change the writer can't express — stripping the retired
+      // launchrail/mattpocock declarations from a consumer's settings.json.
+      const removal = planRemovePluginDeclaration(ctx.cwd);
+      if (removal.content === null) return { changes: [], apply: () => {} };
+      return {
+        changes: [`${CLAUDE_SETTINGS_PATH} — ${removal.detail}`],
+        apply: () => {
+          applyRemovePluginDeclaration(ctx.cwd, removal);
+        },
+      };
+    },
+  },
+  {
     id: "2026-08-wire-default-implementation-loop",
     description:
-      "install the built-in implementation loop's materials when the manifest selects ralph, so /launchrail:implement works without `launchrail add ralph` (ADR-0018)",
+      "install the built-in implementation loop's materials when the manifest selects ralph, so /launch-implement works without `launchrail add ralph` (ADR-0018)",
     plan(ctx) {
       const none = { changes: [], apply: () => {} };
       const manifestPath = join(ctx.cwd, MANIFEST_FILENAME);

@@ -44,9 +44,9 @@ export const IMPLEMENTATION_LOOP_PROVIDERS: Record<ImplementationLoop, Implement
     id: "ralph",
     label: "Ralph (built-in)",
     hint: "Launchrail's verification-gated loop",
-    entry: "launchrail:ralph",
+    entry: "launch-ralph",
     declaration: null,
-    setupHint: "Start building with /launchrail:implement when the ready tickets exist (add a ticket number to build just one).",
+    setupHint: "Start building with /launch-implement when the ready tickets exist (add a ticket number to build just one).",
   },
   superpowers: {
     id: "superpowers",
@@ -61,7 +61,7 @@ export const IMPLEMENTATION_LOOP_PROVIDERS: Record<ImplementationLoop, Implement
       label: "Superpowers",
     },
     setupHint:
-      "Start building with /launchrail:implement — it drives the ready tickets through Superpowers' execution skills. `launchrail verify` still gates every merge.",
+      "Start building with /launch-implement — it drives the ready tickets through Superpowers' execution skills. `launchrail verify` still gates every merge.",
   },
 };
 

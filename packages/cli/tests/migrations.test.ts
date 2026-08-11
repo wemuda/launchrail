@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { emptyLockfile, type Lockfile } from "../src/lib/lockfile.js";
@@ -88,17 +88,30 @@ describe("migration engine", () => {
     expect([...ids].sort((a, b) => a.localeCompare(b))).toEqual(ids);
   });
 
-  test("2026-08-plugin-declaration declares the plugin and is idempotent", () => {
+  test("2026-08-vendor-workflow-skills strips a retired plugin declaration and is idempotent", () => {
+    // A pre-ADR-0019 project that still declares the retired launchrail/mattpocock plugins.
+    mkdirSync(join(tmp.root, ".claude"), { recursive: true });
+    const settingsPath = join(tmp.root, ".claude", "settings.json");
+    writeFileSync(
+      settingsPath,
+      JSON.stringify(
+        {
+          extraKnownMarketplaces: { launchrail: { source: { source: "github", repo: "wemuda/launchrail" } } },
+          enabledPlugins: { "launchrail@launchrail": true, "mattpocock-skills@mattpocock": true },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
     const ctx = { cwd: tmp.root, lockfile };
     const results = applyPendingMigrations(ctx, MIGRATIONS);
-    const result = results.find((r) => r.id === "2026-08-plugin-declaration");
+    const result = results.find((r) => r.id === "2026-08-vendor-workflow-skills");
     expect(result?.status).toBe("applied");
-    const settingsPath = join(tmp.root, ".claude", "settings.json");
-    expect(existsSync(settingsPath)).toBe(true);
     const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(true);
-    // Already satisfied now: a fresh lockfile plans no changes.
+    expect(settings.enabledPlugins).toBeUndefined();
+    expect(settings.extraKnownMarketplaces).toBeUndefined();
+    // Idempotent: with nothing left to strip, a fresh lockfile plans no changes.
     const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
-    expect(planned.find((p) => p.id === "2026-08-plugin-declaration")?.changes).toEqual([]);
+    expect(planned.find((p) => p.id === "2026-08-vendor-workflow-skills")?.changes).toEqual([]);
   });
 });

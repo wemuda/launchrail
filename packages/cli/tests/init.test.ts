@@ -11,9 +11,16 @@ const EXPECTED_FILES = [
   "CLAUDE.md",
   "docs/adr/0000-template.md",
   ".launchrail/CLAUDE.generated.md",
-  ".claude/settings.json",
   // The default implementation loop's materials install with init (ADR-0018).
   ".claude/workflows/ralph.js",
+  // Skills are vendored as managed files, not installed as a plugin (ADR-0019):
+  // Launchrail's own (launch-*) and the Matt Pocock snapshot (bare names), plus
+  // the attribution notice. No .claude/settings.json on the default (ralph) path.
+  ".claude/skills/launch/SKILL.md",
+  ".claude/skills/launch/workflow.md",
+  ".claude/skills/launch-implement/SKILL.md",
+  ".claude/skills/research/SKILL.md",
+  ".claude/skills/NOTICE-mattpocock.md",
 ];
 
 let tmp: TmpRepo;
@@ -44,7 +51,7 @@ describe("launchrail init", () => {
     expect(lock.files[".claude/workflows/ralph.js"]).toMatchObject({ class: "managed" });
     const generated = readFileSync(join(tmp.root, ".launchrail/CLAUDE.generated.md"), "utf8");
     expect(generated).toContain("## The Ralph loop");
-    expect(generated).toContain("/launchrail:implement");
+    expect(generated).toContain("/launch-implement");
   });
 
   test("re-running is a no-op (idempotent)", async () => {
@@ -174,7 +181,7 @@ describe("launchrail init", () => {
     expect(output).toContain("aligning your code with Launchrail's artifacts");
   });
 
-  test("ends with the Claude Code handoff (plugin approval + /launchrail:launch)", async () => {
+  test("ends with the Claude Code handoff (vendored skills + /launch)", async () => {
     const lines: string[] = [];
     const spy = vi.spyOn(console, "log").mockImplementation((...args) => {
       lines.push(args.join(" "));
@@ -186,8 +193,10 @@ describe("launchrail init", () => {
       spy.mockRestore();
     }
     const output = lines.join("\n");
-    expect(output).toContain("claude plugin marketplace add wemuda/launchrail");
-    expect(output).toContain("/launchrail:launch");
+    expect(output).toContain(".claude/skills/");
+    expect(output).toContain("Run /launch");
+    // The plugin is retired (ADR-0019) — no marketplace/install handoff on the golden path.
+    expect(output).not.toContain("claude plugin marketplace add wemuda/launchrail");
     expect(output).not.toContain("fill in the TODO");
   });
 
