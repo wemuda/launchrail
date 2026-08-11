@@ -19,8 +19,8 @@ describe("rewriteReadmeLinks", () => {
   });
 
   test("rewrites a relative file link to a blob URL", () => {
-    expect(rewrite("[Roadmap](ROADMAP.md)")).toBe(
-      "[Roadmap](https://github.com/wemuda/launchrail/blob/master/ROADMAP.md)",
+    expect(rewrite("[Changelog](CHANGELOG.md)")).toBe(
+      "[Changelog](https://github.com/wemuda/launchrail/blob/master/CHANGELOG.md)",
     );
   });
 
@@ -63,7 +63,7 @@ describe("rewriteReadmeLinks", () => {
   test("is idempotent — a second pass changes nothing", () => {
     const input = [
       '<img src="assets/logo.png" />',
-      "[Roadmap](ROADMAP.md)",
+      "[Changelog](CHANGELOG.md)",
       "[ADRs](docs/adr/)",
       "[skills](https://github.com/mattpocock/skills)",
     ].join("\n");

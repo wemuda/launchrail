@@ -9,7 +9,7 @@ Releases are automated by [release-please](https://github.com/googleapis/release
 3. **Merging the release PR** (squash) tags `vX.Y.Z`, creates the GitHub release, and triggers the publish job: `pnpm build`, then `npm publish --provenance --access public` for `@wemuda/launchrail`.
 4. If the `NPM_TOKEN` secret is absent, the publish step skips with a notice — tags and changelog still happen. This is the expected state until npm launch.
 
-Version semantics while pre-1.0: `fix:` bumps patch, `feat:` bumps minor, breaking changes bump minor (`bump-minor-pre-major`).
+Version semantics: `fix:` bumps patch, `feat:` bumps minor, and — now that the toolchain is past 1.0 — a breaking change bumps major.
 
 ## One-time setup (before the first public release)
 
