@@ -1,4 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { writeLockfile } from "../lib/lockfile.js";
+import { MANIFEST_FILENAME, parseManifest } from "../lib/manifest.js";
 import {
   applyPendingMigrations,
   MIGRATIONS,
@@ -83,6 +86,14 @@ export function runSync(opts: SyncOptions): SyncOutcome {
     console.error(`\nlaunchrail: migration ${failed.id} failed: ${failed.error}`);
     console.error("Migrations applied before the failure are recorded; fix the cause and re-run `launchrail sync`.");
     return { code: 1, actions: [], migrations };
+  }
+
+  // A migration may edit the manifest (e.g. enabling a module); re-read it so
+  // the regenerated file surface reflects the post-migration configuration in
+  // this run instead of the next one.
+  if (migrations.some((result) => result.status === "applied")) {
+    const reparsed = parseManifest(readFileSync(join(opts.cwd, MANIFEST_FILENAME), "utf8"));
+    if (reparsed.manifest) state.manifest = reparsed.manifest;
   }
 
   const actions = planWrites(opts.cwd, desiredSpecs(state), state.lockfile);

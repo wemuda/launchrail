@@ -12,6 +12,8 @@ const EXPECTED_FILES = [
   "docs/adr/0000-template.md",
   ".launchrail/CLAUDE.generated.md",
   ".claude/settings.json",
+  // The default implementation loop's materials install with init (ADR-0018).
+  ".claude/workflows/ralph.js",
 ];
 
 let tmp: TmpRepo;
@@ -32,6 +34,17 @@ describe("launchrail init", () => {
     const claude = readFileSync(join(tmp.root, "CLAUDE.md"), "utf8");
     expect(claude).toContain("@AGENTS.md");
     expect(claude).toContain("@.launchrail/CLAUDE.generated.md");
+  });
+
+  test("installs the default implementation loop: module on, workflow managed, instructions carry the section", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    const manifest = readFileSync(join(tmp.root, ".launchrail.yml"), "utf8");
+    expect(manifest).toContain("ralph: true");
+    const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
+    expect(lock.files[".claude/workflows/ralph.js"]).toMatchObject({ class: "managed" });
+    const generated = readFileSync(join(tmp.root, ".launchrail/CLAUDE.generated.md"), "utf8");
+    expect(generated).toContain("## The Ralph loop");
+    expect(generated).toContain("/launchrail:implement");
   });
 
   test("re-running is a no-op (idempotent)", async () => {

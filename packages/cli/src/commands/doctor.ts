@@ -153,9 +153,17 @@ export function runDoctor(cwd: string): DoctorOutcome {
   if (manifest) {
     // Whether the loop's plugin is actually present is covered by the
     // declaration/install checks above (its plugin is in the effective roster);
-    // here just report the selection and how stage 10 hands off.
+    // here report the selection and that its materials are installed.
     const provider = implementationLoopProvider(manifest.implementationLoop);
-    add("pass", "implementation loop", `${provider.label} → ${provider.entry}`);
+    if (manifest.implementationLoop === "ralph" && !manifest.modules[RALPH_MODULE]) {
+      add(
+        "warn",
+        "implementation loop",
+        `${provider.label} selected but its materials are not installed — run \`launchrail sync\``,
+      );
+    } else {
+      add("pass", "implementation loop", `${provider.label} — start with /launchrail:implement`);
+    }
   }
 
   if (manifest?.modules[BROWSER_TESTING_MODULE]) {
@@ -191,7 +199,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
     if (existsSync(join(cwd, RALPH_WORKFLOW_PATH))) {
       add("pass", "ralph workflow", RALPH_WORKFLOW_PATH);
     } else {
-      add("fail", "ralph workflow", `${RALPH_WORKFLOW_PATH} missing — re-run \`launchrail add ralph\``);
+      add("fail", "ralph workflow", `${RALPH_WORKFLOW_PATH} missing — run \`launchrail sync\` to restore it`);
     }
     if (manifest.issueTracker !== "none") {
       add("pass", "ralph tracker", `issueTracker: ${manifest.issueTracker}`);

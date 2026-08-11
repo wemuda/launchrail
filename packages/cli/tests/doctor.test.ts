@@ -72,7 +72,9 @@ describe("launchrail doctor", () => {
   test("passes the plugin declaration check after init, warns without it", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(runDoctor(tmp.root).checks.find((c) => c.name === "plugin declaration")?.status).toBe("pass");
-    rmSync(join(tmp.root, ".claude"), { recursive: true });
+    // Only the settings file — .claude/ also carries the managed ralph
+    // workflow, whose absence is a separate (failing) check.
+    rmSync(join(tmp.root, ".claude/settings.json"));
     const outcome = runDoctor(tmp.root);
     const check = outcome.checks.find((c) => c.name === "plugin declaration");
     expect(check?.status).toBe("warn");

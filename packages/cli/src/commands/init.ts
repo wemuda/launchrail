@@ -24,6 +24,7 @@ import {
 } from "../lib/implementationLoops.js";
 import { emptyLockfile, readLockfile, writeLockfile } from "../lib/lockfile.js";
 import { migrationIds } from "../lib/migrations.js";
+import { RALPH_MODULE, ralphFiles } from "../lib/ralph.js";
 import {
   ISSUE_TRACKERS,
   MANIFEST_FILENAME,
@@ -73,6 +74,15 @@ function defaultTesting(detection: RepoDetection): Manifest["testing"] {
   };
 }
 
+/**
+ * The default loop should be present by default (ADR-0018): selecting `ralph`
+ * enables its module up front, so init installs the loop's materials and nobody
+ * meets a "needs `launchrail add ralph`" wall at the moment they start building.
+ */
+function modulesFor(loop: ImplementationLoop): Manifest["modules"] {
+  return loop === "ralph" ? { core: true, [RALPH_MODULE]: true } : { core: true };
+}
+
 function defaultManifestFor(detection: RepoDetection): Manifest {
   return {
     schemaVersion: 1,
@@ -84,7 +94,7 @@ function defaultManifestFor(detection: RepoDetection): Manifest {
         detection.conventionalCommitRatio === null ? true : detection.conventionalCommitRatio >= 0.5,
     },
     testing: defaultTesting(detection),
-    modules: { core: true },
+    modules: modulesFor(DEFAULT_IMPLEMENTATION_LOOP),
     implementationLoop: DEFAULT_IMPLEMENTATION_LOOP,
   };
 }
@@ -146,7 +156,7 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
             {
               value: "ralph",
               label: "Ralph",
-              hint: "built-in, verification-gated (recommended); `launchrail add ralph`",
+              hint: "built-in, verification-gated (recommended); installed by init",
             },
             {
               value: "superpowers",
@@ -174,7 +184,7 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
       ...defaultTesting(detection),
       unitCommand: answers.unitCommand.trim() === "" ? null : answers.unitCommand.trim(),
     },
-    modules: { core: true },
+    modules: modulesFor(answers.implementationLoop as ImplementationLoop),
     implementationLoop: answers.implementationLoop as ImplementationLoop,
   };
 }
@@ -256,6 +266,11 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const specs: FileSpec[] = [
     { relPath: MANIFEST_FILENAME, content: serializeManifest(manifest), ownership: "seeded" },
     ...seedFiles({ projectName: detection.projectName, manifest, launchrailVersion: VERSION }),
+    // The built-in loop's materials install with init when its module is on
+    // (fresh manifests enable it whenever the loop is `ralph`, ADR-0018). An
+    // existing manifest without the module is brought current by sync's
+    // migration, not silently rewritten here.
+    ...(manifest.modules[RALPH_MODULE] ? ralphFiles() : []),
   ];
 
   const existing = readLockfile(opts.cwd);
