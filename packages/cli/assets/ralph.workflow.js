@@ -1,5 +1,5 @@
 // Managed by Launchrail. Do not hand-edit — `launchrail sync` may replace this file.
-// Override policy per run via args instead, e.g. { width: 1, only: [9, 10] }.
+// Override policy per run via args instead, e.g. { width: 1, only: [9, 10], max: 5 }.
 //
 // The Ralph loop as a deterministic workflow: the plan, the frontier bookkeeping,
 // and every intermediate report live in script variables — not in any context window —
@@ -10,7 +10,7 @@ export const meta = {
   name: 'ralph',
   description: 'Autonomous Ralph loop: implement ready tickets with fresh-context subagents, verification-gated',
   whenToUse:
-    'Run the Ralph implementation loop over the ticket backlog when the dependency graph is wide or the run is long. Scope a run via args: { only: [9, 10], width: 2 } or just [9, 10]. For a watchable, checkpointed run (or when something is already going wrong), use the launchrail:ralph skill instead.',
+    'Run the Ralph implementation loop over the ticket backlog when the dependency graph is wide or the run is long. Scope a run via args: { only: [9, 10], width: 2 }, just [9, 10], or { max: 5 } to stop after 5 verified merges ("the next five" — the frontier picks which, in dependency order). Args must be JSON — resolve any natural-language scope to ticket numbers and a cap before launching. For a watchable, checkpointed run (or when something is already going wrong), use the launchrail:ralph skill instead.',
   phases: [
     { title: 'Preflight', detail: 'read project config, sync the base, run the verification gate' },
     { title: 'Graph', detail: 'list ready tickets and their blocking edges, verbatim' },
@@ -46,6 +46,10 @@ const A = resolveArgs(args)
 const POLICY = {
   // Scope the run to specific ticket numbers ([] = the whole ready frontier).
   only: A.only ?? [],
+  // Stop after this many verified merges (0 = no cap). "The next five": the frontier
+  // decides which five, in dependency order. Batches never exceed the remainder, so a
+  // run has at most `max` merges and leaves the rest of the frontier ready, not parked.
+  max: A.max ?? 0,
   // Parallel implementers. Width also caps local build concurrency — several implementers
   // share one machine, and fanning out test runs buys backpressure, not speed. Use 1 until
   // a run has landed tickets cleanly on this project.
@@ -383,6 +387,7 @@ log(
     (POLICY.only.length > 0
       ? `Scoped to ${POLICY.only.map((n) => `#${n}`).join(', ')}.`
       : 'No scope — building the whole ready frontier.') +
+    (POLICY.max > 0 ? ` Stopping after ${POLICY.max} verified merge(s).` : '') +
     ` Width ${POLICY.width}, ${POLICY.attempts} attempts per ticket.`,
 )
 let graph = await agent(graphPrompt(pre), { label: 'read-graph', phase: 'Graph', schema: GRAPH_SCHEMA, model: 'haiku', effort: 'low' })
@@ -398,16 +403,28 @@ for (const t of tickets) {
   }
 }
 
+const mergedCount = () => [...state.values()].filter((s) => s.status === 'merged').length
+
 let rounds = 0
+let maxReached = false
 while (rounds < POLICY.maxRounds) {
   if (budget.total && budget.remaining() < POLICY.reserve) {
     log(`token budget at reserve (${Math.round(budget.remaining() / 1000)}k left) — stopping before a new round`)
     break
   }
+  // The cap counts verified merges only — a failed or deferred dispatch frees its slot
+  // for a different ticket next round. Capping the batch at the remainder means even a
+  // fully successful round cannot overshoot.
+  const capLeft = POLICY.max > 0 ? POLICY.max - mergedCount() : Infinity
+  if (capLeft <= 0) {
+    maxReached = true
+    log(`cap reached: ${POLICY.max} verified merge(s) — stopping; the rest of the frontier stays ready`)
+    break
+  }
   const ready = frontier(tickets, closedBefore)
   if (ready.length === 0) break
   rounds += 1
-  const batch = ready.slice(0, POLICY.width)
+  const batch = ready.slice(0, Math.min(POLICY.width, capLeft))
   log(`round ${rounds}: dispatching ${batch.map((t) => `#${t.number}`).join(', ')} (${ready.length} unblocked)`)
   const results = await parallel(batch.map((t) => () => drive(pre, t)))
   const landed = results.filter((r) => r?.ok)
@@ -481,6 +498,7 @@ verified means: the verification gate exited 0${pre.browserTesting && merged.len
 return {
   rounds,
   verified: release?.verified ?? false,
+  maxReached,
   release,
   merged: merged.map((s) => ({ ticket: s.ticket.number, title: s.ticket.title, pr: s.pr, mergeCommit: s.mergeCommit })),
   parked: parked.map((s) => ({ ticket: s.ticket.number, title: s.ticket.title, failures: s.failures })),

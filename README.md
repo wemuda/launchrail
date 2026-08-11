@@ -55,7 +55,7 @@ From there, the day-to-day driver is not the CLI — it's the **`launch` skill**
 - **`project-alignment`** — the on-ramp for an existing codebase: infer a vision from the code, interview only the gaps, inventory the design system, then join the loop
 - **`vision-creation`** and **`design-validation`** — the Launchrail-owned stages of the pipeline
 - **`browser-smoke`** — drives a real browser journey and leaves a traceable evidence bundle (with the browser-testing module)
-- **`implement`** — the one door to building: `/launchrail:implement` drives ready tickets to verified merges through the selected loop (a ticket number builds just that one)
+- **`implement`** — the one door to building: `/launchrail:implement` drives ready tickets to verified merges through the selected loop (a ticket number builds just that one; "the next 5 of spec #2" scopes and caps a run)
 - **`ralph`**, **`ralph-implement`**, **`resolving-merge-conflicts`** — the verification-gated loop engine behind that door, installed by `init`
 
 The CLI is the maintenance surface you return to between sessions:

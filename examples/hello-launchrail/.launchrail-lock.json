@@ -4,7 +4,7 @@
   "files": {
     ".claude/workflows/ralph.js": {
       "class": "managed",
-      "checksum": "cda427fff21dc32ed4c474e1d0db1d444880b31f8f582e705643de9c845955a5"
+      "checksum": "d5f5a8c2d544086da2fc8b9c31c1c1a8ba63a1bcd8aac509d893e66f4fbbe0f1"
     },
     ".launchrail.yml": {
       "class": "seeded",
