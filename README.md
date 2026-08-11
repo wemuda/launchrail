@@ -74,23 +74,28 @@ Initialized projects carry two files: `.launchrail.yml` (configuration) and `.la
 
 ## Updating a project
 
-Each release versions the CLI and the Claude Code plugin in lockstep, but a project consumes them through two different mechanisms — and `sync` deliberately handles only one of them. Updating to a new release is two moves, in this order:
+New Launchrail release out? Three steps, in this order, from the project root:
 
-```bash
-# 1. The plugin (the skills): inside Claude Code run /plugin and update there,
-#    or from the terminal:
-claude plugin update launchrail@launchrail
+**1. Update the plugin** — the `/launchrail:*` skills — inside Claude Code:
 
-# 2. The project files: preview what the new release changes, then apply it
-npx @wemuda/launchrail@latest diff
-npx @wemuda/launchrail@latest sync
-
-# 3. sync output is a normal working-tree change — review and commit it
-git diff
-git add -A && git commit -m "chore: launchrail sync"
+```text
+/plugin            # → launchrail → update
+/reload-plugins
 ```
 
-The `@latest` is load-bearing: templates ship inside the CLI and every comparison is local, so a stale `npx` cache will report "everything up to date" against old templates. Plugin before `sync` also matters: the managed instructions a newer CLI writes can reference workflow stages whose skills only exist in the newer plugin. `sync` itself is safe to run at any point — seeded and project-owned files are never touched, and a managed file you've edited keeps your edits. Step-by-step detail, including how migrations and conflicts behave: [docs/getting-started.md](docs/getting-started.md#updating-to-a-new-release).
+**2. Sync the project files** — applies the release's managed files and migrations; your own files are never touched:
+
+```bash
+npx -y @wemuda/launchrail@latest sync
+```
+
+**3. Commit the result:**
+
+```bash
+git add -A && git commit -m "chore: sync launchrail"
+```
+
+Done — the next `/launchrail:launch` runs with everything the release added (the [CHANGELOG](CHANGELOG.md) says what that is). Keep the `@latest`: `npx` caches, and a stale cached CLI reports "everything up to date" against old templates. Want to see the changes before applying? `npx -y @wemuda/launchrail@latest diff` — read-only, like `status` and `sync --dry-run`. The why and the edge cases — ordering, conflicts, migrations, teammates — live in [docs/getting-started.md](docs/getting-started.md#updating-to-a-new-release).
 
 ## The ownership model
 
