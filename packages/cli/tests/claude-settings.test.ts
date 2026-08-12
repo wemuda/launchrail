@@ -2,7 +2,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runInit } from "../src/commands/init.js";
-import { CLAUDE_SETTINGS_PATH, declarationState, planPluginDeclaration } from "../src/lib/claudeSettings.js";
+import {
+  CLAUDE_SETTINGS_PATH,
+  planPluginDeclaration,
+  planRemovePluginDeclaration,
+  RETIRED_PLUGIN_DECLARATIONS,
+} from "../src/lib/claudeSettings.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
 
 let tmp: TmpRepo;
@@ -14,36 +19,30 @@ afterEach(() => tmp.cleanup());
 function settingsPath(): string {
   return join(tmp.root, CLAUDE_SETTINGS_PATH);
 }
-
 function writeSettings(value: unknown): void {
   mkdirSync(join(tmp.root, ".claude"), { recursive: true });
   writeFileSync(settingsPath(), typeof value === "string" ? value : JSON.stringify(value, null, 2) + "\n");
 }
+function writeManifest(loop: string): void {
+  writeFileSync(
+    join(tmp.root, ".launchrail.yml"),
+    `schemaVersion: 1\nmode: standard-mvp\nimplementationLoop: ${loop}\n`,
+  );
+}
 
-describe("plugin declaration in .claude/settings.json", () => {
-  test("init creates the declaration in a blank repo", async () => {
+// Under ADR-0019 the workflow skills are vendored as files, not installed as
+// plugins, so init no longer declares launchrail/mattpocock. The declaration
+// machinery survives only for a selected external loop plugin (superpowers).
+describe("plugin declaration in .claude/settings.json (loop plugins only, ADR-0019)", () => {
+  test("the default ralph loop writes no plugin declaration — skills are vendored", async () => {
     const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(outcome.code).toBe(0);
-    expect(outcome.settings.kind).toBe("create");
-    const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
-    expect(settings.extraKnownMarketplaces.launchrail.source).toEqual({
-      source: "github",
-      repo: "wemuda/launchrail",
-    });
-    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(true);
-    expect(settings.extraKnownMarketplaces.mattpocock.source).toEqual({
-      source: "github",
-      repo: "mattpocock/skills",
-    });
-    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBe(true);
-    expect(declarationState(tmp.root)).toBe("declared");
+    expect(outcome.settings.kind).toBe("skip-declared");
+    expect(existsSync(settingsPath())).toBe(false);
   });
 
-  test("selecting the superpowers loop declares its plugin alongside the core roster", async () => {
-    writeFileSync(
-      join(tmp.root, ".launchrail.yml"),
-      "schemaVersion: 1\nmode: standard-mvp\nimplementationLoop: superpowers\n",
-    );
+  test("selecting the superpowers loop declares only its plugin", async () => {
+    writeManifest("superpowers");
     const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(outcome.code).toBe(0);
     const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
@@ -52,19 +51,13 @@ describe("plugin declaration in .claude/settings.json", () => {
       repo: "obra/superpowers",
     });
     expect(settings.enabledPlugins["superpowers@superpowers-dev"]).toBe(true);
-    // The core roster is still declared too.
-    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(true);
-    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBe(true);
+    // The retired core plugins are never declared.
+    expect(settings.enabledPlugins["launchrail@launchrail"]).toBeUndefined();
+    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBeUndefined();
   });
 
-  test("the default ralph loop adds no extra plugin to the declaration", async () => {
-    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
-    const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
-    expect(settings.enabledPlugins["superpowers@superpowers-dev"]).toBeUndefined();
-    expect(Object.keys(settings.enabledPlugins)).toEqual(["launchrail@launchrail", "mattpocock-skills@mattpocock"]);
-  });
-
-  test("merges into existing settings without touching unrelated keys", async () => {
+  test("the superpowers declaration merges into existing settings without touching unrelated keys", async () => {
+    writeManifest("superpowers");
     writeSettings({
       permissions: { allow: ["Bash(pnpm test)"] },
       extraKnownMarketplaces: { other: { source: { source: "github", repo: "acme/tools" } } },
@@ -76,10 +69,11 @@ describe("plugin declaration in .claude/settings.json", () => {
     expect(settings.permissions).toEqual({ allow: ["Bash(pnpm test)"] });
     expect(settings.extraKnownMarketplaces.other.source.repo).toBe("acme/tools");
     expect(settings.enabledPlugins["formatter@other"]).toBe(true);
-    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(true);
+    expect(settings.enabledPlugins["superpowers@superpowers-dev"]).toBe(true);
   });
 
-  test("re-running init is a no-op for settings", async () => {
+  test("re-running init with superpowers is a no-op for settings", async () => {
+    writeManifest("superpowers");
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     const before = readFileSync(settingsPath(), "utf8");
     const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
@@ -87,54 +81,86 @@ describe("plugin declaration in .claude/settings.json", () => {
     expect(readFileSync(settingsPath(), "utf8")).toBe(before);
   });
 
-  test("respects an explicit opt-out while still declaring the rest of the roster", async () => {
-    writeSettings({
-      extraKnownMarketplaces: { launchrail: { source: { source: "github", repo: "wemuda/launchrail" } } },
-      enabledPlugins: { "launchrail@launchrail": false },
-    });
-    const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
-    expect(outcome.settings.kind).toBe("merge");
-    const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
-    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(false);
-    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBe(true);
-  });
-
-  test("an opt-out of every roster plugin is fully declared — nothing to merge", async () => {
-    writeSettings({
-      extraKnownMarketplaces: {
-        launchrail: { source: { source: "github", repo: "wemuda/launchrail" } },
-        mattpocock: { source: { source: "github", repo: "mattpocock/skills" } },
-      },
-      enabledPlugins: { "launchrail@launchrail": false, "mattpocock-skills@mattpocock": false },
-    });
-    const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
-    expect(outcome.settings.kind).toBe("skip-declared");
-    const settings = JSON.parse(readFileSync(settingsPath(), "utf8"));
-    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(false);
-    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBe(false);
-  });
-
-  test("leaves invalid JSON untouched and init still succeeds", async () => {
+  test("leaves invalid JSON untouched and init still succeeds (superpowers path)", async () => {
+    writeManifest("superpowers");
     writeSettings("{ not json");
     const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(outcome.code).toBe(0);
     expect(outcome.settings.kind).toBe("skip-invalid");
     expect(readFileSync(settingsPath(), "utf8")).toBe("{ not json");
-    expect(declarationState(tmp.root)).toBe("invalid-json");
   });
 
-  test("dry run plans the declaration but writes nothing", async () => {
-    const outcome = await runInit({ cwd: tmp.root, dryRun: true, yes: true });
-    expect(outcome.settings.kind).toBe("create");
+  test("planPluginDeclaration with the empty core roster never touches the file", () => {
+    const plan = planPluginDeclaration(tmp.root);
+    expect(plan.kind).toBe("skip-declared");
+    expect(plan.content).toBeNull();
     expect(existsSync(settingsPath())).toBe(false);
   });
+});
 
-  test("planPluginDeclaration keeps a foreign launchrail marketplace entry as-is", () => {
-    writeSettings({ extraKnownMarketplaces: { launchrail: { source: { source: "github", repo: "fork/launchrail" } } } });
-    const plan = planPluginDeclaration(tmp.root);
-    expect(plan.kind).toBe("merge");
-    const merged = JSON.parse(plan.content ?? "{}");
-    expect(merged.extraKnownMarketplaces.launchrail.source.repo).toBe("fork/launchrail");
-    expect(merged.enabledPlugins["launchrail@launchrail"]).toBe(true);
+describe("retiring the old plugin declaration (ADR-0019)", () => {
+  test("strips the retired launchrail/mattpocock keys, preserving unrelated ones", () => {
+    writeSettings({
+      permissions: { allow: ["Bash(pnpm test)"] },
+      extraKnownMarketplaces: {
+        launchrail: { source: { source: "github", repo: "wemuda/launchrail" } },
+        mattpocock: { source: { source: "github", repo: "mattpocock/skills" } },
+        other: { source: { source: "github", repo: "acme/tools" } },
+      },
+      enabledPlugins: {
+        "launchrail@launchrail": true,
+        "mattpocock-skills@mattpocock": true,
+        "formatter@other": true,
+      },
+    });
+    const plan = planRemovePluginDeclaration(tmp.root);
+    expect(plan.kind).toBe("remove");
+    const settings = JSON.parse(plan.content ?? "{}");
+    expect(settings.extraKnownMarketplaces.launchrail).toBeUndefined();
+    expect(settings.extraKnownMarketplaces.mattpocock).toBeUndefined();
+    expect(settings.enabledPlugins["launchrail@launchrail"]).toBeUndefined();
+    expect(settings.enabledPlugins["mattpocock-skills@mattpocock"]).toBeUndefined();
+    // Unrelated entries and unrelated settings survive untouched.
+    expect(settings.extraKnownMarketplaces.other.source.repo).toBe("acme/tools");
+    expect(settings.enabledPlugins["formatter@other"]).toBe(true);
+    expect(settings.permissions).toEqual({ allow: ["Bash(pnpm test)"] });
+  });
+
+  test("drops a container emptied by the removal rather than leaving {}", () => {
+    writeSettings({
+      extraKnownMarketplaces: { launchrail: { source: { source: "github", repo: "wemuda/launchrail" } } },
+      enabledPlugins: { "launchrail@launchrail": true, "mattpocock-skills@mattpocock": true },
+    });
+    const plan = planRemovePluginDeclaration(tmp.root);
+    const settings = JSON.parse(plan.content ?? "{}");
+    expect(settings.extraKnownMarketplaces).toBeUndefined();
+    expect(settings.enabledPlugins).toBeUndefined();
+  });
+
+  test("is a no-op when no retired declaration is present", () => {
+    writeSettings({ enabledPlugins: { "superpowers@superpowers-dev": true } });
+    const plan = planRemovePluginDeclaration(tmp.root);
+    expect(plan.kind).toBe("skip-absent");
+    expect(plan.content).toBeNull();
+  });
+
+  test("skips a missing settings file", () => {
+    const plan = planRemovePluginDeclaration(tmp.root);
+    expect(plan.kind).toBe("skip-no-file");
+    expect(plan.content).toBeNull();
+  });
+
+  test("skips invalid JSON", () => {
+    writeSettings("{ not json");
+    const plan = planRemovePluginDeclaration(tmp.root);
+    expect(plan.kind).toBe("skip-invalid");
+    expect(plan.content).toBeNull();
+  });
+
+  test("RETIRED_PLUGIN_DECLARATIONS names the launchrail and mattpocock plugins", () => {
+    expect(RETIRED_PLUGIN_DECLARATIONS.map((d) => d.pluginKey)).toEqual([
+      "launchrail@launchrail",
+      "mattpocock-skills@mattpocock",
+    ]);
   });
 });

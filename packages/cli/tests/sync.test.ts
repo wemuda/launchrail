@@ -95,17 +95,26 @@ describe("launchrail sync", () => {
   });
 
   test("applies pending migrations and records them in the lockfile", () => {
+    // A pre-ADR-0019 project still declaring the retired plugins; the vendor
+    // migration has not run yet. Sync strips the declaration and records it.
+    writeFileSync(
+      join(tmp.root, ".claude", "settings.json"),
+      JSON.stringify(
+        { enabledPlugins: { "launchrail@launchrail": true, "mattpocock-skills@mattpocock": true } },
+        null,
+        2,
+      ) + "\n",
+    );
     editLockfile(tmp.root, (lock) => {
-      lock.migrations = [];
+      lock.migrations = lock.migrations.filter((id) => id !== "2026-08-vendor-workflow-skills");
     });
-    rmSync(join(tmp.root, ".claude"), { recursive: true });
     const outcome = runSync({ cwd: tmp.root, dryRun: false });
     expect(outcome.code).toBe(0);
-    const result = outcome.migrations.find((m) => m.id === "2026-08-plugin-declaration");
+    const result = outcome.migrations.find((m) => m.id === "2026-08-vendor-workflow-skills");
     expect(result?.status).toBe("applied");
     const settings = JSON.parse(readFileSync(join(tmp.root, ".claude", "settings.json"), "utf8"));
-    expect(settings.enabledPlugins["launchrail@launchrail"]).toBe(true);
-    expect(readLock().migrations).toContain("2026-08-plugin-declaration");
+    expect(settings.enabledPlugins).toBeUndefined();
+    expect(readLock().migrations).toContain("2026-08-vendor-workflow-skills");
   });
 
   test("records an already-satisfied migration without changes", () => {
@@ -113,9 +122,11 @@ describe("launchrail sync", () => {
       lock.migrations = [];
     });
     const outcome = runSync({ cwd: tmp.root, dryRun: false });
-    const result = outcome.migrations.find((m) => m.id === "2026-08-plugin-declaration");
+    // A fresh ralph project has no retired declaration to strip: the vendor
+    // migration is recorded, but as already-satisfied.
+    const result = outcome.migrations.find((m) => m.id === "2026-08-vendor-workflow-skills");
     expect(result?.status).toBe("already-satisfied");
-    expect(readLock().migrations).toContain("2026-08-plugin-declaration");
+    expect(readLock().migrations).toContain("2026-08-vendor-workflow-skills");
   });
 
   test("wires the default loop into a pre-ADR-0018 project: manifest, workflow file, and regenerated instructions in one run", () => {

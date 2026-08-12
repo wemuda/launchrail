@@ -1,7 +1,7 @@
 # ADR-0011: `init` actively installs the workflow's Claude plugins via the `claude` CLI
 
 ## Status
-Accepted
+Superseded by [ADR-0019](0019-vendor-skills-retire-plugin.md) — `init` no longer installs plugins via the `claude` CLI; the workflow skills ship as vendored, managed files written into `.claude/skills/`.
 
 ## Context
 ADR-0003 subscribes consuming projects to the Launchrail plugin through a committed `.claude/settings.json` declaration, relying on Claude Code to prompt for installation. The first real-project dogfood run exposed the gap: Claude Code only offers declared plugins when a folder is **trusted for the first time**. A project whose folder was already trusted before `init` ran — the common case when Launchrail is added to a repo someone has been working in — never sees a prompt, and the user is left with no skills and no explanation. The manual fallback is also a trap: the `/plugin` "Add Marketplace" dialog rejects a bare name like `launchrail` and requires the full `owner/repo` source.

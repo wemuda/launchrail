@@ -1,7 +1,7 @@
 # ADR-0003: Plugin subscription via project-scoped Claude Code settings
 
 ## Status
-Accepted — extended by [ADR-0011](0011-init-installs-plugin-via-claude-cli.md): the declaration now covers the whole workflow plugin roster (upstream skills included), and init additionally installs the roster directly via the `claude` CLI.
+Superseded by [ADR-0019](0019-vendor-skills-retire-plugin.md) — the plugin subscription is retired in favor of vendored, managed skill files that reach cloud and non-Claude agents. (Originally Accepted; extended by [ADR-0011](0011-init-installs-plugin-via-claude-cli.md): the declaration covered the whole workflow plugin roster and init installed it via the `claude` CLI.)
 
 ## Context
 Phase 2 requires that consuming projects get the Launchrail Claude Code plugin "through a project-scoped declaration": every collaborator who opens the repo in Claude Code should be offered the same skills, without each person installing the plugin by hand. Claude Code supports this natively — a committed `.claude/settings.json` can declare marketplaces (`extraKnownMarketplaces`) and enable plugins (`enabledPlugins`), and Claude Code prompts collaborators to trust and install them. The complication is ownership: `.claude/settings.json` also carries unrelated, project-owned configuration (permissions, hooks, environment), so none of Launchrail's existing whole-file ownership classes (managed / seeded) fit it.

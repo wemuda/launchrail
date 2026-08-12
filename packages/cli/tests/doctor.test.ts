@@ -69,15 +69,34 @@ describe("launchrail doctor", () => {
     expect(check?.status).toBe("pass");
   });
 
-  test("passes the plugin declaration check after init, warns without it", async () => {
+  test("passes the workflow skills check after init; the ralph path declares no plugin", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
-    expect(runDoctor(tmp.root).checks.find((c) => c.name === "plugin declaration")?.status).toBe("pass");
-    // Only the settings file — .claude/ also carries the managed ralph
-    // workflow, whose absence is a separate (failing) check.
-    rmSync(join(tmp.root, ".claude/settings.json"));
+    const checks = runDoctor(tmp.root).checks;
+    expect(checks.find((c) => c.name === "workflow skills")?.status).toBe("pass");
+    // The default (ralph) path vendors skills and declares no plugin at all.
+    expect(checks.find((c) => c.name === "plugin declaration")).toBeUndefined();
+  });
+
+  test("warns (without failing) when a retired plugin declaration lingers", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    writeFileSync(
+      join(tmp.root, ".claude/settings.json"),
+      JSON.stringify(
+        {
+          extraKnownMarketplaces: {
+            launchrail: { source: { source: "github", repo: "wemuda/launchrail" } },
+            mattpocock: { source: { source: "github", repo: "mattpocock/skills" } },
+          },
+          enabledPlugins: { "launchrail@launchrail": true, "mattpocock-skills@mattpocock": true },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
     const outcome = runDoctor(tmp.root);
     const check = outcome.checks.find((c) => c.name === "plugin declaration");
     expect(check?.status).toBe("warn");
+    expect(check?.message).toContain("retired");
     expect(outcome.code).toBe(0);
   });
 

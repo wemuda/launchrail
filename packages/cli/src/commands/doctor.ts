@@ -2,15 +2,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
-import { listInstalledPluginIds, toWorkflowPlugin, WORKFLOW_PLUGINS } from "../lib/claudeCli.js";
+import { listInstalledPluginIds, toWorkflowPlugin } from "../lib/claudeCli.js";
 import { missingImports } from "../lib/claudeImports.js";
-import { CLAUDE_SETTINGS_PATH, declarationState, PLUGIN_DECLARATIONS } from "../lib/claudeSettings.js";
+import { CLAUDE_SETTINGS_PATH, declarationState, RETIRED_PLUGIN_DECLARATIONS } from "../lib/claudeSettings.js";
 import { implementationLoopDeclarations, implementationLoopProvider } from "../lib/implementationLoops.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
 import { MANIFEST_FILENAME, parseManifest, type Manifest } from "../lib/manifest.js";
 import { RALPH_MODULE, RALPH_WORKFLOW_PATH } from "../lib/ralph.js";
+import { skillNames } from "../lib/skills.js";
 
 export type CheckStatus = "pass" | "warn" | "fail";
 
@@ -108,52 +109,71 @@ export function runDoctor(cwd: string): DoctorOutcome {
   }
 
   if (detection.hasMattPocockSetup) add("pass", "Matt Pocock setup", "docs/agents/ present");
-  else add("warn", "Matt Pocock setup", "docs/agents/ not found — run /setup-matt-pocock-skills in Claude Code (init preinstalls the skills plugin)");
+  else add("warn", "Matt Pocock setup", "docs/agents/ not found — run /setup-matt-pocock-skills in Claude Code (it's vendored in .claude/skills/)");
 
-  // The declared/installed roster includes the selected implementation loop's
-  // plugin when it has one (superpowers), so a project that chose it is checked
-  // for it exactly like the core plugins (ADR-0017).
-  const loopDeclarations = manifest ? implementationLoopDeclarations(manifest.implementationLoop) : [];
-  const effectiveDeclarations = [...PLUGIN_DECLARATIONS, ...loopDeclarations];
-  const effectivePlugins = [...WORKFLOW_PLUGINS, ...loopDeclarations.map(toWorkflowPlugin)];
-
-  const declaration = declarationState(cwd, effectiveDeclarations);
-  if (declaration === "declared") {
-    add("pass", "plugin declaration", `${CLAUDE_SETTINGS_PATH} declares the workflow plugins`);
-  } else if (declaration === "invalid-json") {
-    add("warn", "plugin declaration", `${CLAUDE_SETTINGS_PATH} is not valid JSON`);
-  } else {
-    add("warn", "plugin declaration", `Launchrail plugin not declared in ${CLAUDE_SETTINGS_PATH} — run \`launchrail init\``);
-  }
-
-  const installed = listInstalledPluginIds(cwd);
-  if (installed.state === "ok") {
-    const missing = effectivePlugins.filter((wp) => !installed.ids.includes(wp.id));
-    if (missing.length === 0) {
-      add("pass", "plugin install", `${effectivePlugins.map((wp) => wp.id).join(", ")} installed in Claude Code`);
+  // Skills are vendored as managed files (ADR-0019), not a plugin. Their exact
+  // contents/checksums are covered by the managed-file checks above; here give a
+  // single friendly signal that every expected skill directory is on disk.
+  if (lockfile) {
+    const missingSkills = skillNames().filter(
+      (name) => !existsSync(join(cwd, ".claude", "skills", name, "SKILL.md")),
+    );
+    if (missingSkills.length === 0) {
+      add("pass", "workflow skills", `${skillNames().length} vendored in .claude/skills/`);
     } else {
       add(
-        "warn",
-        "plugin install",
-        `missing: ${missing
-          .map((wp) => `${wp.id} (\`claude plugin marketplace add ${wp.marketplace} && claude plugin install ${wp.id}\`)`)
-          .join(", ")}`,
+        "fail",
+        "workflow skills",
+        `${missingSkills.length} missing (e.g. ${missingSkills.slice(0, 3).join(", ")}) — run \`launchrail sync\``,
       );
     }
-  } else if (installed.state === "no-cli") {
-    add(
-      "warn",
-      "plugin install",
-      "claude CLI not found — cannot verify; Claude Code offers the declared plugin when the folder is first trusted",
-    );
-  } else {
-    add("warn", "plugin install", "could not read `claude plugin list --json`");
+    // The plugin was retired (ADR-0019); flag any retired declaration that lingers.
+    if (declarationState(cwd, RETIRED_PLUGIN_DECLARATIONS) === "declared") {
+      add(
+        "warn",
+        "plugin declaration",
+        `${CLAUDE_SETTINGS_PATH} still declares the retired workflow plugins — run \`launchrail sync\` to remove them`,
+      );
+    }
+  }
+
+  // A selected implementation loop may still ship its own external plugin
+  // (superpowers); the default (ralph) ships nothing to install. Check the loop's
+  // plugin only when it has one (ADR-0017/0019).
+  const loopDeclarations = manifest ? implementationLoopDeclarations(manifest.implementationLoop) : [];
+  const loopPlugins = loopDeclarations.map(toWorkflowPlugin);
+  if (loopPlugins.length > 0) {
+    const declaration = declarationState(cwd, loopDeclarations);
+    if (declaration === "declared") {
+      add("pass", "loop plugin declaration", `${CLAUDE_SETTINGS_PATH} declares ${loopDeclarations.map((d) => d.pluginKey).join(", ")}`);
+    } else if (declaration === "invalid-json") {
+      add("warn", "loop plugin declaration", `${CLAUDE_SETTINGS_PATH} is not valid JSON`);
+    } else {
+      add("warn", "loop plugin declaration", `${loopDeclarations.map((d) => d.pluginKey).join(", ")} not declared in ${CLAUDE_SETTINGS_PATH} — run \`launchrail init\``);
+    }
+
+    const installed = listInstalledPluginIds(cwd);
+    if (installed.state === "ok") {
+      const missing = loopPlugins.filter((wp) => !installed.ids.includes(wp.id));
+      if (missing.length === 0) {
+        add("pass", "loop plugin install", `${loopPlugins.map((wp) => wp.id).join(", ")} installed in Claude Code`);
+      } else {
+        add(
+          "warn",
+          "loop plugin install",
+          `missing: ${missing
+            .map((wp) => `${wp.id} (\`claude plugin marketplace add ${wp.marketplace} && claude plugin install ${wp.id}\`)`)
+            .join(", ")}`,
+        );
+      }
+    } else if (installed.state === "no-cli") {
+      add("warn", "loop plugin install", "claude CLI not found — cannot verify the loop plugin");
+    } else {
+      add("warn", "loop plugin install", "could not read `claude plugin list --json`");
+    }
   }
 
   if (manifest) {
-    // Whether the loop's plugin is actually present is covered by the
-    // declaration/install checks above (its plugin is in the effective roster);
-    // here report the selection and that its materials are installed.
     const provider = implementationLoopProvider(manifest.implementationLoop);
     if (manifest.implementationLoop === "ralph" && !manifest.modules[RALPH_MODULE]) {
       add(
@@ -162,7 +182,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
         `${provider.label} selected but its materials are not installed — run \`launchrail sync\``,
       );
     } else {
-      add("pass", "implementation loop", `${provider.label} — start with /launchrail:implement`);
+      add("pass", "implementation loop", `${provider.label} — start with /launch-implement`);
     }
   }
 
@@ -232,6 +252,6 @@ export function printDoctor(outcome: DoctorOutcome): void {
     `\n${failed === 0 ? "Healthy" : "Unhealthy"}: ${outcome.checks.length} checks, ${failed} failed, ${warned} warning(s).`,
   );
   if (failed === 0) {
-    console.log("Next: open Claude Code in this project and run /launchrail:launch.");
+    console.log("Next: open Claude Code in this project and run /launch.");
   }
 }

@@ -11,11 +11,6 @@
           "type": "json",
           "path": "packages/cli/package.json",
           "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "plugins/launchrail/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
         }
       ]
     }

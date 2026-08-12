@@ -1,0 +1,67 @@
+---
+name: launch
+description: The planning conductor and single entry point to the Launchrail loop. Detects how far a project has moved from idea toward release — setup, vision, visual exploration, discovery, grill, research, ADRs, spec, design validation, tickets — then runs or routes to the stage that owns the next step, and hands implementation to /launch-implement. Once the foundation exists it also sizes each new feature (large / semi / small) and routes the planning subset that size needs. Use to start or continue the workflow, ask what stage a project is at, size a new feature, or jump straight to a named stage.
+---
+
+# Launch — the loop conductor
+
+One command for the whole rail. You are the **conductor**, not a stage: find where the project sits, then run or hand off to the skill that owns the next step. Every stage has exactly one owner; [`workflow.md`](workflow.md) is the contract for who owns what and for the conductor rules — compose owners by name, gate on committed artifacts, prepare handoffs for user-typed stages, keep detection read-only. Follow those rules; this file only tells you how to route.
+
+## The stage map
+
+Read `.launchrail.yml` (`mode`, `origin`, `modules`, `issueTracker`, `implementationLoop`) first — it is the source of truth for configuration; `npx @wemuda/launchrail status` for what's installed and current.
+
+| # | Stage | Owner (invoke / run) | Done when |
+|---|---|---|---|
+| 0 | Setup | `npx @wemuda/launchrail init`, then `/setup-matt-pocock-skills` † | Manifest + lockfile committed; `doctor` green; `docs/agents/` present (soft until stage 7) |
+| 1 | Vision | `launch-vision-creation` — via `launch-project-alignment` when `origin: existing` | `docs/vision.md` exists and is real (not the bare template) |
+| 2 | Visual exploration | Claude Design | Exploration artifacts linked from `docs/vision.md` |
+| 3 | Discovery | `launch-discovery` | Landscape map committed under `docs/research/` (`discovery-*.md`) |
+| 4 | Complexity grill | Matt Pocock `grill-with-docs` (never bare `grilling`) | Grill constraints committed under `docs/research/` |
+| 5 | Technical research | Matt Pocock research skill, fed the grill constraints | Research notes committed under `docs/research/` |
+| 6 | Architecture decisions | ADRs (`docs/adr/0000-template.md`) | `docs/adr/NNNN-*.md` beyond the template |
+| 7 | MVP specification | Matt Pocock `wayfinder` / `to-spec` † | A spec exists under `docs/specs/` |
+| 8 | Design validation | `launch-design-validation` (fidelity chosen inside the skill) | The spec carries a `## Design validation` section (a recorded skip counts) |
+| 9 | Tickets | Matt Pocock `to-tickets` | Tracker has `ready-for-agent` tickets with `Blocked by: #n` edges |
+| 10 | Implementation | `/launch-implement` † — routes to the selected loop | The ready frontier is drained; PRs merged and verified |
+| 11 | Verification | `npx @wemuda/launchrail verify` · `launch-browser-smoke` | The gate is green; smoke evidence where behavior is user-facing |
+| 12 | Release | The project's release setup | The release is cut |
+
+† User-typed (`disable-model-invocation`): prepare the handoff — inputs committed, exact fully-argumented command handed over, resume when the artifact lands (see the conductor rules). Never call one and get refused, and never reverse-engineer it.
+
+`deep-research` = stages 3 → 4 → 5 as one arc: discovery widens the option space, the grill narrows it, research de-risks what survives. The workflow doc's stage notes carry the judgment calls for stages 3, 4, 8, and 10.
+
+## Sizing the next feature
+
+Once the foundation exists (a real vision, ADRs beyond the template) and the user brings **one new feature**, the frontier question changes from "what stage is next" to "how much planning does this feature deserve." Size it — propose with your reasoning, let the user correct you; they see scope the artifacts don't show:
+
+| Size | Looks like | Planning path |
+|---|---|---|
+| **Large** | A new subsystem or cross-cutting change; real unknowns; decisions worth an ADR | discovery *(new tech territory only)* → `wayfinder` → grill → `to-spec` → design validation → `to-tickets` |
+| **Semi** | Self-contained feature, some design surface, a handful of tickets | grill → `to-spec` → design validation *(optional)* → `to-tickets` |
+| **Small** | Well-understood change, little or no design surface, one or few tickets | grill → `to-tickets` |
+
+Judgment calls: the grill here is feature-scoped (same `grill-with-docs`, narrower brief); discovery earns a place only when the feature opens genuinely new tech territory — a vendor category or storage engine the project hasn't used; design validation is for real UI surface; a genuine architecture decision gets an ADR before tickets. Between two sizes pick the smaller — it's cheaper to add a stage than to over-plan a small change. `mode` calibrates on top: `spike` may drop `to-spec` and design validation (record the skip); `high-rigor` bumps one notch. Every size ends at `/launch-implement`.
+
+## Running it
+
+1. **Did the user name a stage or a feature?** A stage keyword (below): sanity-check its inputs exist, offer the earlier stage if one is missing, but honor the jump if they insist — then invoke or hand off and stop. A new feature on a founded project: size it (above) and run the path.
+2. **Otherwise orient, then find the frontier.** A cheap read-only look first: `git status`, current branch, recent commits — is something already in flight for the stage you're about to start? If the tracker is configured and reachable, read the live discussion on relevant tickets and PRs, not just titles; skip what isn't there (orientation sharpens routing, never gates it). Then close stage-0 gaps yourself without asking (init, commit init output, `sync`; hand over the `/setup-matt-pocock-skills` one-liner with manifest-derived answers — required only from stage 7, so drive the real frontier in the same breath). Walk stages 1 → 12 and stop at the first whose "done when" fails, skipping only what `mode` permits. `origin: existing` with no real vision → route to `launch-project-alignment`, not a blank vision.
+3. **Confirm the read.** Say where you think the project is and why — which artifacts you found and which you didn't. Ambiguous signals (template-only vision, several specs) are questions, not guesses.
+4. **Route.** Invoke the owner by exact name, or prepare the handoff for a user-typed stage (†). For stage 7, name the authoritative inputs in order; if the stack isn't stood up yet, tell it to name its seams but leave harness mechanics to the foundation work. For stage 10, hand over `/launch-implement` — never start it yourself.
+5. **Leave an explained map.** Current stage, the next one with a sentence on what it does and whether it's optional here, then the rest of the arc to the destination — and that any stage is reachable by keyword. A bare stage name reads as a turnstile; explain, don't gate.
+
+## Stage keywords
+
+Case-insensitive direct jumps:
+
+- `status` / `where` — report the detected stage and stop.
+- `next` — detect the frontier and drive it (the default).
+- `setup` / `init` — 0 · `align` / `adopt` — the existing-project on-ramp · `vision` — 1 · `explore` — 2 · `discovery` / `landscape` — 3 · `grill` — 4 · `research` — 5 · `deep-research` — 3→5 · `adr` / `architecture` — 6 · `spec` — 7 · `design-validation` / `validate` — 8 · `tickets` — 9 · `implement` / `build` / `ralph` / `loop` — hand over `/launch-implement` · `verify` / `smoke` — 11 · `release` — 12.
+- `feature` / `size` — size a described feature (recommend a path; route on request).
+
+Unrecognized keyword → show this list and ask.
+
+## Mode calibration
+
+`mode` calibrates rigor, not stage order: `spike` may skip stages 2–5 and 8 when the vision's non-goals record it (don't nag); `standard-mvp` skips nothing silently; `high-rigor` skips nothing, wants an ADR per stage-6 decision, and design validation covers error and edge states. When a stage looks skipped, check the vision's non-goals before deciding — and if you can't tell, ask.
