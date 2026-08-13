@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { emptyLockfile, type Lockfile } from "../src/lib/lockfile.js";
@@ -113,5 +113,48 @@ describe("migration engine", () => {
     // Idempotent: with nothing left to strip, a fresh lockfile plans no changes.
     const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
     expect(planned.find((p) => p.id === "2026-08-vendor-workflow-skills")?.changes).toEqual([]);
+  });
+
+  const RALPH_MANIFEST = [
+    "schemaVersion: 1",
+    "mode: standard-mvp",
+    "issueTracker: github",
+    "conventions:",
+    "  conventionalCommits: true",
+    "testing:",
+    "  unitCommand: npm test",
+    "  devCommand: null",
+    "  e2eCommand: null",
+    "  smokeCommand: null",
+    "  appUrl: null",
+    "modules:",
+    "  core: true",
+    "  ralph: true",
+    "implementationLoop: ralph",
+    "",
+  ].join("\n");
+
+  test("2026-08-ralph-permission-guard registers the guard hook for a ralph project and is idempotent", () => {
+    writeFileSync(join(tmp.root, ".launchrail.yml"), RALPH_MANIFEST);
+    const ctx = { cwd: tmp.root, lockfile };
+    const results = applyPendingMigrations(ctx, MIGRATIONS);
+    expect(results.find((r) => r.id === "2026-08-ralph-permission-guard")?.status).toBe("applied");
+    const settings = JSON.parse(readFileSync(join(tmp.root, ".claude", "settings.json"), "utf8"));
+    expect(settings.hooks.PreToolUse[0].matcher).toBe("Workflow");
+    expect(settings.hooks.PreToolUse[0].hooks[0].command).toContain("ralph-permission-guard.py");
+    // Idempotent: the registration is detected, so a fresh lockfile plans no changes.
+    const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
+    expect(planned.find((p) => p.id === "2026-08-ralph-permission-guard")?.changes).toEqual([]);
+  });
+
+  test("2026-08-ralph-permission-guard is a no-op for a non-ralph (superpowers) project", () => {
+    writeFileSync(
+      join(tmp.root, ".launchrail.yml"),
+      "schemaVersion: 1\nmode: standard-mvp\nmodules:\n  core: true\nimplementationLoop: superpowers\n",
+    );
+    const ctx = { cwd: tmp.root, lockfile };
+    const results = applyPendingMigrations(ctx, MIGRATIONS);
+    expect(results.find((r) => r.id === "2026-08-ralph-permission-guard")?.status).toBe("already-satisfied");
+    expect(existsSync(join(tmp.root, ".claude", "settings.json"))).toBe(false);
   });
 });

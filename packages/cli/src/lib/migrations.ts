@@ -2,9 +2,11 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyPluginDeclaration,
+  applyRalphGuardHook,
   applyRemovePluginDeclaration,
   CLAUDE_SETTINGS_PATH,
   planPluginDeclaration,
+  planRalphGuardHook,
   planRemovePluginDeclaration,
 } from "./claudeSettings.js";
 import type { Lockfile } from "./lockfile.js";
@@ -47,6 +49,39 @@ export const MIGRATIONS: Migration[] = [
         changes: [`${CLAUDE_SETTINGS_PATH} — ${settings.detail}`],
         apply: () => {
           applyPluginDeclaration(ctx.cwd, settings);
+        },
+      };
+    },
+  },
+  {
+    // Newest migration, but order-independent (the `usesRalph` gate matches either
+    // signal), so it sits at its lexicographic position to keep the registry
+    // date-ordered rather than at the end.
+    id: "2026-08-ralph-permission-guard",
+    description: `register Ralph's unattended-launch guard hook in ${CLAUDE_SETTINGS_PATH} (ADR-0020)`,
+    plan(ctx) {
+      // The guard hook *file* flows through the regular managed-file surface
+      // (sync regenerates ralphFiles() after migrations run); this migration only
+      // performs the structural change the writer can't express — the additive
+      // PreToolUse(Workflow) registration in the shared, project-owned
+      // settings.json. Only Ralph projects get it; matching on either signal keeps
+      // it independent of the loop-wiring migration below (which may enable the
+      // module in the same sync).
+      const none = { changes: [], apply: () => {} };
+      const manifestPath = join(ctx.cwd, MANIFEST_FILENAME);
+      if (!existsSync(manifestPath)) return none;
+      const parsed = parseManifest(readFileSync(manifestPath, "utf8"));
+      const usesRalph =
+        !!parsed.manifest &&
+        (parsed.manifest.modules[RALPH_MODULE] === true || parsed.manifest.implementationLoop === "ralph");
+      if (!usesRalph) return none;
+
+      const hook = planRalphGuardHook(ctx.cwd);
+      if (hook.content === null) return none;
+      return {
+        changes: [`${CLAUDE_SETTINGS_PATH} — ${hook.detail}`],
+        apply: () => {
+          applyRalphGuardHook(ctx.cwd, hook);
         },
       };
     },

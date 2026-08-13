@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "launchrailVersion": "1.7.0",
   "files": {
+    ".claude/hooks/ralph-permission-guard.py": {
+      "class": "managed",
+      "checksum": "bca907ed767a1f5caf9efe4354ae226ad38e63e32696d97b7e97ee64a1deee64"
+    },
     ".claude/skills/code-review/agents/openai.yaml": {
       "class": "managed",
       "checksum": "8229ca854e11dc8e6aef2131ee03f31fb1561cf905fab9ccc325180cf3331352"
@@ -124,7 +128,7 @@
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
-      "checksum": "c9b636a6ee10b22efff143c777d475ad18a05f759bee896dcaf8e6931ad9a950"
+      "checksum": "975389d1e39e6a46904f102c86f14bf053adc290b34a8591e0f43e058ee2beaf"
     },
     ".claude/skills/launch-resolving-merge-conflicts/SKILL.md": {
       "class": "managed",
@@ -288,7 +292,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "d5c9ee7274b8f338aa3afb488931d1ffd30201eb970455ef51c36e3ab08fb0ca"
+      "checksum": "75a58b0f9070bf3e4b189a98c59bb2b1aa810c1b95f23d0aa79959281060cdd2"
     },
     "AGENTS.md": {
       "class": "seeded",
@@ -307,7 +311,8 @@
     "2026-08-plugin-declaration",
     "2026-08-upstream-plugin-declarations",
     "2026-08-wire-default-implementation-loop",
-    "2026-08-vendor-workflow-skills"
+    "2026-08-vendor-workflow-skills",
+    "2026-08-ralph-permission-guard"
   ],
   "decisions": {
     "mode": "standard-mvp",

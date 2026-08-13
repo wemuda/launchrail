@@ -10,9 +10,12 @@ import {
 } from "../lib/claudeImports.js";
 import {
   applyPluginDeclaration,
+  applyRalphGuardHook,
   CLAUDE_SETTINGS_PATH,
   planPluginDeclaration,
+  planRalphGuardHook,
   PLUGIN_DECLARATIONS,
+  type HookPlan,
   type SettingsPlan,
 } from "../lib/claudeSettings.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
@@ -55,6 +58,8 @@ export interface InitOutcome {
   code: number;
   actions: PlannedAction[];
   settings: SettingsPlan;
+  /** How init registered Ralph's unattended-launch guard hook in settings.json — null when the ralph module is off. */
+  ralphHook: HookPlan | null;
   /** How init wired the two workflow @-imports into CLAUDE.md (relevant when the repo already had one). */
   claudeImports: ClaudeImportsPlan;
   plugin: PluginHandoff;
@@ -197,6 +202,13 @@ const SETTINGS_LABEL: Record<SettingsPlan["kind"], string> = {
   "skip-invalid": "conflict",
 };
 
+const HOOK_LABEL: Record<HookPlan["kind"], string> = {
+  create: "create  ",
+  merge: "update  ",
+  "skip-registered": "ok      ",
+  "skip-invalid": "conflict",
+};
+
 const CLAUDE_IMPORTS_LABEL: Record<ClaudeImportsPlan["kind"], string> = {
   seed: "create  ",
   ok: "ok      ",
@@ -220,6 +232,8 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   // run before the manifest is known; recomputed with the selected loop's
   // plugin once the manifest resolves below (ADR-0017).
   let settings = planPluginDeclaration(opts.cwd);
+  // Set once the manifest is known and the ralph module is on (ADR-0020).
+  let ralphHook: HookPlan | null = null;
   const claudeImports = planClaudeImports(opts.cwd);
   const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
 
@@ -229,7 +243,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     if (!parsed.manifest) {
       console.error(`launchrail: existing ${MANIFEST_FILENAME} is invalid:`);
       for (const error of parsed.errors) console.error(`  - ${error}`);
-      return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
+      return { code: 1, actions: [], settings, ralphHook, claudeImports, plugin: "skipped" };
     }
     manifest = parsed.manifest;
     console.log(`Found existing ${MANIFEST_FILENAME} — using its configuration (init is idempotent).`);
@@ -239,7 +253,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     manifest = defaultManifestFor(detection);
   } else {
     console.error("launchrail: non-interactive session — re-run with --yes to accept defaults.");
-    return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
+    return { code: 1, actions: [], settings, ralphHook, claudeImports, plugin: "skipped" };
   }
 
   // The selected implementation loop (stage 10, ADR-0017) may ship its own
@@ -276,11 +290,14 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     // migration, not silently rewritten here.
     ...(manifest.modules[RALPH_MODULE] ? ralphFiles() : []),
   ];
+  // Ralph's guard-hook file rides `specs`; its registration in the shared,
+  // project-owned settings.json is planned as an additive merge (ADR-0020).
+  if (manifest.modules[RALPH_MODULE]) ralphHook = planRalphGuardHook(opts.cwd);
 
   const existing = readLockfile(opts.cwd);
   if (existing.error) {
     console.error(`launchrail: ${existing.error} — refusing to continue. Fix or remove the lockfile first.`);
-    return { code: 1, actions: [], settings, claudeImports, plugin: "skipped" };
+    return { code: 1, actions: [], settings, ralphHook, claudeImports, plugin: "skipped" };
   }
   const lockfile = existing.lockfile ?? emptyLockfile(VERSION);
   if (!existing.lockfile) {
@@ -296,6 +313,9 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log(`  ${ACTION_LABEL[action.kind]}  ${action.spec.relPath}  (${action.detail})`);
   }
   console.log(`  ${SETTINGS_LABEL[settings.kind]}  ${CLAUDE_SETTINGS_PATH}  (${settings.detail})`);
+  if (ralphHook) {
+    console.log(`  ${HOOK_LABEL[ralphHook.kind]}  ${CLAUDE_SETTINGS_PATH}  (${ralphHook.detail})`);
+  }
   // Only worth a line when a CLAUDE.md already exists; a fresh one is seeded
   // with both imports and shows up in the file actions above.
   if (claudeImports.kind !== "seed") {
@@ -320,11 +340,18 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     }
     console.log(`  loop      implementation loop: ${loopProvider.label}  (${loopProvider.setupHint})`);
     console.log("\nDry run — nothing was written.");
-    return { code: 0, actions, settings, claudeImports, plugin: "dry-run" };
+    return { code: 0, actions, settings, ralphHook, claudeImports, plugin: "dry-run" };
   }
 
   const written = applyPlan(opts.cwd, actions, lockfile);
   if (applyPluginDeclaration(opts.cwd, settings)) written.push(CLAUDE_SETTINGS_PATH);
+  // Register Ralph's guard hook (ADR-0020). Re-plan against the on-disk file so
+  // the merge lands on top of any plugin declaration just written above — both
+  // additively edit the same shared settings.json.
+  if (manifest.modules[RALPH_MODULE]) {
+    const applied = applyRalphGuardHook(opts.cwd, planRalphGuardHook(opts.cwd));
+    if (applied && !written.includes(CLAUDE_SETTINGS_PATH)) written.push(CLAUDE_SETTINGS_PATH);
+  }
   // Wire the workflow imports into a pre-existing CLAUDE.md (no-op when init
   // just seeded a fresh one, which already carries both). Additive and
   // idempotent, mirroring the .claude/settings.json merge (ADR-0003, ADR-0012).
@@ -419,5 +446,5 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("     then vision creation, which also replaces the seeded AGENTS.md project-purpose TODO.");
   }
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
-  return { code: 0, actions, settings, claudeImports, plugin };
+  return { code: 0, actions, settings, ralphHook, claudeImports, plugin };
 }

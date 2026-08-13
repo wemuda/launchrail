@@ -11,11 +11,15 @@ const EXPECTED_FILES = [
   "CLAUDE.md",
   "docs/adr/0000-template.md",
   ".launchrail/CLAUDE.generated.md",
-  // The default implementation loop's materials install with init (ADR-0018).
+  // The default implementation loop's materials install with init (ADR-0018):
+  // the workflow, its unattended-launch guard hook, and the guard's registration
+  // in .claude/settings.json (ADR-0020).
   ".claude/workflows/ralph.js",
+  ".claude/hooks/ralph-permission-guard.py",
+  ".claude/settings.json",
   // Skills are vendored as managed files, not installed as a plugin (ADR-0019):
   // Launchrail's own (launch-*) and the Matt Pocock snapshot (bare names), plus
-  // the attribution notice. No .claude/settings.json on the default (ralph) path.
+  // the attribution notice.
   ".claude/skills/launch/SKILL.md",
   ".claude/skills/launch/workflow.md",
   ".claude/skills/launch-implement/SKILL.md",

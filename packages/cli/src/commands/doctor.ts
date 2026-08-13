@@ -4,13 +4,18 @@ import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from ".
 import { sha256 } from "../lib/checksum.js";
 import { listInstalledPluginIds, toWorkflowPlugin } from "../lib/claudeCli.js";
 import { missingImports } from "../lib/claudeImports.js";
-import { CLAUDE_SETTINGS_PATH, declarationState, RETIRED_PLUGIN_DECLARATIONS } from "../lib/claudeSettings.js";
+import {
+  CLAUDE_SETTINGS_PATH,
+  declarationState,
+  ralphGuardHookState,
+  RETIRED_PLUGIN_DECLARATIONS,
+} from "../lib/claudeSettings.js";
 import { implementationLoopDeclarations, implementationLoopProvider } from "../lib/implementationLoops.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
 import { MANIFEST_FILENAME, parseManifest, type Manifest } from "../lib/manifest.js";
-import { RALPH_MODULE, RALPH_WORKFLOW_PATH } from "../lib/ralph.js";
+import { RALPH_GUARD_HOOK_PATH, RALPH_MODULE, RALPH_WORKFLOW_PATH } from "../lib/ralph.js";
 import { skillNames } from "../lib/skills.js";
 
 export type CheckStatus = "pass" | "warn" | "fail";
@@ -220,6 +225,25 @@ export function runDoctor(cwd: string): DoctorOutcome {
       add("pass", "ralph workflow", RALPH_WORKFLOW_PATH);
     } else {
       add("fail", "ralph workflow", `${RALPH_WORKFLOW_PATH} missing — run \`launchrail sync\` to restore it`);
+    }
+    // The unattended-launch guard (ADR-0020): the hook file is managed; its
+    // registration in the shared settings.json is not lockfile-tracked, so this
+    // is the only check that confirms it is actually wired in.
+    if (!existsSync(join(cwd, RALPH_GUARD_HOOK_PATH))) {
+      add("fail", "ralph guard", `${RALPH_GUARD_HOOK_PATH} missing — run \`launchrail sync\` to restore it`);
+    } else {
+      const guard = ralphGuardHookState(cwd);
+      if (guard === "registered") {
+        add("pass", "ralph guard", `unattended-launch guard registered in ${CLAUDE_SETTINGS_PATH}`);
+      } else if (guard === "invalid-json") {
+        add("warn", "ralph guard", `${CLAUDE_SETTINGS_PATH} is not valid JSON — cannot confirm the guard is registered`);
+      } else {
+        add(
+          "warn",
+          "ralph guard",
+          `guard hook present but not registered in ${CLAUDE_SETTINGS_PATH} — run \`launchrail sync\``,
+        );
+      }
     }
     if (manifest.issueTracker !== "none") {
       add("pass", "ralph tracker", `issueTracker: ${manifest.issueTracker}`);

@@ -2,13 +2,27 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
 import { BROWSER_TESTING_MODULE, browserTestingFiles } from "../lib/browser-testing.js";
+import {
+  applyRalphGuardHook,
+  CLAUDE_SETTINGS_PATH,
+  planRalphGuardHook,
+  type HookPlan,
+} from "../lib/claudeSettings.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
 import { emptyLockfile, readLockfile, writeLockfile, type Lockfile } from "../lib/lockfile.js";
 import { MANIFEST_FILENAME, parseManifest, setModuleEnabled, type Manifest, type TestingKey } from "../lib/manifest.js";
-import { RALPH_MODULE, RALPH_WORKFLOW_PATH, ralphFiles } from "../lib/ralph.js";
+import { RALPH_GUARD_HOOK_PATH, RALPH_MODULE, RALPH_WORKFLOW_PATH, ralphFiles } from "../lib/ralph.js";
 import { claudeGeneratedFile } from "../lib/seeds.js";
 import { ACTION_LABEL, applyPlan, planWrites, type FileSpec, type PlannedAction } from "../lib/writer.js";
 import { VERSION } from "../version.js";
+
+/** Print label for the guard-hook registration line, aligned with ACTION_LABEL. */
+const HOOK_LABEL: Record<HookPlan["kind"], string> = {
+  create: "create  ",
+  merge: "update  ",
+  "skip-registered": "ok      ",
+  "skip-invalid": "conflict",
+};
 
 export interface AddOptions {
   cwd: string;
@@ -153,6 +167,7 @@ function planRalph(parsed: Manifest): ModulePlan {
       "Create the tracker labels Ralph uses: ready-for-agent, ralph:building, needs-info.",
       "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (Matt Pocock's to-tickets, stage 9 of the workflow).",
       "Start building: /launch-implement in Claude Code drives the ready tickets to verified merges (add a ticket number to build just one).",
+      "For an unattended run, launch in a non-prompting permission mode (bypass/autonomous) — a guard hook warns if you start Ralph in an interactive mode, since one benign prompt can stall a walk-away run.",
       "Start with width 1 until a few tickets have landed cleanly, then widen.",
     ],
   };
@@ -205,6 +220,9 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
     claudeGeneratedFile({ projectName: detection.projectName, manifest: plan.manifest, launchrailVersion: VERSION }),
   ];
   const actions = planWrites(opts.cwd, specs, lockfile);
+  // Ralph's guard hook file rides `actions`; its registration in the shared,
+  // project-owned settings.json is an additive merge planned separately (ADR-0020).
+  const hookPlan = opts.module === RALPH_MODULE ? planRalphGuardHook(opts.cwd) : null;
 
   console.log("");
   console.log(
@@ -214,6 +232,9 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
   );
   for (const action of actions) {
     console.log(`  ${ACTION_LABEL[action.kind]}  ${action.spec.relPath}  (${action.detail})`);
+  }
+  if (hookPlan) {
+    console.log(`  ${HOOK_LABEL[hookPlan.kind]}  ${CLAUDE_SETTINGS_PATH}  (${hookPlan.detail})`);
   }
   for (const note of plan.notes) console.log(`\n${note}`);
 
@@ -226,6 +247,7 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
     writeFileSync(join(opts.cwd, MANIFEST_FILENAME), manifestUpdate.source, "utf8");
   }
   const written = applyPlan(opts.cwd, actions, lockfile);
+  if (hookPlan && applyRalphGuardHook(opts.cwd, hookPlan)) written.push(CLAUDE_SETTINGS_PATH);
   lockfile.launchrailVersion = VERSION;
   lockfile.decisions = {
     ...lockfile.decisions,
@@ -254,7 +276,9 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
   console.log("\nNext steps:");
   plan.nextSteps.forEach((step, i) => console.log(`  ${i + 1}. ${step}`));
   if (opts.module === RALPH_MODULE) {
-    console.log(`\nThe Ralph loop workflow lives at ${RALPH_WORKFLOW_PATH} (managed — do not hand-edit).`);
+    console.log(
+      `\nThe Ralph loop workflow lives at ${RALPH_WORKFLOW_PATH} and its unattended-launch guard at ${RALPH_GUARD_HOOK_PATH} (both managed — do not hand-edit).`,
+    );
   }
   return { code: 0, actions };
 }

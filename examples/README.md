@@ -12,7 +12,9 @@ A minimal Node app (dependency-free HTTP server + `node --test` tests) showing e
 | `CLAUDE.md` | seeded | Claude Code entry point importing `@AGENTS.md` and the generated instructions. |
 | `.launchrail/CLAUDE.generated.md` | managed | Workflow instructions Launchrail may replace on `sync`. |
 | `docs/adr/0000-template.md` | seeded | ADR template. |
-| `.claude/settings.json` | merged | Declares the Launchrail plugin marketplace and enables the plugin ([ADR-0003](../docs/adr/0003-plugin-subscription-via-project-settings.md)). |
+| `.claude/workflows/ralph.js` | managed | The Ralph implementation loop as a deterministic workflow ([ADR-0005](../docs/adr/0005-ralph-two-frontends-one-policy.md)). |
+| `.claude/hooks/ralph-permission-guard.py` | managed | Warns when the Ralph loop is launched in an interactive permission mode, so an unattended run can't stall on a prompt ([ADR-0020](../docs/adr/0020-ralph-unattended-permission-guard.md)). |
+| `.claude/settings.json` | merged | Registers the Ralph guard hook on the Workflow tool ([ADR-0020](../docs/adr/0020-ralph-unattended-permission-guard.md)). Additively merged — your other settings are preserved. |
 
 ### Regenerating
 
