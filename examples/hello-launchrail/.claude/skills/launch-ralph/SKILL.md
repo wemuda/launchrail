@@ -21,7 +21,7 @@ This skill is the watchable, checkpointed frontend of the loop. The same loop ex
 - **Deferrals are not attempts.** An implementer that stops at its dependency gate (a declared blocker had not actually landed) hands the attempt back and is retried after the blocker lands — capped at 2 deferrals, then it counts as a real failure.
 - **Max rounds: 25** — a backstop, not a target; deferral rounds spend from it too. Stop and report if the frontier hasn't drained.
 - **Checkpoints: none** by default — run to completion, report once. The user may ask for a pause after each round instead.
-- **Review gate:** the implementer's own self-review via `/code-review`, inside `launch-ralph-implement`.
+- **Review gate:** the implementer's own self-review via `/launch-code-review`, inside `launch-ralph-implement`.
 - **Verification gate:** `npx @wemuda/launchrail verify` — per ticket before the PR, and once more on the final base before the loop may report success.
 - **Merge ordering: optimistic, arbitrated by the remote.** Implementers re-sync immediately before merging and retry up to 3 times if the base moved. No merge locks.
 - **Labels:** tickets enter as `ready-for-agent`, are marked `ralph:building` while owned, and leave as closed or `needs-info` (parked).
@@ -29,7 +29,7 @@ This skill is the watchable, checkpointed frontend of the loop. The same loop ex
 ## Preconditions — refuse to start if any fails
 
 1. `.launchrail.yml` exists with `issueTracker` not `none`, and the tracker is reachable **from this environment**: check whether the CLI the project docs assume (e.g. `gh`) is installed here; if not, identify the substitute (e.g. GitHub MCP tools) and name it in every dispatch.
-2. Open tickets labeled `ready-for-agent` exist and carry explicit `Blocked by: #n` edges (or the tracker's native blocking relations). No tickets with edges → nothing to orchestrate; point the user at `to-tickets`. If anything wearing `ready-for-agent` is plainly not an implementable ticket — a published spec, research notes, an epic — stop and have it relabeled (e.g. `spec`) before starting: the frontier is computed from the label alone and cannot tell prose from work.
+2. Open tickets labeled `ready-for-agent` exist and carry explicit `Blocked by: #n` edges (or the tracker's native blocking relations). No tickets with edges → nothing to orchestrate; point the user at `launch-tickets`. If anything wearing `ready-for-agent` is plainly not an implementable ticket — a published spec, research notes, an epic — stop and have it relabeled (e.g. `spec`) before starting: the frontier is computed from the label alone and cannot tell prose from work.
 3. The base branch exists on the remote and is green on a fresh checkout: sync it, run the install command, then `npx @wemuda/launchrail verify` — report actual exit codes, not the reassuring summary line; a broken base poisons every implementer after it. A missing base branch is a refusal, not a cue to guess another. An **empty verification contract fails `verify` and is a refusal condition**: a run whose completion nothing can verify must not start. Tell the user to configure `testing` commands in `.launchrail.yml` first.
 4. The verbatim local commands are known (from `AGENTS.md` / `.launchrail.yml`), including which checks belong to CI rather than the shared local machine.
 
@@ -49,7 +49,7 @@ Each implementer prompt is self-contained — assume it knows nothing about this
 2. Read the ticket and everything it links (spec sections, ADRs, journeys), plus `AGENTS.md`/`CLAUDE.md`. If the ticket is already closed, report "already-done" and stop.
 3. Label the ticket `ralph:building` so a lost session leaves a trace.
 4. Branch from a fresh sync of the base: `ralph/<n>-<short-slug>`.
-5. Implement by invoking the **`launch-ralph-implement`** skill — it owns TDD, the verification gate, browser smoke for user-facing changes, self-review via `/code-review`, and commit conventions. Name the skill; do not paraphrase it.
+5. Implement by invoking the **`launch-ralph-implement`** skill — it owns TDD, the verification gate, browser smoke for user-facing changes, self-review via `/launch-code-review`, and commit conventions. Name the skill; do not paraphrase it.
 6. Pre-PR sync: merge the latest base into the branch; resolve conflicts with the **`launch-resolving-merge-conflicts`** skill; re-run the verification gate if anything changed.
 7. Open a PR titled from the ticket with `Closes #<n>` in the body. Never open a second PR for a ticket — adopt an existing one. Opening against an up-to-date base means CI tests the state that will actually land.
 8. Wait for CI if the repository has it — space polls with the Monitor tool or a background sleep, never a foreground sleep or busy loop; ~20 minutes is the budget. Fix what the branch broke and push; a failure that reproduces on the base itself is "ci-red" — systemic, not this ticket's problem. Re-sync immediately before merging (up to 3 retries if the base moves), then squash-merge. Squash-merge does not reliably fire `Closes` — read the issue back, close it explicitly if still open, and remove `ralph:building`.

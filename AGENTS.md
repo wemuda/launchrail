@@ -24,7 +24,8 @@ The Launchrail **toolchain monorepo**: the `@wemuda/launchrail` CLI, the Claude 
 
 - TypeScript, Node ≥ 22, ESM only. pnpm workspace under `packages/*`.
 - Meaningful decisions become ADRs in `docs/adr/`, numbered `NNNN-short-title.md`, using [docs/adr/0000-template.md](docs/adr/0000-template.md). ADRs for meaningful decisions, not every dependency.
-- Prefer composing upstream tools ([Matt Pocock skills](https://github.com/mattpocock/skills), Claude Design, Playwright, Ralph Wiggum plugin) over reimplementing or mirroring them. **One deliberate exception:** the workflow's upstream skills are *vendored* as a pinned, MIT-attributed snapshot under `packages/cli/assets/skills/vendor/` so they reach cloud and non-Claude agents as plain files ([ADR-0019](docs/adr/0019-vendor-skills-retire-plugin.md)). That is a licensed, refreshed mirror maintained through the vendoring pipeline — not a hand-fork — and it does not license reimplementing upstream logic elsewhere.
+- **The workflow skills are Launchrail's own complete set** ([ADR-0020](docs/adr/0020-independent-skill-set.md)): every stage owner is a `launch-*` skill under `packages/cli/assets/skills/launchrail/`, written to the rail's artifact contract. Several absorb methodology and text from [Matt Pocock's skills](https://github.com/mattpocock/skills) under its MIT license — derived files carry a derivation note, and `packages/cli/assets/skills/NOTICE.md` reproduces the license. Upstream is monitored as inspiration: improvements worth having are translated into our skills, never re-vendored.
+- Compose the runtime tools the workflow *drives* (Claude Design, Playwright) rather than reimplementing them; own the skills the workflow *is*.
 - Stay lightweight: no empty directories, no ceremony ahead of need, no speculative abstraction.
 - File-manipulation logic gets snapshot/fixture tests; CLI behavior gets integration tests against temporary Git repositories.
 
