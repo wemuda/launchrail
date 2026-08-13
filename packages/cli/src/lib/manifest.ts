@@ -13,7 +13,7 @@ export type Mode = (typeof MODES)[number];
 export const ORIGINS = ["new", "existing"] as const;
 export type Origin = (typeof ORIGINS)[number];
 
-export const ISSUE_TRACKERS = ["github", "linear", "none"] as const;
+export const ISSUE_TRACKERS = ["github", "gitlab", "linear", "local", "none"] as const;
 export type IssueTracker = (typeof ISSUE_TRACKERS)[number];
 
 export const TESTING_KEYS = ["unitCommand", "devCommand", "e2eCommand", "smokeCommand", "appUrl"] as const;

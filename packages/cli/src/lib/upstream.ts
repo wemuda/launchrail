@@ -19,7 +19,7 @@ export interface UpstreamRename {
 /** Known upstream renames. Empty until an upstream rename actually ships. */
 export const UPSTREAM_RENAMES: UpstreamRename[] = [];
 
-/** Project-owned docs worth scanning: agent contracts and launch-setup's output. */
+/** Project-owned docs worth scanning: agent contracts and the seeded docs/agents configuration. */
 const SCAN_FILES = ["AGENTS.md", "CLAUDE.md", "docs/workflow.md"];
 const SCAN_DIRS = ["docs/agents"];
 

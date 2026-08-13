@@ -1,4 +1,8 @@
-<!-- Contains text derived from Matt Pocock's skills (https://github.com/mattpocock/skills), MIT — see ../NOTICE.md -->
+<!--
+  Seeded by `launchrail init` from `.launchrail.yml` (issueTracker: local).
+  This file is yours — edit it freely; Launchrail never overwrites it.
+  Contains text derived from Matt Pocock's skills (MIT): https://github.com/mattpocock/skills
+-->
 
 # Issue tracker: Local Markdown
 

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { agentsDocsFiles } from "./agentsDocs.js";
 import { BROWSER_TESTING_MODULE, browserTestingFiles } from "./browser-testing.js";
 import { detectRepo, type RepoDetection } from "./detect.js";
 import { LOCKFILE_FILENAME, readLockfile, type Lockfile } from "./lockfile.js";
@@ -46,9 +47,13 @@ export function moduleSpecs(state: ProjectState): Record<string, FileSpec[]> {
     manifest: state.manifest,
     launchrailVersion: VERSION,
   };
-  // Skills are vendored as managed files on every project (ADR-0019) — not
-  // module-gated, so they ship regardless of which modules are enabled.
-  const modules: Record<string, FileSpec[]> = { core: seedFiles(ctx), skills: skillFiles() };
+  // Skills ship as managed files on every project (ADR-0019/0020) — not
+  // module-gated, so they ship regardless of which modules are enabled. The
+  // docs/agents configuration seeds with core, derived from the manifest.
+  const modules: Record<string, FileSpec[]> = {
+    core: [...seedFiles(ctx), ...agentsDocsFiles(state.manifest)],
+    skills: skillFiles(),
+  };
   if (state.manifest.modules[BROWSER_TESTING_MODULE]) {
     modules[BROWSER_TESTING_MODULE] = browserTestingFiles({ manifest: state.manifest, detection: state.detection });
   }

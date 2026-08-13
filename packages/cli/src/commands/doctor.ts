@@ -106,9 +106,6 @@ export function runDoctor(cwd: string): DoctorOutcome {
     }
   }
 
-  if (detection.hasAgentsSetup) add("pass", "launch setup", "docs/agents/ present");
-  else add("warn", "launch setup", "docs/agents/ not found — run /launch-setup in Claude Code (it's in .claude/skills/)");
-
   // Skills ship as managed files (ADR-0019/0020), not a plugin. Their exact
   // contents/checksums are covered by the managed-file checks above; here give a
   // single friendly signal that every expected skill directory is on disk.

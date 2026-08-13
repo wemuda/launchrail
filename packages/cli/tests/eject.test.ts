@@ -54,7 +54,13 @@ describe("launchrail eject", () => {
     const outcome = runEject({ cwd: tmp.root, target: "core", all: false, dryRun: false });
     expect(outcome.code).toBe(0);
     expect(outcome.ejected.sort()).toEqual(
-      [".launchrail/CLAUDE.generated.md", "AGENTS.md", "CLAUDE.md", "docs/adr/0000-template.md"].sort(),
+      [
+        ".launchrail/CLAUDE.generated.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/adr/0000-template.md",
+        "docs/agents/domain.md",
+      ].sort(),
     );
     const lock = readLock();
     for (const relPath of outcome.ejected) {

@@ -13,7 +13,7 @@ Read `.launchrail.yml` (`mode`, `origin`, `modules`, `issueTracker`) first — i
 
 | # | Stage | Owner (invoke / run) | Done when |
 |---|---|---|---|
-| 0 | Setup | `npx @wemuda/launchrail init`, then `/launch-setup` † | Manifest + lockfile committed; `doctor` green; `docs/agents/` present (soft until stage 7) |
+| 0 | Setup | `npx @wemuda/launchrail init` | Manifest + lockfile committed; `doctor` green (`docs/agents/` is seeded by init) |
 | 1 | Vision | `launch-vision-creation` — via `launch-project-alignment` when `origin: existing` | `docs/vision.md` exists and is real (not the bare template) |
 | 2 | Visual exploration | Claude Design | Exploration artifacts linked from `docs/vision.md` |
 | 3 | Discovery | `launch-discovery` | Landscape map committed under `docs/research/` (`discovery-*.md`) |
@@ -46,7 +46,7 @@ Judgment calls: the grill here is feature-scoped (same `launch-grill`, narrower 
 ## Running it
 
 1. **Did the user name a stage or a feature?** A stage keyword (below): sanity-check its inputs exist, offer the earlier stage if one is missing, but honor the jump if they insist — then invoke or hand off and stop. A new feature on a founded project: size it (above) and run the path.
-2. **Otherwise orient, then find the frontier.** A cheap read-only look first: `git status`, current branch, recent commits — is something already in flight for the stage you're about to start? If the tracker is configured and reachable, read the live discussion on relevant tickets and PRs, not just titles; skip what isn't there (orientation sharpens routing, never gates it). Then close stage-0 gaps yourself without asking (init, commit init output, `sync`; hand over the `/launch-setup` one-liner with manifest-derived answers — required only from stage 7, so drive the real frontier in the same breath). Walk stages 1 → 12 and stop at the first whose "done when" fails, skipping only what `mode` permits. `origin: existing` with no real vision → route to `launch-project-alignment`, not a blank vision.
+2. **Otherwise orient, then find the frontier.** A cheap read-only look first: `git status`, current branch, recent commits — is something already in flight for the stage you're about to start? If the tracker is configured and reachable, read the live discussion on relevant tickets and PRs, not just titles; skip what isn't there (orientation sharpens routing, never gates it). Then close stage-0 gaps yourself without asking (init, commit init output, `sync` — it seeds `docs/agents/` too). Walk stages 1 → 12 and stop at the first whose "done when" fails, skipping only what `mode` permits. `origin: existing` with no real vision → route to `launch-project-alignment`, not a blank vision.
 3. **Confirm the read.** Say where you think the project is and why — which artifacts you found and which you didn't. Ambiguous signals (template-only vision, several specs) are questions, not guesses.
 4. **Route.** Invoke the owner by exact name, or prepare the handoff for a user-typed stage (†). For stage 7, name the authoritative inputs in order; if the stack isn't stood up yet, tell it to name its seams but leave harness mechanics to the foundation work. For stage 10, hand over `/launch-implement` — never start it yourself.
 5. **Leave an explained map.** Current stage, the next one with a sentence on what it does and whether it's optional here, then the rest of the arc to the destination — and that any stage is reachable by keyword. A bare stage name reads as a turnstile; explain, don't gate.

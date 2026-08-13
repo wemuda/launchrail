@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
+import { agentsDocsFiles } from "../lib/agentsDocs.js";
 import {
   applyClaudeImports,
   planClaudeImports,
@@ -68,7 +69,11 @@ function defaultManifestFor(detection: RepoDetection): Manifest {
     schemaVersion: 1,
     mode: "standard-mvp",
     origin: detection.looksEstablished ? "existing" : "new",
-    issueTracker: detection.gitRemoteUrl?.includes("github.com") ? "github" : "none",
+    issueTracker: detection.gitRemoteUrl?.includes("github.com")
+      ? "github"
+      : detection.gitRemoteUrl?.includes("gitlab")
+        ? "gitlab"
+        : "none",
     conventions: {
       conventionalCommits:
         detection.conventionalCommitRatio === null ? true : detection.conventionalCommitRatio >= 0.5,
@@ -204,6 +209,9 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   const specs: FileSpec[] = [
     { relPath: MANIFEST_FILENAME, content: serializeManifest(manifest), ownership: "seeded" },
     ...seedFiles({ projectName: detection.projectName, manifest, launchrailVersion: VERSION }),
+    // Workflow configuration under docs/agents/ seeds straight from the
+    // manifest's answers (ADR-0020) — there is no interactive setup stage.
+    ...agentsDocsFiles(manifest),
     // The workflow skills — Launchrail's own complete set (ADR-0020) — ship as
     // managed files (ADR-0019): they travel with the repo, so cloud and
     // non-Claude agents get them with no install step.
@@ -287,11 +295,10 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   if (manifest.origin === "existing") {
     console.log("     For an existing project it starts by aligning your code with Launchrail's artifacts:");
     console.log("     it infers a vision from what you already have, asks about the gaps, and inventories your");
-    console.log("     design system — rather than a blank vision. Run /launch-setup first to configure the");
-    console.log("     issue tracker and domain docs.");
+    console.log("     design system — rather than a blank vision.");
   } else {
-    console.log("     On a fresh project that means running /launch-setup (configures the issue tracker and");
-    console.log("     domain docs), then vision creation, which also replaces the seeded AGENTS.md project-purpose TODO.");
+    console.log("     On a fresh project that starts with vision creation, which also replaces the seeded");
+    console.log("     AGENTS.md project-purpose TODO.");
   }
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
   return { code: 0, actions, claudeImports };

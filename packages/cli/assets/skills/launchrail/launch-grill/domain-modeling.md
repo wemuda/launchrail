@@ -1,44 +1,12 @@
----
-name: launch-domain-modeling
-description: Build and sharpen the project's domain model while designing — pin down terminology into CONTEXT.md, stress-test concepts with concrete scenarios, and record decisions as ADRs using the project's template. Used by launch-grill and launch-wayfinder whenever the domain model is being changed, or directly when the user wants to pin down a ubiquitous language or record an architectural decision.
----
-
 <!-- Contains text derived from Matt Pocock's skills (https://github.com/mattpocock/skills), MIT — see ../NOTICE.md -->
 
-# Domain modeling
+# The domain-modeling discipline
 
-Actively build and sharpen the project's domain model as you design. This is the *active* discipline — challenging terms, inventing edge-case scenarios, and writing the glossary and decisions down the moment they crystallise. (Merely *reading* `CONTEXT.md` for vocabulary is not this skill — that's a one-line habit any skill can do. This skill is for when you're changing the model, not just consuming it.)
+Run every grill with this discipline active: build and sharpen the project's domain model *as you design*, challenging terms, inventing edge-case scenarios, and writing the glossary and decisions down the moment they crystallise. (Merely *reading* `CONTEXT.md` for vocabulary is a one-line habit any skill can do; this discipline is for when the model is being changed.)
 
 ## File structure
 
-Most repos have a single context:
-
-```
-/
-├── CONTEXT.md
-├── docs/
-│   └── adr/
-│       ├── 0000-template.md
-│       ├── 0001-event-sourced-orders.md
-│       └── 0002-postgres-for-write-model.md
-└── src/
-```
-
-If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts. The map points to where each one lives:
-
-```
-/
-├── CONTEXT-MAP.md
-├── docs/
-│   └── adr/                          ← system-wide decisions
-├── src/
-│   ├── ordering/
-│   │   ├── CONTEXT.md
-│   │   └── docs/adr/                 ← context-specific decisions
-│   └── billing/
-│       ├── CONTEXT.md
-│       └── docs/adr/
-```
+Most repos have a single context: one `CONTEXT.md` at the repo root, plus `docs/adr/`. If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts and the map points to where each `CONTEXT.md` lives (with `src/<context>/docs/adr/` for context-scoped decisions). The layouts and inference rules are in [CONTEXT-FORMAT.md](./CONTEXT-FORMAT.md).
 
 Create files lazily — only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. Everything here is project-owned; Launchrail tooling never overwrites it.
 
