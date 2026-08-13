@@ -12,7 +12,7 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
 Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
 
-The issue tracker configuration should have been provided to you — run `/launch-setup` if `docs/agents/issue-tracker.md` is missing.
+The issue tracker configuration lives in `docs/agents/issue-tracker.md`, seeded by `launchrail init` from the manifest — `npx @wemuda/launchrail sync` re-seeds it if it's missing.
 
 ## Process
 

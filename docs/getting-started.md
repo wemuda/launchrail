@@ -36,6 +36,7 @@ The interview asks four things — project mode (spike / standard MVP / high-rig
 - `.launchrail/CLAUDE.generated.md` — managed workflow instructions, replaced on `sync` as modules change.
 - `.claude/workflows/ralph.js` — the implementation loop's workflow form, managed ([ADR-0018](adr/0018-implement-front-door.md)): the loop is present from day one, so `/launch-implement` works the moment tickets exist.
 - `docs/adr/0000-template.md` — ADR template.
+- `docs/agents/` — the issue-tracker conventions (templated from your `issueTracker` answer, the rail's label vocabulary included) and the domain-doc consumer rules. Seeded: yours to edit — delete one and `sync` re-seeds it from the manifest's current answers.
 - `.claude/skills/` — the workflow skills as **managed files** ([ADR-0019](adr/0019-vendor-skills-retire-plugin.md)): Launchrail's own complete, `launch-*` prefixed set ([ADR-0020](adr/0020-independent-skill-set.md)), plus a `NOTICE.md` carrying the MIT attribution for the skills with upstream-derived text. Committed to the repo, so the whole team — and every session, cloud or local, on any agent — has them after a `git pull`. `.claude/settings.json` is never touched.
 
 There is no plugin to install — the skills are on disk the moment `init` finishes, and re-running `init` (or `sync`) is how you refresh them.
@@ -62,7 +63,7 @@ git add -A && git commit -m "chore: initialize launchrail"
 From here the workflow lives in Claude Code, not the CLI:
 
 1. **Open Claude Code (or another agent) in the project.** The skills are already in `.claude/skills/` — nothing to install. (A Claude Code session that was open during `init` may need `/reload-plugins` or a restart to pick up the new files.)
-2. **Run `/launch`.** The planning conductor detects the project's stage and drives the workflow from there. On a fresh project that means running `/launch-setup` (once — it configures the issue tracker, the rail's labels, and the domain docs), then vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
+2. **Run `/launch`.** The planning conductor detects the project's stage and drives the workflow from there. On a fresh project that starts with vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. There is no setup conversation first: the issue-tracker conventions (labels included) and domain-doc rules were already seeded into `docs/agents/` by `init`, straight from your manifest answers. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
 3. **When tickets exist, run `/launch-implement`.** The one door to building: it drives every ready ticket to a verified merge through the Ralph loop — or just one (`/launch-implement 15`), or a bounded slice of the backlog ("the next 5 of spec #2" — it resolves the scope against the tracker, tells you what it resolved, and stops after five verified merges). That's the whole surface to remember: `launch` plans, `launch-implement` builds.
 
 Teammates don't need the CLI at all: the skills are committed files, so a `git pull` gives everyone the same workflow — no install, no per-machine plugin state.

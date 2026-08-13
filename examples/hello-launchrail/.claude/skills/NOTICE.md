@@ -7,13 +7,14 @@ Several of them absorb methodology and contain text derived from
 [Matt Pocock's skills](https://github.com/mattpocock/skills), used and adapted
 under the MIT License reproduced below:
 
-- `launch-research`, `launch-grill`, `launch-domain-modeling`,
-  `launch-wayfinder`, `launch-spec`, `launch-tickets`, `launch-code-review`,
-  `launch-setup`
+- `launch-research`, `launch-grill` (including its `domain-modeling.md` and
+  `CONTEXT-FORMAT.md`), `launch-wayfinder`, `launch-spec`, `launch-tickets`,
+  `launch-code-review`
 
-Each of those files carries its own derivation note. If Launchrail is useful to
-you, the inspiration credit belongs upstream — see the Launchrail README's
-Credits section.
+The same applies to the issue-tracker and domain-doc files Launchrail seeds
+into `docs/agents/`. Each derived file carries its own derivation note. If
+Launchrail is useful to you, the inspiration credit belongs upstream — see the
+Launchrail README's Credits section.
 
 ---
 

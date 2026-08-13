@@ -52,9 +52,8 @@ npx @wemuda/launchrail init
 
 From there, the day-to-day driver is not the CLI — it's the **`launch` skill** inside Claude Code: open the project and run `/launch`. Invoke it (or just ask "what's next?") and it reads your committed artifacts, works out where the project is — no vision yet, mid-grill, spec validated, tickets ready — and runs or routes to the next stage's owner. Give it a stage name (`launch design-validation`) to jump straight there. The skills carry the rest of the workflow too:
 
-- **`launch-setup`** — one-time repo configuration: the issue tracker, the rail's label vocabulary, and the domain-doc layout under `docs/agents/`
 - **`launch-project-alignment`** — the on-ramp for an existing codebase: infer a vision from the code, interview only the gaps, inventory the design system, then join the loop
-- **`launch-vision-creation`**, **`launch-discovery`**, **`launch-grill`**, **`launch-research`** — vision, then the divergent landscape scan, the convergent complexity grill (with `launch-domain-modeling` keeping the glossary and ADRs honest), and primary-source research
+- **`launch-vision-creation`**, **`launch-discovery`**, **`launch-grill`**, **`launch-research`** — vision, then the divergent landscape scan, the grill (the convergent interview that runs both as the foundation's complexity grill and per-feature before speccing, keeping the glossary and ADRs honest as it goes), and primary-source research
 - **`launch-wayfinder`**, **`launch-spec`**, **`launch-tickets`**, **`launch-design-validation`** — break big work into decision maps, synthesize the spec, validate it visually, and cut tracer-bullet tickets with blocking edges
 - **`launch-browser-smoke`** — drives a real browser journey and leaves a traceable evidence bundle (with the browser-testing module)
 - **`launch-implement`** — the one door to building: `/launch-implement` drives ready tickets to verified merges through the Ralph loop (a ticket number builds just that one; "the next 5 of spec #2" scopes and caps a run)

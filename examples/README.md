@@ -12,6 +12,7 @@ A minimal Node app (dependency-free HTTP server + `node --test` tests) showing e
 | `CLAUDE.md` | seeded | Claude Code entry point importing `@AGENTS.md` and the generated instructions. |
 | `.launchrail/CLAUDE.generated.md` | managed | Workflow instructions Launchrail may replace on `sync`. |
 | `docs/adr/0000-template.md` | seeded | ADR template. |
+| `docs/agents/` | seeded | Issue-tracker conventions (templated from the manifest's `issueTracker`) and domain-doc rules ([ADR-0020](../docs/adr/0020-independent-skill-set.md)). |
 | `.claude/skills/` | managed | The complete `launch-*` workflow skill set plus its attribution `NOTICE.md` ([ADR-0019](../docs/adr/0019-vendor-skills-retire-plugin.md), [ADR-0020](../docs/adr/0020-independent-skill-set.md)). |
 | `.claude/workflows/ralph.js` | managed | The Ralph loop's workflow form, installed by `init` ([ADR-0018](../docs/adr/0018-implement-front-door.md)). |
 
@@ -27,4 +28,4 @@ node ../../packages/cli/dist/index.js init --yes
 node ../../packages/cli/dist/index.js doctor
 ```
 
-(`init` detects git from the monorepo working tree; `doctor` should report healthy with warnings only for package manager and launch setup.)
+(`init` detects git from the monorepo working tree; `doctor` should report healthy with a package-manager warning only.)

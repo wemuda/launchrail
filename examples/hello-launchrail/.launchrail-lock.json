@@ -8,7 +8,7 @@
     },
     ".claude/skills/launch-code-review/SKILL.md": {
       "class": "managed",
-      "checksum": "90aa06f8de558113d677177c9a9df5086cfe139cb85863ce7b943ac7e3ea5ecc"
+      "checksum": "5e396abeaff70ca8efda44730ababa143c8d85c5ddab3d65e410481625a7ea9f"
     },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
@@ -18,17 +18,17 @@
       "class": "managed",
       "checksum": "38e737c46ae3f30905a1ae437bf581b8a35e3334f88ba6e7f3e77e25748ca57c"
     },
-    ".claude/skills/launch-domain-modeling/CONTEXT-FORMAT.md": {
+    ".claude/skills/launch-grill/CONTEXT-FORMAT.md": {
       "class": "managed",
       "checksum": "d3e411a85973cf8287ff2075a63478acc45a8357d8efbe388496cc4ed957073c"
     },
-    ".claude/skills/launch-domain-modeling/SKILL.md": {
+    ".claude/skills/launch-grill/domain-modeling.md": {
       "class": "managed",
-      "checksum": "b2642af6b7fe7e1309713eb766926f36202a649cf7f641ff3e7492cf133e82ef"
+      "checksum": "466ee47be8e37a7ec4535b416eada495fbcda45c5fa2ae427f2ad48efcfec2c2"
     },
     ".claude/skills/launch-grill/SKILL.md": {
       "class": "managed",
-      "checksum": "a46e30222a58f226f2a53b04e84ae9e84a25f536d072d7424bd628cf8b2ee169"
+      "checksum": "5b27018b59e688d65e06f42e893e659befe37b2f2a3308b1cd556123bbf98511"
     },
     ".claude/skills/launch-implement/SKILL.md": {
       "class": "managed",
@@ -54,33 +54,13 @@
       "class": "managed",
       "checksum": "f971454930558eeb12c3976eac736bfb2f1d78cdf59e9667a58dbcde3c454477"
     },
-    ".claude/skills/launch-setup/domain.md": {
-      "class": "managed",
-      "checksum": "863d20f03d454a911683a77b39673eb6661467795fff0327fbf64315fc5be797"
-    },
-    ".claude/skills/launch-setup/issue-tracker-github.md": {
-      "class": "managed",
-      "checksum": "0e951ef28155916cc36fddfee610f4166641e7db76bf2f81b3a4b9dc7cd301ba"
-    },
-    ".claude/skills/launch-setup/issue-tracker-gitlab.md": {
-      "class": "managed",
-      "checksum": "6ab904507f3c595137b2f8e7485923cb998f10691a4c508384bc259fadbee1bc"
-    },
-    ".claude/skills/launch-setup/issue-tracker-local.md": {
-      "class": "managed",
-      "checksum": "89fac50ee20898188157389c28edc555c1b9e97af3db50a08ac088c822227146"
-    },
-    ".claude/skills/launch-setup/SKILL.md": {
-      "class": "managed",
-      "checksum": "0bdb83817e2c70ea44b392efbf2c69126c85b39e9cd5077cc3579527c06450ac"
-    },
     ".claude/skills/launch-spec/SKILL.md": {
       "class": "managed",
       "checksum": "11ed52c48d1b32e55b1fdd7f8f8356b0175f7e6714929d4689b04ce4d55db10c"
     },
     ".claude/skills/launch-tickets/SKILL.md": {
       "class": "managed",
-      "checksum": "e2f64279ddff15eeb7d2f2dca43a7c5ea63f1bfbfee53e14e120a10bdf24214e"
+      "checksum": "6a7ec4f7bd4630fc0e17bebe8df04453fefd03f5d8c8be35ee6a85b9690e7978"
     },
     ".claude/skills/launch-vision-creation/SKILL.md": {
       "class": "managed",
@@ -88,19 +68,19 @@
     },
     ".claude/skills/launch-wayfinder/SKILL.md": {
       "class": "managed",
-      "checksum": "6517e09dedd6042c1fa58216b916d67f3c5d976f82a4922994396d02fc39b355"
+      "checksum": "77d74a4ec735ff9418afc6daf82dbb2b92fe21af4bba7d808df1ce84d9b60ebf"
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "2686af41348cf0e4e838206963262657a05bed7d6937d6db56600fc5703d57c0"
+      "checksum": "9becec102c605caaaca14b8498a4556d78bd863fd322703f6ce0d330d11d0325"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "99f95b05c561abbf27a889b098adad2984c959b6a2faccf51c2f00cb9764d898"
+      "checksum": "07cc1fd390971bab8de4f1771c01f21830412a3bd935ca87cac5eb7b420856ed"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",
-      "checksum": "e8498461da192471f9b5302396118edfdfd6450612302f12d650ebf55b72cef4"
+      "checksum": "9df8e9a84bb30324452add60ca331c7dbe5ca68dd2c9046f0db26c8a59cb5b0d"
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
@@ -112,7 +92,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "d5c9ee7274b8f338aa3afb488931d1ffd30201eb970455ef51c36e3ab08fb0ca"
+      "checksum": "e83064a4a6de4aae9acbfdaade8b1c63a6cfa0b630f0ee951e97be288da7624d"
     },
     "AGENTS.md": {
       "class": "seeded",
@@ -125,6 +105,14 @@
     "docs/adr/0000-template.md": {
       "class": "seeded",
       "checksum": "f28c0b63aefcba78b2e5db5d50b4b950031cba904eab6ebe4f51d633d09f2f1f"
+    },
+    "docs/agents/domain.md": {
+      "class": "seeded",
+      "checksum": "2c93118d2bd715e3f1cc2f81cae3a0fbfd9618dd3b4b16bd16675722d2099723"
+    },
+    "docs/agents/issue-tracker.md": {
+      "class": "seeded",
+      "checksum": "1123b65c6e8aa8de1c8edd3af2e46412cdd352e9e194722de287ba5e11d5bcdb"
     }
   },
   "migrations": [

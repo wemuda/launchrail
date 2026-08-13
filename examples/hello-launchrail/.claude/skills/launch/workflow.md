@@ -11,8 +11,7 @@ Two commands cover the whole rail:
 
 ## Prerequisites
 
-- The repository is initialized (`npx @wemuda/launchrail init`) and healthy (`npx @wemuda/launchrail doctor`). Init writes the workflow skills *and* the implementation loop's materials — there is no separate install step on the golden path.
-- The repo's tracker and domain-doc configuration exists: run `/launch-setup` once per repository (expected output: `docs/agents/`). `doctor` checks it.
+- The repository is initialized (`npx @wemuda/launchrail init`) and healthy (`npx @wemuda/launchrail doctor`). Init writes the workflow skills, the implementation loop's materials, *and* the `docs/agents/` configuration (issue-tracker conventions and domain-doc rules, seeded from the manifest's answers) — there is no separate install or setup step on the golden path.
 
 ## Stages
 
@@ -31,7 +30,7 @@ Two commands cover the whole rail:
 | 11 | Verification | `npx @wemuda/launchrail verify` · Launchrail `browser-smoke` skill | Merged work | The gate green; smoke evidence where behavior is user-facing |
 | 12 | Release | The project's release setup | Verified base | The release cut |
 
-† **User-typed by design** — `disable-model-invocation`: only the user can start these. `/launch-setup`, `launch-wayfinder`/`launch-spec`, and `launch-tickets` write configuration or publish to the tracker; `/launch-implement` spawns agents and merges PRs. A conductor prepares the handoff instead of calling them — see the conductor rules.
+† **User-typed by design** — `disable-model-invocation`: only the user can start these. `launch-wayfinder`/`launch-spec` and `launch-tickets` publish to the tracker; `/launch-implement` spawns agents and merges PRs. A conductor prepares the handoff instead of calling them — see the conductor rules.
 
 Stage notes:
 

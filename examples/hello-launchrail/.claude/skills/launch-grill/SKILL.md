@@ -1,15 +1,20 @@
 ---
 name: launch-grill
-description: The complexity grill — stage 4. A relentless, round-based interview that stress-tests the vision, exploration artifacts, and discovery landscape into surviving constraints, maintains the domain model as terms and decisions crystallise, and always ends by committing the grill constraints under docs/research/. Also used feature-scoped when sizing routes a feature through a grill. Use when the user wants a plan, decision, or idea grilled or stress-tested.
+description: The grill — a relentless, round-based interview that stress-tests a plan, decision, or idea into surviving constraints, maintains the domain model as terms and decisions crystallise, and always ends by committing the constraints under docs/research/. Runs in two contexts, the foundation's complexity grill (stage 4) and the feature grill that opens every delivery-loop path before speccing and tickets. Use whenever the user wants to be grilled, stress-test thinking, or get aligned before building.
 ---
 
 <!-- Contains text derived from Matt Pocock's skills (https://github.com/mattpocock/skills), MIT — see ../NOTICE.md -->
 
-# The complexity grill
+# The grill
 
-Interview the user relentlessly until you reach a shared understanding — then commit what survived. The grill is the rail's *convergent* tool: it takes the vision, the visual exploration, and the discovery landscape and narrows them into the constraints that everything downstream (research, ADRs, spec) builds on. A grill that ends in conversation and no committed file has not finished — see [the artifact](#the-artifact-is-the-stage) below.
+Interview the user relentlessly until you reach a shared understanding — then commit what survived. The grill is the rail's *convergent* tool, and it runs anywhere the user needs to get aligned with the agent before work hardens into specs and tickets. A grill that ends in conversation and no committed file has not finished — see [the artifact](#the-artifact-closes-the-grill) below.
 
-Run it with the **`launch-domain-modeling`** skill active throughout: challenge terms against the glossary, sharpen fuzzy language, update `CONTEXT.md` as terms resolve, and offer an ADR (the project's `docs/adr/0000-template.md` format) when a decision meets its three-part bar.
+Run every grill with the **domain-modeling discipline** ([domain-modeling.md](./domain-modeling.md)) active: challenge terms against the glossary, sharpen fuzzy language, update `CONTEXT.md` as terms resolve, and offer an ADR (the project's `docs/adr/0000-template.md` format) when a decision meets its three-part bar.
+
+## Two contexts, one grill
+
+- **The foundation grill (stage 4).** Inputs: the vision, the visual exploration, and the discovery landscape (`docs/research/discovery-*.md`). The job is to narrow the whole product's option space into the constraints everything downstream builds on. When discovery ran, the landscape map is the option space — pick from the real contenders it surfaced; don't re-assume the default that the discovery stage existed to widen past. The surviving constraints become technical research's brief (stage 5).
+- **The feature grill (delivery loop).** Every sizing path — large, semi, small — starts here: when a new feature or idea arrives, grill it *before* `launch-spec` and `launch-tickets`, so the spec synthesizes decisions actually made together rather than assumptions. Same method, narrower brief: inputs are the feature idea plus the founded artifacts it touches (vision, ADRs, existing specs, the code). Hand off to whatever the sizing path says comes next — usually straight to `launch-spec` or `launch-tickets`.
 
 ## The interview
 
@@ -29,16 +34,14 @@ Finding _facts_ is your job, never the user's. When a frontier question needs a 
 
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on the decisions until the user confirms you have reached a shared understanding.
 
-Grill against what's committed: when discovery ran (stage 3), the landscape map under `docs/research/discovery-*.md` is the option space to narrow — pick from the real contenders it surfaced, don't re-assume the default the discovery stage existed to widen past.
+## The artifact closes the grill
 
-## The artifact is the stage
-
-Stage 4 gates on a committed file, not on the conversation. When the user confirms shared understanding, write the surviving constraints to **`docs/research/grill-<topic>.md`** (feature-scoped grills take the feature's slug) and commit it. The doc records:
+A grill gates on a committed file, not on the conversation. When the user confirms shared understanding, write the surviving constraints to **`docs/research/grill-<topic>.md`** (feature grills take the feature's slug) and commit it. The doc records:
 
 - the decisions made, each with its one-line why;
 - the assumptions attacked, and whether they survived;
 - the options ruled out, with the reason;
-- the open questions handed to technical research (stage 5) — its brief.
+- the open questions handed onward — to technical research after a foundation grill, or into the spec after a feature grill.
 
 Everything under `docs/research/` is project-owned; Launchrail tooling never overwrites it.
 
