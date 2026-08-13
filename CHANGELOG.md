@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.8.0](https://github.com/wemuda/launchrail/compare/v1.7.0...v1.8.0) (2026-08-13)
+
+
+### Features
+
+* **cli:** absorb the workflow skills as one independent launch-* set (ADR-0020) ([0f03eee](https://github.com/wemuda/launchrail/commit/0f03eee7a711e77b526fb235e112ef0b80419fc6))
+* **cli:** install the default implementation loop with init ([00e46e3](https://github.com/wemuda/launchrail/commit/00e46e3f7b71caae6e581394e03d463e8ddfaaf7))
+* **cli:** ship Ralph's unattended-launch permission guard (ADR-0020) ([640c983](https://github.com/wemuda/launchrail/commit/640c983310785a642dffab59bd688d0b8e533e24))
+* **cli:** slim the skill set to 16 — seed docs/agents from the manifest, fold domain modeling into the grill (ADR-0020) ([6a8b417](https://github.com/wemuda/launchrail/commit/6a8b4170240c0791cd8a3c5b4618a25c54f87038))
+* **cli:** vendor pinned Matt Pocock skills snapshot under CLI assets ([f51e4c3](https://github.com/wemuda/launchrail/commit/f51e4c3c6635827442e5b1f6afe1baa61667f4ce))
+* **cli:** vendor workflow skills as managed files, retire marketplace plugin (ADR-0019) ([d4984f5](https://github.com/wemuda/launchrail/commit/d4984f59f18e9d78c7bf16567ec31c5da37a0deb))
+* **cli:** write vendored skills on init/sync; retire the plugin path (ADR-0019) ([8b960ed](https://github.com/wemuda/launchrail/commit/8b960edf37001ed83b66969d9f0163f3a108ad10))
+* one front door for building — /launchrail:implement, start-feature folded into launch, loop installed by init ([133388b](https://github.com/wemuda/launchrail/commit/133388ba5fcc0b32e203ea40d817efe4b8859fd7))
+* **plugin:** one implement front door; fold start-feature into launch ([2143d7e](https://github.com/wemuda/launchrail/commit/2143d7e817521a04d449201676dc7a999d0e544b))
+* **ralph:** bounded runs — a max-merges cap and a scope-resolution contract ([29d9eec](https://github.com/wemuda/launchrail/commit/29d9eec983ab3d69c1fe74a8a5c2e56a1c5663aa))
+* **ralph:** bounded runs — max-merges cap + prose scope resolution in implement ([819119d](https://github.com/wemuda/launchrail/commit/819119d0ae0bb787610121daef0e1007f0ed7bd9))
+
+
+### Bug Fixes
+
+* **adr:** complete ADR-0016→0017 renumber in merged files ([083e76d](https://github.com/wemuda/launchrail/commit/083e76d4e5196a253ac4b4fe2774be9a5a7120ca))
+
 ## [1.7.0](https://github.com/wemuda/launchrail/compare/v1.6.0...v1.7.0) (2026-08-11)
 
 
