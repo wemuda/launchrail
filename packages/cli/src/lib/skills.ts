@@ -4,28 +4,23 @@ import { fileURLToPath } from "node:url";
 import type { FileSpec } from "./writer.js";
 
 /**
- * The workflow skills ship as real files under assets/skills/ and are vendored
- * into consuming repos as managed files (ADR-0019) — no Claude Code plugin. The
+ * The workflow skills are Launchrail's own complete, `launch-`-prefixed set
+ * (ADR-0020), shipped as real files under assets/skills/launchrail/ and written
+ * into consuming repos as managed files (ADR-0019) — no plugin and no vendored
+ * upstream snapshot. Skills that absorb text from Matt Pocock's MIT-licensed
+ * skills carry a derivation note; the license travels as the NOTICE file. The
  * asset dir resolves from both src/ (tests) and dist/ (published CLI); both are
  * siblings of assets/, exactly like the Ralph workflow asset (see ralph.ts).
- *
- * Two source roots flatten into one destination:
- *   - launchrail/       — Launchrail's own skills, `launch-` prefixed
- *   - vendor/mattpocock/ — a pinned MIT snapshot, bare upstream names
- * Both land under .claude/skills/<name>/… in the consumer, and the vendored
- * snapshot's upstream LICENSE travels with them as an attribution NOTICE.
  */
 const SKILLS_ASSET_DIR = fileURLToPath(new URL("../../assets/skills/", import.meta.url));
 
-/** Where vendored skills land in a consuming repo. */
+/** Where the workflow skills land in a consuming repo. */
 export const SKILLS_DEST_PREFIX = ".claude/skills";
-/** Attribution file carrying the vendored snapshot's upstream MIT license. */
-export const MATTPOCOCK_NOTICE_PATH = `${SKILLS_DEST_PREFIX}/NOTICE-mattpocock.md`;
-/** Relative path (from assets/skills/) to the vendored snapshot's license. */
-const MATTPOCOCK_LICENSE = join("vendor", "mattpocock", "LICENSE");
+/** Attribution file for the skills with upstream-derived text (MIT). */
+export const SKILLS_NOTICE_PATH = `${SKILLS_DEST_PREFIX}/NOTICE.md`;
 
-/** Skill source roots, in write order. */
-const SOURCE_ROOTS = ["launchrail", join("vendor", "mattpocock")] as const;
+/** The single skill source root — Launchrail's own set. */
+const SOURCE_ROOT = "launchrail";
 
 /** Recursively list every file under `dir` (absolute paths). */
 function walk(dir: string): string[] {
@@ -38,48 +33,20 @@ function walk(dir: string): string[] {
   return out;
 }
 
-/** A short attribution note prepended to the vendored snapshot's MIT license. */
-function mattpocockNotice(licenseText: string): string {
-  return `# Vendored skills — attribution
-
-Some skills in this directory are vendored from [Matt Pocock's skills](https://github.com/mattpocock/skills)
-and redistributed under the MIT License, reproduced below. Launchrail keeps this
-snapshot current through \`launchrail sync\`; edit a vendored skill in place only if
-you intend to own it (\`launchrail eject <path>\`), which stops future updates to it.
-
-Skills prefixed \`launch-\` (and the \`launch\` conductor) are Launchrail's own.
-
----
-
-${licenseText.trim()}
-`;
-}
-
 /**
- * Every skill file Launchrail writes into a consuming repo, as managed specs.
- * Root-level metadata in a source root (the vendored LICENSE and VENDOR.json)
- * is not a skill: VENDOR.json is toolchain-internal and dropped; the LICENSE is
- * re-emitted once as the attribution NOTICE.
+ * Every skill file Launchrail writes into a consuming repo, as managed specs,
+ * plus the attribution NOTICE beside them.
  */
 export function skillFiles(): FileSpec[] {
-  const specs: FileSpec[] = [];
-  for (const root of SOURCE_ROOTS) {
-    const rootDir = join(SKILLS_ASSET_DIR, root);
-    for (const file of walk(rootDir)) {
-      const rel = relative(rootDir, file).split(sep).join("/");
-      // Root-level files (no skill directory) are metadata, not skills.
-      if (!rel.includes("/")) continue;
-      specs.push({
-        relPath: `${SKILLS_DEST_PREFIX}/${rel}`,
-        content: readFileSync(file, "utf8"),
-        ownership: "managed",
-      });
-    }
-  }
-  const licenseText = readFileSync(join(SKILLS_ASSET_DIR, MATTPOCOCK_LICENSE), "utf8");
+  const rootDir = join(SKILLS_ASSET_DIR, SOURCE_ROOT);
+  const specs: FileSpec[] = walk(rootDir).map((file) => ({
+    relPath: `${SKILLS_DEST_PREFIX}/${relative(rootDir, file).split(sep).join("/")}`,
+    content: readFileSync(file, "utf8"),
+    ownership: "managed" as const,
+  }));
   specs.push({
-    relPath: MATTPOCOCK_NOTICE_PATH,
-    content: mattpocockNotice(licenseText),
+    relPath: SKILLS_NOTICE_PATH,
+    content: readFileSync(join(SKILLS_ASSET_DIR, "NOTICE.md"), "utf8"),
     ownership: "managed",
   });
   return specs;
@@ -87,9 +54,8 @@ export function skillFiles(): FileSpec[] {
 
 /** Directory names of every skill written into the consumer, for reporting/verification. */
 export function skillNames(): string[] {
-  return SOURCE_ROOTS.flatMap((root) =>
-    readdirSync(join(SKILLS_ASSET_DIR, root), { withFileTypes: true })
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name),
-  ).sort();
+  return readdirSync(join(SKILLS_ASSET_DIR, SOURCE_ROOT), { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
 }

@@ -2,10 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
-import { listInstalledPluginIds, toWorkflowPlugin } from "../lib/claudeCli.js";
 import { missingImports } from "../lib/claudeImports.js";
 import { CLAUDE_SETTINGS_PATH, declarationState, RETIRED_PLUGIN_DECLARATIONS } from "../lib/claudeSettings.js";
-import { implementationLoopDeclarations, implementationLoopProvider } from "../lib/implementationLoops.js";
 import { detectRepo } from "../lib/detect.js";
 import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
@@ -108,10 +106,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
     }
   }
 
-  if (detection.hasMattPocockSetup) add("pass", "Matt Pocock setup", "docs/agents/ present");
-  else add("warn", "Matt Pocock setup", "docs/agents/ not found — run /setup-matt-pocock-skills in Claude Code (it's vendored in .claude/skills/)");
-
-  // Skills are vendored as managed files (ADR-0019), not a plugin. Their exact
+  // Skills ship as managed files (ADR-0019/0020), not a plugin. Their exact
   // contents/checksums are covered by the managed-file checks above; here give a
   // single friendly signal that every expected skill directory is on disk.
   if (lockfile) {
@@ -119,7 +114,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
       (name) => !existsSync(join(cwd, ".claude", "skills", name, "SKILL.md")),
     );
     if (missingSkills.length === 0) {
-      add("pass", "workflow skills", `${skillNames().length} vendored in .claude/skills/`);
+      add("pass", "workflow skills", `${skillNames().length} in .claude/skills/`);
     } else {
       add(
         "fail",
@@ -137,52 +132,15 @@ export function runDoctor(cwd: string): DoctorOutcome {
     }
   }
 
-  // A selected implementation loop may still ship its own external plugin
-  // (superpowers); the default (ralph) ships nothing to install. Check the loop's
-  // plugin only when it has one (ADR-0017/0019).
-  const loopDeclarations = manifest ? implementationLoopDeclarations(manifest.implementationLoop) : [];
-  const loopPlugins = loopDeclarations.map(toWorkflowPlugin);
-  if (loopPlugins.length > 0) {
-    const declaration = declarationState(cwd, loopDeclarations);
-    if (declaration === "declared") {
-      add("pass", "loop plugin declaration", `${CLAUDE_SETTINGS_PATH} declares ${loopDeclarations.map((d) => d.pluginKey).join(", ")}`);
-    } else if (declaration === "invalid-json") {
-      add("warn", "loop plugin declaration", `${CLAUDE_SETTINGS_PATH} is not valid JSON`);
-    } else {
-      add("warn", "loop plugin declaration", `${loopDeclarations.map((d) => d.pluginKey).join(", ")} not declared in ${CLAUDE_SETTINGS_PATH} — run \`launchrail init\``);
-    }
-
-    const installed = listInstalledPluginIds(cwd);
-    if (installed.state === "ok") {
-      const missing = loopPlugins.filter((wp) => !installed.ids.includes(wp.id));
-      if (missing.length === 0) {
-        add("pass", "loop plugin install", `${loopPlugins.map((wp) => wp.id).join(", ")} installed in Claude Code`);
-      } else {
-        add(
-          "warn",
-          "loop plugin install",
-          `missing: ${missing
-            .map((wp) => `${wp.id} (\`claude plugin marketplace add ${wp.marketplace} && claude plugin install ${wp.id}\`)`)
-            .join(", ")}`,
-        );
-      }
-    } else if (installed.state === "no-cli") {
-      add("warn", "loop plugin install", "claude CLI not found — cannot verify the loop plugin");
-    } else {
-      add("warn", "loop plugin install", "could not read `claude plugin list --json`");
-    }
-  }
-
   if (manifest) {
-    const provider = implementationLoopProvider(manifest.implementationLoop);
-    if (manifest.implementationLoop === "ralph" && !manifest.modules[RALPH_MODULE]) {
+    if (!manifest.modules[RALPH_MODULE]) {
       add(
         "warn",
         "implementation loop",
-        `${provider.label} selected but its materials are not installed — run \`launchrail sync\``,
+        "Ralph's materials are not installed — run `launchrail sync`",
       );
     } else {
-      add("pass", "implementation loop", `${provider.label} — start with /launch-implement`);
+      add("pass", "implementation loop", "Ralph — start with /launch-implement");
     }
   }
 

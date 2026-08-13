@@ -1,9 +1,4 @@
 import { parse, parseDocument, stringify } from "yaml";
-import {
-  DEFAULT_IMPLEMENTATION_LOOP,
-  IMPLEMENTATION_LOOPS,
-  type ImplementationLoop,
-} from "./implementationLoops.js";
 
 export const MANIFEST_FILENAME = ".launchrail.yml";
 
@@ -18,7 +13,7 @@ export type Mode = (typeof MODES)[number];
 export const ORIGINS = ["new", "existing"] as const;
 export type Origin = (typeof ORIGINS)[number];
 
-export const ISSUE_TRACKERS = ["github", "linear", "none"] as const;
+export const ISSUE_TRACKERS = ["github", "gitlab", "linear", "local", "none"] as const;
 export type IssueTracker = (typeof ISSUE_TRACKERS)[number];
 
 export const TESTING_KEYS = ["unitCommand", "devCommand", "e2eCommand", "smokeCommand", "appUrl"] as const;
@@ -34,8 +29,6 @@ export interface Manifest {
   };
   testing: Record<TestingKey, string | null>;
   modules: Record<string, boolean>;
-  /** Which stage-10 loop drives ready tickets to verified merges (ADR-0017). */
-  implementationLoop: ImplementationLoop;
 }
 
 export interface ManifestParseResult {
@@ -122,19 +115,9 @@ export function validateManifest(data: unknown): ManifestParseResult {
     }
   }
 
-  // Optional with a default so manifests written before the loop became
-  // selectable stay valid (ADR-0017); an explicit but unknown value still errors.
-  let implementationLoop: ImplementationLoop = DEFAULT_IMPLEMENTATION_LOOP;
-  if (data.implementationLoop !== undefined) {
-    if (
-      typeof data.implementationLoop === "string" &&
-      (IMPLEMENTATION_LOOPS as readonly string[]).includes(data.implementationLoop)
-    ) {
-      implementationLoop = data.implementationLoop as ImplementationLoop;
-    } else {
-      errors.push(`implementationLoop must be one of: ${IMPLEMENTATION_LOOPS.join(", ")}`);
-    }
-  }
+  // `implementationLoop` (ADR-0017) was removed by ADR-0020 — Ralph is the
+  // loop. Manifests that still carry the key stay valid: unknown keys are
+  // ignored here, and the independence migration deletes it.
 
   if (errors.length > 0) return { manifest: null, errors };
   return {
@@ -146,7 +129,6 @@ export function validateManifest(data: unknown): ManifestParseResult {
       conventions: { conventionalCommits },
       testing,
       modules,
-      implementationLoop,
     },
     errors: [],
   };
@@ -172,6 +154,27 @@ export function serializeManifest(manifest: Manifest): string {
 export interface ModuleEnableResult {
   source: string;
   changed: boolean;
+}
+
+export interface KeyRemovalResult {
+  source: string;
+  changed: boolean;
+  /** The removed key's value, when the key was present. */
+  previous: unknown;
+}
+
+/**
+ * Remove a retired top-level key from an existing manifest source. Like
+ * `setModuleEnabled`, this is a deliberate structural exception to "never
+ * rewrite seeded files", applied via a YAML document round-trip that preserves
+ * the user's comments and formatting.
+ */
+export function removeManifestKey(source: string, key: string): KeyRemovalResult {
+  const doc = parseDocument(source);
+  if (!doc.has(key)) return { source, changed: false, previous: undefined };
+  const previous = doc.get(key);
+  doc.delete(key);
+  return { source: doc.toString(), changed: true, previous };
 }
 
 /**

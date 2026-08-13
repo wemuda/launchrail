@@ -1,15 +1,18 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { sha256 } from "./checksum.js";
 import {
   applyPluginDeclaration,
   applyRemovePluginDeclaration,
   CLAUDE_SETTINGS_PATH,
   planPluginDeclaration,
   planRemovePluginDeclaration,
+  RETIRED_SUPERPOWERS_DECLARATION,
 } from "./claudeSettings.js";
 import type { Lockfile } from "./lockfile.js";
-import { MANIFEST_FILENAME, parseManifest, setModuleEnabled } from "./manifest.js";
+import { MANIFEST_FILENAME, parseManifest, removeManifestKey, setModuleEnabled } from "./manifest.js";
 import { RALPH_MODULE, RALPH_WORKFLOW_PATH, ralphFiles } from "./ralph.js";
+import { SKILLS_DEST_PREFIX, skillFiles } from "./skills.js";
 import { applyPlan, planWrites } from "./writer.js";
 
 export interface MigrationContext {
@@ -96,8 +99,10 @@ export const MIGRATIONS: Migration[] = [
       const source = readFileSync(manifestPath, "utf8");
       const parsed = parseManifest(source);
       // An invalid manifest is sync's own precondition failure, not this
-      // migration's; a project that selected another loop needs nothing.
-      if (!parsed.manifest || parsed.manifest.implementationLoop !== "ralph") return none;
+      // migration's. Ralph is the implementation loop (ADR-0020), so every
+      // valid manifest gets its materials; before ADR-0020 this checked the
+      // manifest's `implementationLoop` selection.
+      if (!parsed.manifest) return none;
 
       const changes: string[] = [];
       const manifestUpdate = setModuleEnabled(source, RALPH_MODULE, {});
@@ -117,6 +122,108 @@ export const MIGRATIONS: Migration[] = [
         apply: () => {
           if (manifestUpdate.changed) writeFileSync(manifestPath, manifestUpdate.source, "utf8");
           applyPlan(ctx.cwd, actions, ctx.lockfile);
+        },
+      };
+    },
+  },
+  {
+    id: "2026-08-workflow-skills-independence",
+    description:
+      "retire the vendored upstream skills in favor of Launchrail's own complete launch-* set, and drop the removed implementationLoop manifest field (ADR-0020)",
+    plan(ctx) {
+      const changes: string[] = [];
+
+      // 1. Skill files the surface no longer ships (the vendored bare-name
+      // snapshot and its NOTICE): delete each tracked file that is unmodified
+      // since Launchrail wrote it; a locally-modified copy is kept on disk and
+      // handed to the project. Either way the lockfile stops tracking the
+      // path. The absorbed launch-* skills arrive through the regular managed
+      // surface right after migrations run — this only clears what they
+      // replace.
+      const current = new Set(skillFiles().map((spec) => spec.relPath));
+      const removable: string[] = [];
+      const keptModified: string[] = [];
+      for (const [relPath, entry] of Object.entries(ctx.lockfile.files)) {
+        if (!relPath.startsWith(`${SKILLS_DEST_PREFIX}/`) || entry.class === "ejected" || current.has(relPath)) {
+          continue;
+        }
+        const abs = join(ctx.cwd, relPath);
+        if (existsSync(abs) && sha256(readFileSync(abs, "utf8")) !== entry.checksum) {
+          keptModified.push(relPath);
+        } else {
+          removable.push(relPath);
+        }
+      }
+      if (removable.length > 0) {
+        changes.push(`${SKILLS_DEST_PREFIX} — remove ${removable.length} retired skill file(s)`);
+      }
+      for (const relPath of keptModified) {
+        changes.push(`${relPath} — locally modified; kept on disk, no longer managed`);
+      }
+
+      // 2. The manifest's implementationLoop field is retired — Ralph is the
+      // implementation loop, no field selects it.
+      const manifestPath = join(ctx.cwd, MANIFEST_FILENAME);
+      const manifestSource = existsSync(manifestPath) ? readFileSync(manifestPath, "utf8") : null;
+      const keyRemoval = manifestSource === null ? null : removeManifestKey(manifestSource, "implementationLoop");
+      if (keyRemoval?.changed) {
+        changes.push(`${MANIFEST_FILENAME} — remove the retired implementationLoop field`);
+      }
+
+      // 3. A project that had selected superpowers converges on Ralph: the
+      // plugin declaration Launchrail added for that loop is removed (only
+      // then — a declaration the user added themselves is never touched) and
+      // Ralph's materials install.
+      const wasSuperpowers = keyRemoval?.previous === "superpowers";
+      const settingsRemoval = wasSuperpowers
+        ? planRemovePluginDeclaration(ctx.cwd, [RETIRED_SUPERPOWERS_DECLARATION])
+        : null;
+      if (settingsRemoval !== null && settingsRemoval.content !== null) {
+        changes.push(`${CLAUDE_SETTINGS_PATH} — ${settingsRemoval.detail}`);
+      }
+      const ralphEnable =
+        wasSuperpowers && keyRemoval ? setModuleEnabled(keyRemoval.source, RALPH_MODULE, {}) : null;
+      if (ralphEnable?.changed) {
+        changes.push(`${MANIFEST_FILENAME} — enable the ralph module (superpowers loop retired)`);
+      }
+      const ralphActions = wasSuperpowers ? planWrites(ctx.cwd, ralphFiles(), ctx.lockfile) : [];
+      for (const action of ralphActions) {
+        if (action.kind === "create" || action.kind === "update") {
+          changes.push(`${action.spec.relPath} — ${action.detail}`);
+        }
+      }
+
+      if (changes.length === 0) return { changes: [], apply: () => {} };
+      const skillsRoot = join(ctx.cwd, SKILLS_DEST_PREFIX);
+      return {
+        changes,
+        apply: () => {
+          for (const relPath of removable) {
+            const abs = join(ctx.cwd, relPath);
+            if (existsSync(abs)) unlinkSync(abs);
+            delete ctx.lockfile.files[relPath];
+          }
+          for (const relPath of keptModified) delete ctx.lockfile.files[relPath];
+          // Clear the skill directories the deletes emptied, deepest first;
+          // rmdir refuses a non-empty directory, which is exactly the guard.
+          const dirs = [...new Set(removable.map((relPath) => dirname(join(ctx.cwd, relPath))))].sort(
+            (a, b) => b.length - a.length,
+          );
+          for (const dir of dirs) {
+            for (let d = dir; d !== skillsRoot && d.startsWith(skillsRoot); d = dirname(d)) {
+              try {
+                rmdirSync(d);
+              } catch {
+                break;
+              }
+            }
+          }
+          const manifestFinal = ralphEnable ?? keyRemoval;
+          if (manifestFinal && (keyRemoval?.changed || ralphEnable?.changed)) {
+            writeFileSync(manifestPath, manifestFinal.source, "utf8");
+          }
+          if (settingsRemoval !== null) applyRemovePluginDeclaration(ctx.cwd, settingsRemoval);
+          if (ralphActions.length > 0) applyPlan(ctx.cwd, ralphActions, ctx.lockfile);
         },
       };
     },

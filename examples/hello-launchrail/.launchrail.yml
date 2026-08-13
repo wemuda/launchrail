@@ -2,7 +2,8 @@
 # This file is yours to edit; Launchrail reads it and never force-overwrites it.
 schemaVersion: 1
 mode: standard-mvp
-issueTracker: none
+origin: existing
+issueTracker: github
 conventions:
   conventionalCommits: true
 testing:

@@ -34,10 +34,6 @@ init / add options:
   --dry-run        Show what would be written without writing
   -y, --yes        Accept defaults; no interactive questions
 
-init options:
-  --skip-plugin-install   Declare the Claude Code plugin but do not install it
-                          via the claude CLI (env: LAUNCHRAIL_SKIP_CLAUDE_CLI=1)
-
 smoke options:
   --url <url>      Test a specific URL (e.g. a preview environment)
   --dry-run        Show what would be scaffolded without writing
@@ -70,7 +66,6 @@ if (command === "init") {
     cwd: process.cwd(),
     dryRun: flags.has("--dry-run"),
     yes: flags.has("--yes") || flags.has("-y"),
-    skipPluginInstall: flags.has("--skip-plugin-install"),
   });
   process.exit(outcome.code);
 }

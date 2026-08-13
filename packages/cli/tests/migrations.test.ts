@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { sha256 } from "../src/lib/checksum.js";
 import { emptyLockfile, type Lockfile } from "../src/lib/lockfile.js";
 import {
   applyPendingMigrations,
@@ -113,5 +114,38 @@ describe("migration engine", () => {
     // Idempotent: with nothing left to strip, a fresh lockfile plans no changes.
     const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
     expect(planned.find((p) => p.id === "2026-08-vendor-workflow-skills")?.changes).toEqual([]);
+  });
+
+  test("2026-08-workflow-skills-independence retires vendored skill files, keeping local edits", () => {
+    // A pre-ADR-0020 project with the vendored snapshot on disk: one pristine
+    // skill, one locally edited, plus the old attribution notice.
+    const skillsDir = join(tmp.root, ".claude", "skills");
+    const pristine = "---\nname: research\n---\nSpin up a background agent.\n";
+    const edited = "---\nname: tdd\n---\nMy local tweaks.\n";
+    mkdirSync(join(skillsDir, "research"), { recursive: true });
+    mkdirSync(join(skillsDir, "tdd"), { recursive: true });
+    writeFileSync(join(skillsDir, "research", "SKILL.md"), pristine);
+    writeFileSync(join(skillsDir, "tdd", "SKILL.md"), edited);
+    writeFileSync(join(skillsDir, "NOTICE-mattpocock.md"), "old notice\n");
+    lockfile.files[".claude/skills/research/SKILL.md"] = { class: "managed", checksum: sha256(pristine) };
+    lockfile.files[".claude/skills/tdd/SKILL.md"] = { class: "managed", checksum: sha256("what launchrail wrote\n") };
+    lockfile.files[".claude/skills/NOTICE-mattpocock.md"] = { class: "managed", checksum: sha256("old notice\n") };
+
+    const ctx = { cwd: tmp.root, lockfile };
+    const results = applyPendingMigrations(ctx, MIGRATIONS);
+    const result = results.find((r) => r.id === "2026-08-workflow-skills-independence");
+    expect(result?.status).toBe("applied");
+    // Pristine vendored files are deleted, emptied directories included.
+    expect(existsSync(join(skillsDir, "research"))).toBe(false);
+    expect(existsSync(join(skillsDir, "NOTICE-mattpocock.md"))).toBe(false);
+    // A locally modified copy stays on disk but stops being managed.
+    expect(readFileSync(join(skillsDir, "tdd", "SKILL.md"), "utf8")).toBe(edited);
+    expect(result?.changes.join(" ")).toContain("locally modified");
+    expect(lockfile.files[".claude/skills/research/SKILL.md"]).toBeUndefined();
+    expect(lockfile.files[".claude/skills/tdd/SKILL.md"]).toBeUndefined();
+    expect(lockfile.files[".claude/skills/NOTICE-mattpocock.md"]).toBeUndefined();
+    // Idempotent: a second application plans no changes.
+    const planned = planPendingMigrations({ cwd: tmp.root, lockfile: { ...lockfile, migrations: [] } }, MIGRATIONS);
+    expect(planned.find((p) => p.id === "2026-08-workflow-skills-independence")?.changes).toEqual([]);
   });
 });
