@@ -11,16 +11,18 @@ const EXPECTED_FILES = [
   "CLAUDE.md",
   "docs/adr/0000-template.md",
   ".launchrail/CLAUDE.generated.md",
-  // The default implementation loop's materials install with init (ADR-0018).
+  // The implementation loop's materials install with init (ADR-0018/0020).
   ".claude/workflows/ralph.js",
-  // Skills are vendored as managed files, not installed as a plugin (ADR-0019):
-  // Launchrail's own (launch-*) and the Matt Pocock snapshot (bare names), plus
-  // the attribution notice. No .claude/settings.json on the default (ralph) path.
+  // Skills ship as managed files, not a plugin (ADR-0019): Launchrail's own
+  // complete launch-* set (ADR-0020) plus the attribution notice. No
+  // .claude/settings.json is ever written.
   ".claude/skills/launch/SKILL.md",
   ".claude/skills/launch/workflow.md",
   ".claude/skills/launch-implement/SKILL.md",
-  ".claude/skills/research/SKILL.md",
-  ".claude/skills/NOTICE-mattpocock.md",
+  ".claude/skills/launch-research/SKILL.md",
+  ".claude/skills/launch-grill/SKILL.md",
+  ".claude/skills/launch-setup/SKILL.md",
+  ".claude/skills/NOTICE.md",
 ];
 
 let tmp: TmpRepo;
@@ -60,7 +62,6 @@ describe("launchrail init", () => {
     const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(second.code).toBe(0);
     expect(second.actions.every((a) => a.kind === "skip-unchanged")).toBe(true);
-    expect(second.settings.kind).toBe("skip-declared");
     expect(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8")).toBe(lockBefore);
   });
 
@@ -143,11 +144,13 @@ describe("launchrail init", () => {
     expect(lock.decisions.mode).toBe("spike");
   });
 
-  test("defaults the implementation loop to ralph and records it", async () => {
+  test("installs Ralph as the loop with no manifest field selecting it (ADR-0020)", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
-    expect(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8")).toContain("implementationLoop: ralph");
+    const manifest = readFileSync(join(tmp.root, ".launchrail.yml"), "utf8");
+    expect(manifest).not.toContain("implementationLoop");
+    expect(manifest).toContain("ralph: true");
     const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
-    expect(lock.decisions.implementationLoop).toBe("ralph");
+    expect(lock.decisions.implementationLoop).toBeUndefined();
   });
 
   test("defaults a blank repo to the 'new' origin", async () => {

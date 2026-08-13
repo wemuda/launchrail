@@ -38,7 +38,7 @@ How each Launchrail artifact shows up in an existing project, and what to do:
 | Design system | Tokens, theme/Tailwind config, component lib, Storybook, Figma links | Record as the baseline; link from the vision | Note as a stage-2 gap |
 | Architecture decisions (`docs/adr/`) | ADRs beyond the template; or de-facto decisions in code/docs | Note stage 6 as largely satisfied | Note as a gap; capture load-bearing existing decisions as ADRs later |
 | MVP spec (`docs/specs/`) | Spec docs, PRDs, design docs | Note stage 7 as partial/satisfied | Real gap — owned by the spec stage |
-| Tickets | The tracker in `.launchrail.yml` (issues/backlog) | Note stage 9 as partial | Real gap — owned by `to-tickets` |
+| Tickets | The tracker in `.launchrail.yml` (issues/backlog) | Note stage 9 as partial | Real gap — owned by `launch-tickets` |
 | Verification | Test suite, CI config, Playwright | Wire `testing` commands in `.launchrail.yml`; note stage 11 partial | Note as a gap |
 
 ## What this skill does not do

@@ -151,7 +151,7 @@ function planRalph(parsed: Manifest): ModulePlan {
     notes,
     nextSteps: [
       "Create the tracker labels Ralph uses: ready-for-agent, ralph:building, needs-info.",
-      "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (Matt Pocock's to-tickets, stage 9 of the workflow).",
+      "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (launch-tickets, stage 9 of the workflow).",
       "Start building: /launch-implement in Claude Code drives the ready tickets to verified merges (add a ticket number to build just one).",
       "Start with width 1 until a few tickets have landed cleanly, then widen.",
     ],
