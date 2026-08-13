@@ -6,281 +6,85 @@
       "class": "managed",
       "checksum": "bca907ed767a1f5caf9efe4354ae226ad38e63e32696d97b7e97ee64a1deee64"
     },
-    ".claude/skills/code-review/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "8229ca854e11dc8e6aef2131ee03f31fb1561cf905fab9ccc325180cf3331352"
-    },
-    ".claude/skills/code-review/SKILL.md": {
-      "class": "managed",
-      "checksum": "9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442"
-    },
-    ".claude/skills/codebase-design/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f"
-    },
-    ".claude/skills/codebase-design/DEEPENING.md": {
-      "class": "managed",
-      "checksum": "125e6b77413ad2bc7cf7a772bc74336d580a50f9e797db2178ed133d62333d06"
-    },
-    ".claude/skills/codebase-design/DESIGN-IT-TWICE.md": {
-      "class": "managed",
-      "checksum": "09f9948ea7636a4d3704c5ab909762e876c0b39849eefb14d2e03a398cc9c7e7"
-    },
-    ".claude/skills/codebase-design/SKILL.md": {
-      "class": "managed",
-      "checksum": "a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad"
-    },
-    ".claude/skills/diagnosing-bugs/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "3e430dbe4334a87597488c060cb3dc3786bb00c9182877d6f5ec41f62490e90b"
-    },
-    ".claude/skills/diagnosing-bugs/scripts/hitl-loop.template.sh": {
-      "class": "managed",
-      "checksum": "18ae07e1cc49b32c71767e241a6e8de4be74ef21d5e3b7e39034d9c7335f2d80"
-    },
-    ".claude/skills/diagnosing-bugs/SKILL.md": {
-      "class": "managed",
-      "checksum": "b9339b09ee3980808d8c5a35c7251b891b8b1e0036ec4ca37812b976ebddf6b6"
-    },
-    ".claude/skills/domain-modeling/ADR-FORMAT.md": {
-      "class": "managed",
-      "checksum": "f1f36cd3f8d3b6474ddd5855da4e233bfc4ae1a1c5024909ccf11871819a41b2"
-    },
-    ".claude/skills/domain-modeling/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b"
-    },
-    ".claude/skills/domain-modeling/CONTEXT-FORMAT.md": {
-      "class": "managed",
-      "checksum": "b8cc318f2a4285b530e908b6bc43901c3c5cd11100362636bbc4216639bef597"
-    },
-    ".claude/skills/domain-modeling/SKILL.md": {
-      "class": "managed",
-      "checksum": "152e2c97239affb12a60c5f4a7e74ab546a49ae169688c81f4e2ccc42dafa579"
-    },
-    ".claude/skills/grill-me/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "c061e39c3e0f9d865fb1b97556d485704af2a8a58f4b8221a8917a5c2074a32b"
-    },
-    ".claude/skills/grill-me/SKILL.md": {
-      "class": "managed",
-      "checksum": "6189dfceb7304a6e5558f75d87e68fa3bc7fcf7ba120e44f21f8a61fe01eba54"
-    },
-    ".claude/skills/grill-with-docs/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9"
-    },
-    ".claude/skills/grill-with-docs/SKILL.md": {
-      "class": "managed",
-      "checksum": "610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165"
-    },
-    ".claude/skills/grilling/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b"
-    },
-    ".claude/skills/grilling/SKILL.md": {
-      "class": "managed",
-      "checksum": "fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef"
-    },
-    ".claude/skills/handoff/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "5c479fd562c691851690e8b18c8501045bef0943c10743d636b2fae26add1d28"
-    },
-    ".claude/skills/handoff/SKILL.md": {
-      "class": "managed",
-      "checksum": "57c9f1f392d7352cdc85b1e39ca49eddc70ce1dc278bd9653fb4f23dfc2560fc"
-    },
-    ".claude/skills/improve-codebase-architecture/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "c8cb20f68ebf0edb4e497bc11ae5fcaa196004e661cd189015b04f4109ced7f1"
-    },
-    ".claude/skills/improve-codebase-architecture/HTML-REPORT.md": {
-      "class": "managed",
-      "checksum": "0b0936104158abeef7246ff6cbabefa4dc055f17589f2833f2d93001421910a1"
-    },
-    ".claude/skills/improve-codebase-architecture/SKILL.md": {
-      "class": "managed",
-      "checksum": "7b76f01b0eefe49a127754c9027a6235a036a21348df5dad988893d8b2f384d6"
-    },
     ".claude/skills/launch-browser-smoke/SKILL.md": {
       "class": "managed",
       "checksum": "b5ef0f344de5f7af948c7eda4d44a988a8ade1667cd75a424e817f9cc95e3e9e"
     },
+    ".claude/skills/launch-code-review/SKILL.md": {
+      "class": "managed",
+      "checksum": "5e396abeaff70ca8efda44730ababa143c8d85c5ddab3d65e410481625a7ea9f"
+    },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
-      "checksum": "b9a5beab9d2fde714743f1c193cf01be16b945547488b3129024c3520c2c0681"
+      "checksum": "ab15cd625f82d6e339e7514dc963a877f356e58f24fa051026858eafa43ca192"
     },
     ".claude/skills/launch-discovery/SKILL.md": {
       "class": "managed",
-      "checksum": "f50407eb24513dba45fd7aac004cdd302a0564829b2f9cd561ba7e4487854b8d"
+      "checksum": "38e737c46ae3f30905a1ae437bf581b8a35e3334f88ba6e7f3e77e25748ca57c"
+    },
+    ".claude/skills/launch-grill/CONTEXT-FORMAT.md": {
+      "class": "managed",
+      "checksum": "d3e411a85973cf8287ff2075a63478acc45a8357d8efbe388496cc4ed957073c"
+    },
+    ".claude/skills/launch-grill/domain-modeling.md": {
+      "class": "managed",
+      "checksum": "466ee47be8e37a7ec4535b416eada495fbcda45c5fa2ae427f2ad48efcfec2c2"
+    },
+    ".claude/skills/launch-grill/SKILL.md": {
+      "class": "managed",
+      "checksum": "5b27018b59e688d65e06f42e893e659befe37b2f2a3308b1cd556123bbf98511"
     },
     ".claude/skills/launch-implement/SKILL.md": {
       "class": "managed",
-      "checksum": "4a1e177068c449de7d68e9197491496230a6c875c92aad48d8814ed01cd7c960"
+      "checksum": "a5a159276adb196300f7c92538a00641744bcf67ff9652e7a05f38f54937bf47"
     },
     ".claude/skills/launch-project-alignment/SKILL.md": {
       "class": "managed",
-      "checksum": "4bab0033b1fae02b80a708962643361996c89d328417b6511e2a7d87af42d1fc"
+      "checksum": "1691b9feca1c3a6ba35ee19d2f9672dcf8680fb181ee9208d378bc6bd183d4a3"
     },
     ".claude/skills/launch-ralph-implement/SKILL.md": {
       "class": "managed",
-      "checksum": "84a12a39c0a2fb36b12b0218c441df7eb6991cd777be60d72c18581ad56041d7"
+      "checksum": "dd7088ed4a19fbe9d5fe5a3c49f54b2da382989b66582f2822a39d0a512c7033"
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
-      "checksum": "975389d1e39e6a46904f102c86f14bf053adc290b34a8591e0f43e058ee2beaf"
+      "checksum": "2e90c42ce8ec115479d327bb1fd57065c00b6ae5dcba8437e2841d3f647e322d"
+    },
+    ".claude/skills/launch-research/SKILL.md": {
+      "class": "managed",
+      "checksum": "d31ae1922720e1f7f3c02dc2058fcc3567d95e5b905eda537730e2ae784584ae"
     },
     ".claude/skills/launch-resolving-merge-conflicts/SKILL.md": {
       "class": "managed",
       "checksum": "f971454930558eeb12c3976eac736bfb2f1d78cdf59e9667a58dbcde3c454477"
     },
+    ".claude/skills/launch-spec/SKILL.md": {
+      "class": "managed",
+      "checksum": "11ed52c48d1b32e55b1fdd7f8f8356b0175f7e6714929d4689b04ce4d55db10c"
+    },
+    ".claude/skills/launch-tickets/SKILL.md": {
+      "class": "managed",
+      "checksum": "6a7ec4f7bd4630fc0e17bebe8df04453fefd03f5d8c8be35ee6a85b9690e7978"
+    },
     ".claude/skills/launch-vision-creation/SKILL.md": {
       "class": "managed",
-      "checksum": "ed555ce3f6f53e20672747002378a72ebe986f4010df97d66a63cc3476c4aef2"
+      "checksum": "2ac7ded9289c4e6b997dd9e79ffcee007105a82b39d87d4dec431ccbf2414035"
+    },
+    ".claude/skills/launch-wayfinder/SKILL.md": {
+      "class": "managed",
+      "checksum": "77d74a4ec735ff9418afc6daf82dbb2b92fe21af4bba7d808df1ce84d9b60ebf"
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "608ef8baba062657aea7cc8f7dc6da823bad84fb3813ae4662f55d761d566c37"
+      "checksum": "9becec102c605caaaca14b8498a4556d78bd863fd322703f6ce0d330d11d0325"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "0f3fb700f006b75b8702dba2c0497d577a93650ae4be09952ac1ca755fb76d84"
+      "checksum": "07cc1fd390971bab8de4f1771c01f21830412a3bd935ca87cac5eb7b420856ed"
     },
-    ".claude/skills/NOTICE-mattpocock.md": {
+    ".claude/skills/NOTICE.md": {
       "class": "managed",
-      "checksum": "ece3798a467d8b6a307469397ce0cda158836cd33214ffca4da2976a018c9bb4"
-    },
-    ".claude/skills/prototype/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "5af65e43ab41a350436697b81e27b7f848d36782043b73c322bb2c9fa9cc55dc"
-    },
-    ".claude/skills/prototype/LOGIC.md": {
-      "class": "managed",
-      "checksum": "5aef84c2ef514dd2a7268433abd3ee8e47b35f42b60e0b5f7430ec4937f4f06a"
-    },
-    ".claude/skills/prototype/SKILL.md": {
-      "class": "managed",
-      "checksum": "2579ecf89a7fb7e73345117405c7ba9b9fb5ab22a78ecb08b0ce68b73f0148c2"
-    },
-    ".claude/skills/prototype/UI.md": {
-      "class": "managed",
-      "checksum": "e2ca04434be54acdee2f5df582ef8038fadf582bbcc99be0d2e27737ff8ed096"
-    },
-    ".claude/skills/research/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "9b4c470d63221c1f68f22df70b83e2f12401b317babe0d1b7b5f24a974474d0d"
-    },
-    ".claude/skills/research/SKILL.md": {
-      "class": "managed",
-      "checksum": "af378829f015775a3bcd65ff466826722e99359017ae6bae227ca4c9bd14049c"
-    },
-    ".claude/skills/setup-matt-pocock-skills/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "9527de0110541c45712319025155aeab8dc7d77c6ed6e5e83271bab1851ab939"
-    },
-    ".claude/skills/setup-matt-pocock-skills/domain.md": {
-      "class": "managed",
-      "checksum": "25be404b58798b3cb2d51c93dba2ab052fc3a425632185726ac3f5fcff193b99"
-    },
-    ".claude/skills/setup-matt-pocock-skills/issue-tracker-github.md": {
-      "class": "managed",
-      "checksum": "ec8332bb69e7e79e349989e940be481a0c79b552be3acc613e718278bcc5e03d"
-    },
-    ".claude/skills/setup-matt-pocock-skills/issue-tracker-gitlab.md": {
-      "class": "managed",
-      "checksum": "16ea4a727803876cbc763e1f6b00992b3b393ba5e0cd394382dccc0f8d83c564"
-    },
-    ".claude/skills/setup-matt-pocock-skills/issue-tracker-local.md": {
-      "class": "managed",
-      "checksum": "6f38f66f9ffce2fdc26c43608d06b527f60e45c6f43003d0ea77d4e2641c9de3"
-    },
-    ".claude/skills/setup-matt-pocock-skills/SKILL.md": {
-      "class": "managed",
-      "checksum": "310fb1a73c0467e617e17d7c41d4a2278b5405c4a27f36d7cd22bb4599aee6bb"
-    },
-    ".claude/skills/setup-matt-pocock-skills/triage-labels.md": {
-      "class": "managed",
-      "checksum": "4f53c9b40ce2651e3611aa090eaedbd6dbc9b71ef8c5f7e65eac0d8263190d0d"
-    },
-    ".claude/skills/tdd/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "ea6f01cf1b8c06a4b0f5b649d74b1b8ce8685e72af1b38d70d877693e092af0b"
-    },
-    ".claude/skills/tdd/mocking.md": {
-      "class": "managed",
-      "checksum": "3ceb807fdf4a47d6a93d4d9a891e5ba6d362a6247bd08adc451feebfc17361ef"
-    },
-    ".claude/skills/tdd/SKILL.md": {
-      "class": "managed",
-      "checksum": "5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08"
-    },
-    ".claude/skills/tdd/tests.md": {
-      "class": "managed",
-      "checksum": "859f9e592c188fda4fc7277dd180e4ce9c7a2e13f6efe1f6f29eccc9d28c106a"
-    },
-    ".claude/skills/teach/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "5856f3ae8aec742f1499c640aecdd5f1d6af5fa210a7c6ec794de8263a6f733f"
-    },
-    ".claude/skills/teach/GLOSSARY-FORMAT.md": {
-      "class": "managed",
-      "checksum": "d177def491519d97873291f2e860d8f1d60ead78feecb82eee022177958069c6"
-    },
-    ".claude/skills/teach/LEARNING-RECORD-FORMAT.md": {
-      "class": "managed",
-      "checksum": "855f81017625256584bbf62bd5edb9b0c86605c4cc1139c56acc36b802595d17"
-    },
-    ".claude/skills/teach/MISSION-FORMAT.md": {
-      "class": "managed",
-      "checksum": "8da6d3ac84eb2eb19f17c260b6acf01c560d3ac7a4501c415eea0e985602f4d7"
-    },
-    ".claude/skills/teach/RESOURCES-FORMAT.md": {
-      "class": "managed",
-      "checksum": "2bc634a64b0d0daa10904f9222e7aa0d361420dfacabbf092fbe3a72222edc08"
-    },
-    ".claude/skills/teach/SKILL.md": {
-      "class": "managed",
-      "checksum": "6d2dbe5e03084cf26fef66b535127b36cd1bcbe9478e26b0626029cd51dc2259"
-    },
-    ".claude/skills/to-spec/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "1c5b4d1e3d8e52287ef19cc2742fdbbfae1914ac75d33af3e4c8174f08cc55bb"
-    },
-    ".claude/skills/to-spec/SKILL.md": {
-      "class": "managed",
-      "checksum": "5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811"
-    },
-    ".claude/skills/to-tickets/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "21bc6215fffcd7614e9f772bb1760e87cc5fc7dcc707e7d282bc9414267a6090"
-    },
-    ".claude/skills/to-tickets/SKILL.md": {
-      "class": "managed",
-      "checksum": "5ecdf1d4df8a360ed39df21a2347f97ba177afd449a577da4f6b6ea8e1ebb808"
-    },
-    ".claude/skills/triage/AGENT-BRIEF.md": {
-      "class": "managed",
-      "checksum": "5b78d347cc53f6bcf7b875106005ccf5315055fa4cf75eb28d41e96ee426d27b"
-    },
-    ".claude/skills/triage/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "2e683717720cf456d165d0bb1a68bb600d0b6a8ccb61841c172e50d26f95351c"
-    },
-    ".claude/skills/triage/OUT-OF-SCOPE.md": {
-      "class": "managed",
-      "checksum": "2526f998fd7ca5e956d3f6f234bcc2431a5971ee769f1148ddc60b92f04d5914"
-    },
-    ".claude/skills/triage/SKILL.md": {
-      "class": "managed",
-      "checksum": "91e2817ecb688c4df4e2444eab472d1d79d2a0a57abf9f6726967664c460ff2e"
-    },
-    ".claude/skills/wayfinder/agents/openai.yaml": {
-      "class": "managed",
-      "checksum": "88bc81a11a6d52ac67aeaa76b8b619e387020d47c5133a4dd4927fd15c4ad073"
-    },
-    ".claude/skills/wayfinder/SKILL.md": {
-      "class": "managed",
-      "checksum": "d33e2141f7c8bbfd137fef0213cbec465820e4680e67da5d0f0815d6742d26c2"
+      "checksum": "9df8e9a84bb30324452add60ca331c7dbe5ca68dd2c9046f0db26c8a59cb5b0d"
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
@@ -288,11 +92,11 @@
     },
     ".launchrail.yml": {
       "class": "seeded",
-      "checksum": "c232f03a67ea91c4b16bf56f648e51c6a22a00c9d1f71d7def6431ea46164c4d"
+      "checksum": "855830fd42519257a47d5a400d6120abe69b15571af7c91c1eeb40ec18e8ac41"
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "75a58b0f9070bf3e4b189a98c59bb2b1aa810c1b95f23d0aa79959281060cdd2"
+      "checksum": "4bc334701d8982513fb9302a23b869cd0b93e1a8470c598b364e630ff8510694"
     },
     "AGENTS.md": {
       "class": "seeded",
@@ -305,18 +109,28 @@
     "docs/adr/0000-template.md": {
       "class": "seeded",
       "checksum": "f28c0b63aefcba78b2e5db5d50b4b950031cba904eab6ebe4f51d633d09f2f1f"
+    },
+    "docs/agents/domain.md": {
+      "class": "seeded",
+      "checksum": "2c93118d2bd715e3f1cc2f81cae3a0fbfd9618dd3b4b16bd16675722d2099723"
+    },
+    "docs/agents/issue-tracker.md": {
+      "class": "seeded",
+      "checksum": "1123b65c6e8aa8de1c8edd3af2e46412cdd352e9e194722de287ba5e11d5bcdb"
     }
   },
   "migrations": [
     "2026-08-plugin-declaration",
     "2026-08-upstream-plugin-declarations",
-    "2026-08-wire-default-implementation-loop",
     "2026-08-vendor-workflow-skills",
+    "2026-08-wire-default-implementation-loop",
+    "2026-08-workflow-skills-independence",
     "2026-08-ralph-permission-guard"
   ],
   "decisions": {
     "mode": "standard-mvp",
-    "issueTracker": "none",
+    "origin": "existing",
+    "issueTracker": "github",
     "conventionalCommits": true,
     "unitCommand": "npm test"
   }

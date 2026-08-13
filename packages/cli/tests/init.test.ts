@@ -11,20 +11,25 @@ const EXPECTED_FILES = [
   "CLAUDE.md",
   "docs/adr/0000-template.md",
   ".launchrail/CLAUDE.generated.md",
-  // The default implementation loop's materials install with init (ADR-0018):
-  // the workflow, its unattended-launch guard hook, and the guard's registration
-  // in .claude/settings.json (ADR-0020).
+  // The implementation loop's materials install with init (ADR-0018/0020): the
+  // workflow, its unattended-launch guard hook, and the guard's registration in
+  // .claude/settings.json (ADR-0021).
   ".claude/workflows/ralph.js",
   ".claude/hooks/ralph-permission-guard.py",
   ".claude/settings.json",
-  // Skills are vendored as managed files, not installed as a plugin (ADR-0019):
-  // Launchrail's own (launch-*) and the Matt Pocock snapshot (bare names), plus
-  // the attribution notice.
+  // Skills ship as managed files, not a plugin (ADR-0019): Launchrail's own
+  // complete launch-* set (ADR-0020) plus the attribution notice.
   ".claude/skills/launch/SKILL.md",
   ".claude/skills/launch/workflow.md",
   ".claude/skills/launch-implement/SKILL.md",
-  ".claude/skills/research/SKILL.md",
-  ".claude/skills/NOTICE-mattpocock.md",
+  ".claude/skills/launch-research/SKILL.md",
+  ".claude/skills/launch-grill/SKILL.md",
+  ".claude/skills/launch-grill/domain-modeling.md",
+  ".claude/skills/NOTICE.md",
+  // Workflow configuration seeds from the manifest (ADR-0020) — no setup skill.
+  // A repo without a remote defaults to issueTracker: none, so only the domain
+  // doc seeds here; the tracker doc is covered by its own tests below.
+  "docs/agents/domain.md",
 ];
 
 let tmp: TmpRepo;
@@ -64,7 +69,6 @@ describe("launchrail init", () => {
     const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(second.code).toBe(0);
     expect(second.actions.every((a) => a.kind === "skip-unchanged")).toBe(true);
-    expect(second.settings.kind).toBe("skip-declared");
     expect(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8")).toBe(lockBefore);
   });
 
@@ -147,11 +151,39 @@ describe("launchrail init", () => {
     expect(lock.decisions.mode).toBe("spike");
   });
 
-  test("defaults the implementation loop to ralph and records it", async () => {
+  test("installs Ralph as the loop with no manifest field selecting it (ADR-0020)", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
-    expect(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8")).toContain("implementationLoop: ralph");
+    const manifest = readFileSync(join(tmp.root, ".launchrail.yml"), "utf8");
+    expect(manifest).not.toContain("implementationLoop");
+    expect(manifest).toContain("ralph: true");
     const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
-    expect(lock.decisions.implementationLoop).toBe("ralph");
+    expect(lock.decisions.implementationLoop).toBeUndefined();
+  });
+
+  test("seeds the tracker doc matching the manifest's issueTracker", async () => {
+    writeFileSync(
+      join(tmp.root, ".launchrail.yml"),
+      "schemaVersion: 1\nmode: standard-mvp\nissueTracker: github\n",
+    );
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    const doc = readFileSync(join(tmp.root, "docs/agents/issue-tracker.md"), "utf8");
+    expect(doc).toContain("gh issue create");
+    expect(doc).toContain("ready-for-agent");
+    const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
+    expect(lock.files["docs/agents/issue-tracker.md"]).toMatchObject({ class: "seeded" });
+    expect(lock.files["docs/agents/domain.md"]).toMatchObject({ class: "seeded" });
+  });
+
+  test("seeds no tracker doc when issueTracker is none, and never overwrites an edited one", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    // No remote → issueTracker: none → no tracker doc.
+    expect(existsSync(join(tmp.root, "docs/agents/issue-tracker.md"))).toBe(false);
+    // The domain doc is seeded — and, once edited, stays the project's.
+    const domainPath = join(tmp.root, "docs/agents/domain.md");
+    writeFileSync(domainPath, "# my own domain rules\n");
+    const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(second.code).toBe(0);
+    expect(readFileSync(domainPath, "utf8")).toBe("# my own domain rules\n");
   });
 
   test("defaults a blank repo to the 'new' origin", async () => {

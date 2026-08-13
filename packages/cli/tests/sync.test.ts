@@ -86,7 +86,7 @@ describe("launchrail sync", () => {
     expect(existsSync(join(tmp.root, "docs/adr/0000-template.md"))).toBe(true);
   });
 
-  test("brings a pre-guard ralph project current: restores the hook file and registers it (ADR-0020)", () => {
+  test("brings a pre-guard ralph project current: restores the hook file and registers it (ADR-0021)", () => {
     // Rewind to a project initialized before the guard shipped: drop the hook
     // file and its lockfile entry, the settings registration, and the migration record.
     rmSync(join(tmp.root, RALPH_GUARD_HOOK_PATH));
@@ -181,27 +181,49 @@ describe("launchrail sync", () => {
     expect(second.actions.every((a) => a.kind === "skip-unchanged")).toBe(true);
   });
 
-  test("leaves a superpowers project alone: the wire migration is already satisfied", () => {
+  test("converges a pre-ADR-0020 superpowers project on Ralph: manifest field dropped, declaration removed, materials installed", () => {
+    // Rewind to a project that had selected the retired superpowers loop:
+    // the manifest carries the field, no ralph module or workflow file, and
+    // settings.json declares the plugin Launchrail installed back then.
     const manifestPath = join(tmp.root, ".launchrail.yml");
     writeFileSync(
       manifestPath,
-      readFileSync(manifestPath, "utf8")
-        .replace("implementationLoop: ralph", "implementationLoop: superpowers")
-        .replace(/^\s*ralph: true\n/m, ""),
+      readFileSync(manifestPath, "utf8").replace(/^\s*ralph: true\n/m, "") + "implementationLoop: superpowers\n",
       "utf8",
     );
     rmSync(join(tmp.root, RALPH_WORKFLOW_PATH));
+    writeFileSync(
+      join(tmp.root, ".claude", "settings.json"),
+      JSON.stringify(
+        {
+          extraKnownMarketplaces: { "superpowers-dev": { source: { source: "github", repo: "obra/superpowers" } } },
+          enabledPlugins: { "superpowers@superpowers-dev": true },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
     editLockfile(tmp.root, (lock) => {
       delete lock.files[RALPH_WORKFLOW_PATH];
-      lock.migrations = lock.migrations.filter((id) => id !== "2026-08-wire-default-implementation-loop");
+      lock.migrations = lock.migrations.filter(
+        (id) => id !== "2026-08-wire-default-implementation-loop" && id !== "2026-08-workflow-skills-independence",
+      );
     });
 
     const outcome = runSync({ cwd: tmp.root, dryRun: false });
     expect(outcome.code).toBe(0);
-    const result = outcome.migrations.find((m) => m.id === "2026-08-wire-default-implementation-loop");
-    expect(result?.status).toBe("already-satisfied");
-    expect(existsSync(join(tmp.root, RALPH_WORKFLOW_PATH))).toBe(false);
-    expect(readFileSync(manifestPath, "utf8")).not.toContain("ralph: true");
+    expect(outcome.migrations.find((m) => m.id === "2026-08-wire-default-implementation-loop")?.status).toBe(
+      "applied",
+    );
+    expect(outcome.migrations.find((m) => m.id === "2026-08-workflow-skills-independence")?.status).toBe("applied");
+    const manifest = readFileSync(manifestPath, "utf8");
+    expect(manifest).not.toContain("implementationLoop");
+    expect(manifest).toContain("ralph: true");
+    expect(existsSync(join(tmp.root, RALPH_WORKFLOW_PATH))).toBe(true);
+    // The declaration Launchrail added for the retired loop is gone.
+    const settings = JSON.parse(readFileSync(join(tmp.root, ".claude", "settings.json"), "utf8"));
+    expect(settings.extraKnownMarketplaces).toBeUndefined();
+    expect(settings.enabledPlugins).toBeUndefined();
   });
 
   test("a failing migration stops the run before files regenerate and stays recoverable", () => {

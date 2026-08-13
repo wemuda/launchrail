@@ -27,7 +27,7 @@ export function ralphGuardHookContent(): string {
  *
  * - the workflow script (`.claude/workflows/ralph.js`), read by the Workflow tool;
  * - the unattended-launch guard hook, which warns when the loop is launched in an
- *   interactive permission mode (ADR-0020). The hook file rides here; its
+ *   interactive permission mode (ADR-0021). The hook file rides here; its
  *   registration in the project-owned `.claude/settings.json` is an additive merge
  *   handled separately (see `planRalphGuardHook`), exactly like the plugin
  *   declaration, because that file is shared and never lockfile-tracked.

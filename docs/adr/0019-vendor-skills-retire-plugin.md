@@ -1,7 +1,7 @@
 # ADR-0019: Vendor workflow skills as managed files; retire the marketplace plugin
 
 ## Status
-Accepted — supersedes [ADR-0003](0003-plugin-subscription-via-project-settings.md) (plugin subscription via project settings) and [ADR-0011](0011-init-installs-plugin-via-claude-cli.md) (init installs plugins via the `claude` CLI); amends [ADR-0018](0018-implement-front-door.md) (the front-door command spelling under vendoring)
+Accepted — supersedes [ADR-0003](0003-plugin-subscription-via-project-settings.md) (plugin subscription via project settings) and [ADR-0011](0011-init-installs-plugin-via-claude-cli.md) (init installs plugins via the `claude` CLI); amends [ADR-0018](0018-implement-front-door.md) (the front-door command spelling under vendoring). Partially superseded by [ADR-0020](0020-independent-skill-set.md): skills still ship as managed files in the consuming repo, but the pinned Matt Pocock snapshot is retired — the workflow-critical upstream skills are absorbed as Launchrail's own `launch-*` skills and the rest are dropped.
 
 ## Context
 Launchrail distributed its workflow skills as a Claude Code plugin: a committed `.claude/settings.json` declaration (ADR-0003) plus a direct `claude plugin install` from `init` (ADR-0011). A cloud dogfood run — Launchrail on an adopted project (fixback) opened in Claude Code on the web — showed that this distribution model cannot reach the environments the workflow increasingly runs in.

@@ -30,7 +30,7 @@ Inserting a numbered stage renumbers the rail from the grill onward: grill 3→4
 - One more foundation stage (skippable in `spike`), and a rail renumber that ripples through the contract (`docs/workflow.md`), the conductor (`launch`), and the operational skills that route by stage number (`project-alignment`, `start-feature`).
 - Prior ADRs (0009, 0013) reference the pre-insertion stage numbers and are left as historical records — the canonical map is `docs/workflow.md` plus the `launch` stage map.
 - Three stages now write to `docs/research/` (discovery, grill, technical research); discovery uses a `discovery-*.md` filename convention so its artifact stays distinguishable for frontier detection.
-- The `assets/how-launchrail-works.png` diagram is now stale (missing Discovery research) and needs regenerating.
+- The `assets/how-launchrail-works.png` diagram was regenerated to include Discovery research as a distinct foundation stage.
 
 ## Revisit when
 Discovery consistently surfaces nothing the grill couldn't have found on its own — the divergence isn't earning its stage — or the option-space scan proves better fused into the grill than run before it.

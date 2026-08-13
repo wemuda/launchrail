@@ -25,7 +25,7 @@ function addRalph(overrides: Partial<Parameters<typeof runAdd>[0]> = {}) {
  * Rewind to a pre-ADR-0018 project: init used to leave the ralph module off and
  * its materials uninstalled — the population `add ralph` now serves. Also removes
  * the guard hook, its lockfile entry, and the settings.json registration so tests
- * observe `add ralph` creating them from scratch (ADR-0020).
+ * observe `add ralph` creating them from scratch (ADR-0021).
  */
 function stripRalph(): void {
   const manifestPath = join(tmp.root, ".launchrail.yml");

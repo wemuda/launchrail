@@ -165,7 +165,7 @@ function planRalph(parsed: Manifest): ModulePlan {
     notes,
     nextSteps: [
       "Create the tracker labels Ralph uses: ready-for-agent, ralph:building, needs-info.",
-      "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (Matt Pocock's to-tickets, stage 9 of the workflow).",
+      "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (launch-tickets, stage 9 of the workflow).",
       "Start building: /launch-implement in Claude Code drives the ready tickets to verified merges (add a ticket number to build just one).",
       "For an unattended run, launch in a non-prompting permission mode (bypass/autonomous) — a guard hook warns if you start Ralph in an interactive mode, since one benign prompt can stall a walk-away run.",
       "Start with width 1 until a few tickets have landed cleanly, then widen.",
@@ -221,7 +221,7 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
   ];
   const actions = planWrites(opts.cwd, specs, lockfile);
   // Ralph's guard hook file rides `actions`; its registration in the shared,
-  // project-owned settings.json is an additive merge planned separately (ADR-0020).
+  // project-owned settings.json is an additive merge planned separately (ADR-0021).
   const hookPlan = opts.module === RALPH_MODULE ? planRalphGuardHook(opts.cwd) : null;
 
   console.log("");

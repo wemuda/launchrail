@@ -3,14 +3,14 @@ import { dirname, join } from "node:path";
 import { RALPH_GUARD_HOOK_PATH } from "./ralph.js";
 
 /**
- * Consuming projects subscribe to the workflow's Claude Code plugins through a
- * committed, project-scoped declaration in .claude/settings.json (ADR-0003,
- * extended to the full roster by ADR-0011) — that is what offers teammates the
- * same skills on their first folder trust. The file is project-owned and
- * shared with unrelated Claude Code configuration, so it is never tracked in
- * the lockfile and never replaced: init only performs an additive merge of
- * the declaration keys below, and an explicit opt-out (a pluginKey set to
- * `false`) is respected.
+ * Consuming projects used to subscribe to workflow Claude Code plugins through
+ * a committed, project-scoped declaration in .claude/settings.json (ADR-0003,
+ * extended by ADR-0011, retired by ADR-0019/0020 — skills ship as files now).
+ * This module remains to plan additive merges and, mostly, their inverse: the
+ * migrations that strip the retired declarations from consumers. The file is
+ * project-owned and shared with unrelated Claude Code configuration, so it is
+ * never tracked in the lockfile and never replaced — only the named keys are
+ * ever added or removed.
  */
 export const CLAUDE_SETTINGS_PATH = join(".claude", "settings.json");
 
@@ -26,19 +26,16 @@ export interface PluginDeclaration {
 }
 
 /**
- * The core workflow plugin roster is empty: Launchrail's own skills and the Matt
- * Pocock snapshot are vendored as managed files, not installed as plugins
- * (ADR-0019). A selected implementation loop may still declare its own external
- * plugin (superpowers) — that flows through `implementationLoopDeclarations`, not
- * this list. Kept as an (empty) array so the declaration machinery still serves
- * those provider plugins.
+ * The workflow plugin roster is empty: the skills are Launchrail's own and ship
+ * as managed files (ADR-0019/0020), never as plugins. Kept as an (empty) array
+ * because the legacy declaration migrations plan through it.
  */
 export const PLUGIN_DECLARATIONS: PluginDeclaration[] = [];
 
 /**
- * The declarations Launchrail wrote before it vendored skills (ADR-0003/0011).
- * The vendor migration strips these from a consumer's settings.json; they live
- * here only so it knows what to remove.
+ * The declarations Launchrail wrote before it shipped skills as files
+ * (ADR-0003/0011). The vendor migration strips these from a consumer's
+ * settings.json; they live here only so it knows what to remove.
  */
 export const RETIRED_PLUGIN_DECLARATIONS: PluginDeclaration[] = [
   { marketplace: "launchrail", repo: "wemuda/launchrail", pluginKey: "launchrail@launchrail", label: "Launchrail" },
@@ -49,6 +46,20 @@ export const RETIRED_PLUGIN_DECLARATIONS: PluginDeclaration[] = [
     label: "Matt Pocock's skills",
   },
 ];
+
+/**
+ * The declaration Launchrail added when a project selected the retired
+ * `superpowers` implementation loop (ADR-0017, removed by ADR-0020). The
+ * independence migration removes it — only from projects whose manifest had
+ * selected that loop, so a declaration the user added for their own reasons
+ * is never touched.
+ */
+export const RETIRED_SUPERPOWERS_DECLARATION: PluginDeclaration = {
+  marketplace: "superpowers-dev",
+  repo: "obra/superpowers",
+  pluginKey: "superpowers@superpowers-dev",
+  label: "Superpowers",
+};
 
 export type DeclarationState = "declared" | "no-file" | "invalid-json" | "undeclared";
 
@@ -219,7 +230,7 @@ export function applyRemovePluginDeclaration(root: string, plan: SettingsRemoval
 }
 
 /**
- * The Ralph unattended-launch guard (ADR-0020). The hook *file* is a managed
+ * The Ralph unattended-launch guard (ADR-0021). The hook *file* is a managed
  * Ralph asset (see `ralphFiles`); this is its registration in the project-owned,
  * shared `.claude/settings.json` — an additive `PreToolUse(Workflow)` entry that
  * runs the guard. Like the plugin declaration, the file is never lockfile-tracked
