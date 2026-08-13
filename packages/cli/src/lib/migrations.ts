@@ -3,9 +3,11 @@ import { dirname, join } from "node:path";
 import { sha256 } from "./checksum.js";
 import {
   applyPluginDeclaration,
+  applyRalphGuardHook,
   applyRemovePluginDeclaration,
   CLAUDE_SETTINGS_PATH,
   planPluginDeclaration,
+  planRalphGuardHook,
   planRemovePluginDeclaration,
   RETIRED_SUPERPOWERS_DECLARATION,
 } from "./claudeSettings.js";
@@ -50,6 +52,37 @@ export const MIGRATIONS: Migration[] = [
         changes: [`${CLAUDE_SETTINGS_PATH} — ${settings.detail}`],
         apply: () => {
           applyPluginDeclaration(ctx.cwd, settings);
+        },
+      };
+    },
+  },
+  {
+    // Newest migration, but order-independent, so it sits at its lexicographic
+    // position to keep the registry date-ordered rather than at the end.
+    id: "2026-08-ralph-permission-guard",
+    description: `register Ralph's unattended-launch guard hook in ${CLAUDE_SETTINGS_PATH} (ADR-0021)`,
+    plan(ctx) {
+      // The guard hook *file* flows through the regular managed-file surface
+      // (sync regenerates ralphFiles() after migrations run); this migration only
+      // performs the structural change the writer can't express — the additive
+      // PreToolUse(Workflow) registration in the shared, project-owned
+      // settings.json. Post-ADR-0020 Ralph is the implementation loop, so every
+      // valid manifest is a Ralph project (mirroring the wire-default-loop
+      // migration below). This runs before that migration in id order, but the
+      // hook file it registers still lands in the same sync — whether wire or the
+      // managed-file pass writes it.
+      const none = { changes: [], apply: () => {} };
+      const manifestPath = join(ctx.cwd, MANIFEST_FILENAME);
+      if (!existsSync(manifestPath)) return none;
+      const parsed = parseManifest(readFileSync(manifestPath, "utf8"));
+      if (!parsed.manifest) return none;
+
+      const hook = planRalphGuardHook(ctx.cwd);
+      if (hook.content === null) return none;
+      return {
+        changes: [`${CLAUDE_SETTINGS_PATH} — ${hook.detail}`],
+        apply: () => {
+          applyRalphGuardHook(ctx.cwd, hook);
         },
       };
     },

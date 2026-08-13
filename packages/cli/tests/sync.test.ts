@@ -5,7 +5,8 @@ import { runAdd } from "../src/commands/add.js";
 import { runInit } from "../src/commands/init.js";
 import { runSync } from "../src/commands/sync.js";
 import { sha256 } from "../src/lib/checksum.js";
-import { RALPH_WORKFLOW_PATH } from "../src/lib/ralph.js";
+import { CLAUDE_SETTINGS_PATH, ralphGuardHookState } from "../src/lib/claudeSettings.js";
+import { RALPH_GUARD_HOOK_PATH, RALPH_WORKFLOW_PATH } from "../src/lib/ralph.js";
 import type { Lockfile } from "../src/lib/lockfile.js";
 import type { Migration } from "../src/lib/migrations.js";
 import { editLockfile, makeTmpRepo, type TmpRepo } from "./helpers.js";
@@ -83,6 +84,26 @@ describe("launchrail sync", () => {
     const outcome = runSync({ cwd: tmp.root, dryRun: false });
     expect(outcome.actions.find((a) => a.spec.relPath === "docs/adr/0000-template.md")?.kind).toBe("create");
     expect(existsSync(join(tmp.root, "docs/adr/0000-template.md"))).toBe(true);
+  });
+
+  test("brings a pre-guard ralph project current: restores the hook file and registers it (ADR-0021)", () => {
+    // Rewind to a project initialized before the guard shipped: drop the hook
+    // file and its lockfile entry, the settings registration, and the migration record.
+    rmSync(join(tmp.root, RALPH_GUARD_HOOK_PATH));
+    rmSync(join(tmp.root, CLAUDE_SETTINGS_PATH), { force: true });
+    editLockfile(tmp.root, (lock) => {
+      delete lock.files[RALPH_GUARD_HOOK_PATH];
+      lock.migrations = lock.migrations.filter((id) => id !== "2026-08-ralph-permission-guard");
+    });
+
+    const outcome = runSync({ cwd: tmp.root, dryRun: false });
+    expect(outcome.code).toBe(0);
+    // The migration performs the structural change (the settings.json registration)…
+    expect(outcome.migrations.find((m) => m.id === "2026-08-ralph-permission-guard")?.status).toBe("applied");
+    expect(ralphGuardHookState(tmp.root)).toBe("registered");
+    // …and the managed-file pass restores the hook file itself, checksum-tracked again.
+    expect(existsSync(join(tmp.root, RALPH_GUARD_HOOK_PATH))).toBe(true);
+    expect(readLock().files[RALPH_GUARD_HOOK_PATH]?.class).toBe("managed");
   });
 
   test("dry run previews without writing", () => {

@@ -116,6 +116,46 @@ describe("migration engine", () => {
     expect(planned.find((p) => p.id === "2026-08-vendor-workflow-skills")?.changes).toEqual([]);
   });
 
+  const RALPH_MANIFEST = [
+    "schemaVersion: 1",
+    "mode: standard-mvp",
+    "issueTracker: github",
+    "conventions:",
+    "  conventionalCommits: true",
+    "testing:",
+    "  unitCommand: npm test",
+    "  devCommand: null",
+    "  e2eCommand: null",
+    "  smokeCommand: null",
+    "  appUrl: null",
+    "modules:",
+    "  core: true",
+    "  ralph: true",
+    "",
+  ].join("\n");
+
+  test("2026-08-ralph-permission-guard registers the guard hook for a ralph project and is idempotent", () => {
+    writeFileSync(join(tmp.root, ".launchrail.yml"), RALPH_MANIFEST);
+    const ctx = { cwd: tmp.root, lockfile };
+    const results = applyPendingMigrations(ctx, MIGRATIONS);
+    expect(results.find((r) => r.id === "2026-08-ralph-permission-guard")?.status).toBe("applied");
+    const settings = JSON.parse(readFileSync(join(tmp.root, ".claude", "settings.json"), "utf8"));
+    expect(settings.hooks.PreToolUse[0].matcher).toBe("Workflow");
+    expect(settings.hooks.PreToolUse[0].hooks[0].command).toContain("ralph-permission-guard.py");
+    // Idempotent: the registration is detected, so a fresh lockfile plans no changes.
+    const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
+    expect(planned.find((p) => p.id === "2026-08-ralph-permission-guard")?.changes).toEqual([]);
+  });
+
+  test("2026-08-ralph-permission-guard is a no-op without a manifest (nothing to guard)", () => {
+    // Post-ADR-0020 Ralph is the implementation loop, so every *valid* manifest is
+    // a Ralph project; the only no-op is the absence of a manifest to read.
+    const ctx = { cwd: tmp.root, lockfile };
+    const results = applyPendingMigrations(ctx, MIGRATIONS);
+    expect(results.find((r) => r.id === "2026-08-ralph-permission-guard")?.status).toBe("already-satisfied");
+    expect(existsSync(join(tmp.root, ".claude", "settings.json"))).toBe(false);
+  });
+
   test("2026-08-workflow-skills-independence retires vendored skill files, keeping local edits", () => {
     // A pre-ADR-0020 project with the vendored snapshot on disk: one pristine
     // skill, one locally edited, plus the old attribution notice.

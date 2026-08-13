@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "launchrailVersion": "1.7.0",
   "files": {
+    ".claude/hooks/ralph-permission-guard.py": {
+      "class": "managed",
+      "checksum": "bca907ed767a1f5caf9efe4354ae226ad38e63e32696d97b7e97ee64a1deee64"
+    },
     ".claude/skills/launch-browser-smoke/SKILL.md": {
       "class": "managed",
       "checksum": "b5ef0f344de5f7af948c7eda4d44a988a8ade1667cd75a424e817f9cc95e3e9e"
@@ -44,7 +48,7 @@
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
-      "checksum": "8168c28d3556969e1d3f011902623f9e2e7aed0204a2e71c9871bee72a3b6234"
+      "checksum": "2e90c42ce8ec115479d327bb1fd57065c00b6ae5dcba8437e2841d3f647e322d"
     },
     ".claude/skills/launch-research/SKILL.md": {
       "class": "managed",
@@ -92,7 +96,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "e83064a4a6de4aae9acbfdaade8b1c63a6cfa0b630f0ee951e97be288da7624d"
+      "checksum": "4bc334701d8982513fb9302a23b869cd0b93e1a8470c598b364e630ff8510694"
     },
     "AGENTS.md": {
       "class": "seeded",
@@ -120,7 +124,8 @@
     "2026-08-upstream-plugin-declarations",
     "2026-08-vendor-workflow-skills",
     "2026-08-wire-default-implementation-loop",
-    "2026-08-workflow-skills-independence"
+    "2026-08-workflow-skills-independence",
+    "2026-08-ralph-permission-guard"
   ],
   "decisions": {
     "mode": "standard-mvp",

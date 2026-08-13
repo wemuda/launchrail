@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { RALPH_GUARD_HOOK_PATH } from "./ralph.js";
 
 /**
  * Consuming projects used to subscribe to workflow Claude Code plugins through
@@ -62,9 +63,20 @@ export const RETIRED_SUPERPOWERS_DECLARATION: PluginDeclaration = {
 
 export type DeclarationState = "declared" | "no-file" | "invalid-json" | "undeclared";
 
+interface HookCommand {
+  type?: string;
+  command?: string;
+  [key: string]: unknown;
+}
+interface HookMatcher {
+  matcher?: string;
+  hooks?: HookCommand[];
+  [key: string]: unknown;
+}
 interface Settings {
   extraKnownMarketplaces?: Record<string, unknown>;
   enabledPlugins?: Record<string, unknown>;
+  hooks?: { PreToolUse?: HookMatcher[]; [event: string]: HookMatcher[] | undefined };
   [key: string]: unknown;
 }
 
@@ -214,5 +226,103 @@ export function planRemovePluginDeclaration(
 export function applyRemovePluginDeclaration(root: string, plan: SettingsRemovalPlan): boolean {
   if (plan.content === null) return false;
   writeFileSync(join(root, CLAUDE_SETTINGS_PATH), plan.content, "utf8");
+  return true;
+}
+
+/**
+ * The Ralph unattended-launch guard (ADR-0021). The hook *file* is a managed
+ * Ralph asset (see `ralphFiles`); this is its registration in the project-owned,
+ * shared `.claude/settings.json` — an additive `PreToolUse(Workflow)` entry that
+ * runs the guard. Like the plugin declaration, the file is never lockfile-tracked
+ * and never replaced wholesale: the registration is an idempotent merge that
+ * preserves every other setting and hook a project already carries.
+ */
+export const RALPH_GUARD_HOOK_COMMAND = `python3 "$CLAUDE_PROJECT_DIR/${RALPH_GUARD_HOOK_PATH}"`;
+
+/** A PreToolUse hook is "ours" when its command invokes the guard script, whatever the matcher. */
+function isGuardCommand(hook: HookCommand): boolean {
+  return typeof hook.command === "string" && hook.command.includes("ralph-permission-guard.py");
+}
+
+function guardRegistered(settings: Settings | null): boolean {
+  const preToolUse = settings?.hooks?.PreToolUse;
+  if (!Array.isArray(preToolUse)) return false;
+  return preToolUse.some((entry) => Array.isArray(entry?.hooks) && entry.hooks.some(isGuardCommand));
+}
+
+export type HookRegistrationState = "registered" | "no-file" | "invalid-json" | "unregistered";
+
+/** Whether the guard hook is already registered in a project's settings.json. */
+export function ralphGuardHookState(root: string): HookRegistrationState {
+  const path = join(root, CLAUDE_SETTINGS_PATH);
+  if (!existsSync(path)) return "no-file";
+  let data: unknown;
+  try {
+    data = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return "invalid-json";
+  }
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return "invalid-json";
+  return guardRegistered(data as Settings) ? "registered" : "unregistered";
+}
+
+export type HookPlanKind = "create" | "merge" | "skip-registered" | "skip-invalid";
+
+export interface HookPlan {
+  kind: HookPlanKind;
+  detail: string;
+  /** Full file content to write; null when nothing should change. */
+  content: string | null;
+}
+
+/**
+ * Plan registration of the Ralph guard hook in .claude/settings.json. Additive
+ * and idempotent: an existing registration (matched by the guard command, not by
+ * exact JSON) is left alone, unparseable JSON is never touched, and every
+ * unrelated setting — including other hooks — is preserved.
+ */
+export function planRalphGuardHook(root: string): HookPlan {
+  const path = join(root, CLAUDE_SETTINGS_PATH);
+  const exists = existsSync(path);
+  let settings: Settings | null = null;
+  if (exists) {
+    let data: unknown;
+    try {
+      data = JSON.parse(readFileSync(path, "utf8"));
+    } catch {
+      return { kind: "skip-invalid", detail: "unparseable JSON — not touching it", content: null };
+    }
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return { kind: "skip-invalid", detail: "unparseable JSON — not touching it", content: null };
+    }
+    settings = data as Settings;
+  }
+  if (guardRegistered(settings)) {
+    return { kind: "skip-registered", detail: "Ralph guard hook already registered", content: null };
+  }
+
+  const merged: Settings = settings ? { ...settings } : {};
+  const hooks = { ...merged.hooks };
+  hooks.PreToolUse = [
+    ...(Array.isArray(hooks.PreToolUse) ? hooks.PreToolUse : []),
+    { matcher: "Workflow", hooks: [{ type: "command", command: RALPH_GUARD_HOOK_COMMAND }] },
+  ];
+  merged.hooks = hooks;
+
+  return {
+    kind: exists ? "merge" : "create",
+    detail: exists
+      ? "registering the Ralph unattended-launch guard, keeping existing settings"
+      : "registers the Ralph unattended-launch guard for this project",
+    content: JSON.stringify(merged, null, 2) + "\n",
+  };
+}
+
+/** Execute a hook-registration plan. Returns true when the file was written. */
+export function applyRalphGuardHook(root: string, plan: HookPlan): boolean {
+  if (plan.content === null) return false;
+  const abs = join(root, CLAUDE_SETTINGS_PATH);
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, plan.content, "utf8");
   return true;
 }

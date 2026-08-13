@@ -8,6 +8,12 @@ import {
   planClaudeImports,
   type ClaudeImportsPlan,
 } from "../lib/claudeImports.js";
+import {
+  applyRalphGuardHook,
+  CLAUDE_SETTINGS_PATH,
+  planRalphGuardHook,
+  type HookPlan,
+} from "../lib/claudeSettings.js";
 import { detectRepo, type RepoDetection } from "../lib/detect.js";
 import { emptyLockfile, readLockfile, writeLockfile } from "../lib/lockfile.js";
 import { migrationIds } from "../lib/migrations.js";
@@ -36,6 +42,8 @@ export interface InitOptions {
 export interface InitOutcome {
   code: number;
   actions: PlannedAction[];
+  /** How init registered Ralph's unattended-launch guard hook in settings.json — null when the ralph module is off. */
+  ralphHook: HookPlan | null;
   /** How init wired the two workflow @-imports into CLAUDE.md (relevant when the repo already had one). */
   claudeImports: ClaudeImportsPlan;
 }
@@ -155,6 +163,13 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
   };
 }
 
+const HOOK_LABEL: Record<HookPlan["kind"], string> = {
+  create: "create  ",
+  merge: "update  ",
+  "skip-registered": "ok      ",
+  "skip-invalid": "conflict",
+};
+
 const CLAUDE_IMPORTS_LABEL: Record<ClaudeImportsPlan["kind"], string> = {
   seed: "create  ",
   ok: "ok      ",
@@ -173,6 +188,8 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       detection.isGitRepo = true;
     }
   }
+  // Set once the manifest is known and the ralph module is on (ADR-0021).
+  let ralphHook: HookPlan | null = null;
   const claudeImports = planClaudeImports(opts.cwd);
   const interactive = !opts.yes && process.stdin.isTTY === true && process.stdout.isTTY === true;
 
@@ -182,7 +199,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     if (!parsed.manifest) {
       console.error(`launchrail: existing ${MANIFEST_FILENAME} is invalid:`);
       for (const error of parsed.errors) console.error(`  - ${error}`);
-      return { code: 1, actions: [], claudeImports };
+      return { code: 1, actions: [], ralphHook, claudeImports };
     }
     manifest = parsed.manifest;
     console.log(`Found existing ${MANIFEST_FILENAME} — using its configuration (init is idempotent).`);
@@ -192,7 +209,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     manifest = defaultManifestFor(detection);
   } else {
     console.error("launchrail: non-interactive session — re-run with --yes to accept defaults.");
-    return { code: 1, actions: [], claudeImports };
+    return { code: 1, actions: [], ralphHook, claudeImports };
   }
 
   // Adopting a project that already exists (not a fresh Launchrail init): make
@@ -222,11 +239,14 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     // rewritten here.
     ...(manifest.modules[RALPH_MODULE] ? ralphFiles() : []),
   ];
+  // Ralph's guard-hook file rides `specs`; its registration in the shared,
+  // project-owned settings.json is planned as an additive merge (ADR-0021).
+  if (manifest.modules[RALPH_MODULE]) ralphHook = planRalphGuardHook(opts.cwd);
 
   const existing = readLockfile(opts.cwd);
   if (existing.error) {
     console.error(`launchrail: ${existing.error} — refusing to continue. Fix or remove the lockfile first.`);
-    return { code: 1, actions: [], claudeImports };
+    return { code: 1, actions: [], ralphHook, claudeImports };
   }
   const lockfile = existing.lockfile ?? emptyLockfile(VERSION);
   if (!existing.lockfile) {
@@ -241,6 +261,9 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   for (const action of actions) {
     console.log(`  ${ACTION_LABEL[action.kind]}  ${action.spec.relPath}  (${action.detail})`);
   }
+  if (ralphHook) {
+    console.log(`  ${HOOK_LABEL[ralphHook.kind]}  ${CLAUDE_SETTINGS_PATH}  (${ralphHook.detail})`);
+  }
   // Only worth a line when a CLAUDE.md already exists; a fresh one is seeded
   // with both imports and shows up in the file actions above.
   if (claudeImports.kind !== "seed") {
@@ -252,10 +275,16 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
       console.log("  git-init  .  (not a git repository — init will run `git init` first)");
     }
     console.log("\nDry run — nothing was written.");
-    return { code: 0, actions, claudeImports };
+    return { code: 0, actions, ralphHook, claudeImports };
   }
 
   const written = applyPlan(opts.cwd, actions, lockfile);
+  // Register Ralph's guard hook (ADR-0021), an additive merge into the shared,
+  // project-owned settings.json (re-planned against the on-disk file).
+  if (manifest.modules[RALPH_MODULE]) {
+    const applied = applyRalphGuardHook(opts.cwd, planRalphGuardHook(opts.cwd));
+    if (applied && !written.includes(CLAUDE_SETTINGS_PATH)) written.push(CLAUDE_SETTINGS_PATH);
+  }
   // Wire the workflow imports into a pre-existing CLAUDE.md (no-op when init
   // just seeded a fresh one, which already carries both). Additive and
   // idempotent, mirroring the old .claude/settings.json merge (ADR-0012).
@@ -301,5 +330,5 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("     AGENTS.md project-purpose TODO.");
   }
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
-  return { code: 0, actions, claudeImports };
+  return { code: 0, actions, ralphHook, claudeImports };
 }
