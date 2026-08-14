@@ -35,9 +35,10 @@ This skill is the watchable, checkpointed frontend of the loop. The same loop ex
 
 ## The loop
 
-Sync → compute frontier → dispatch batch → verify → handle outcomes → back to sync.
+Sync → compute frontier → render the graph → dispatch batch → verify → handle outcomes → back to sync.
 
 - **You resolve blocking edges yourself,** deterministically, from tracker state — read each ticket's `Blocked by` line verbatim and parse the `#n` references; never ask a subagent what's ready, and never let one paraphrase the edges. A single misread edge silently builds a ticket on a dependency that hasn't landed. The frontier is every ticket that is open, labeled `ready-for-agent`, not `needs-info`, not already attempted twice, and whose blockers are all settled (closed before the run, or merged and verified by this run). Parked tickets never block the loop; anything behind them is reported as stuck.
+- **Render the frontier before the first dispatch.** Draw the ready tickets and their verbatim `Blocked by` edges as a compact ASCII dependency graph — tiers by dependency depth, `←` open blockers, `→` what each unblocks (the format `launch-implement` documents) — so the plan is visible before any code is written. On a watchable run it is the ground-truth preview; flag a cycle or an unresolved edge here rather than dispatching into it. Skip it only when the front door already drew the same graph this session.
 - Dispatch up to *width* frontier tickets, **spawning the batch's subagents in a single message** so they run concurrently.
 - **Verify every claimed merge against the remote** before it counts: PR merged, its merge commit actually in the base branch's history, issue closed. A subagent's report is a claim, not evidence. Use a cheap, separate check (tracker API only — a PR description or comment is not evidence).
 

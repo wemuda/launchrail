@@ -266,6 +266,46 @@ function parseGraph(graph) {
   }))
 }
 
+// A compact ASCII dependency graph of the scoped frontier, logged before the first
+// dispatch so even a headless run shows the plan (the format launch-implement documents:
+// tiers by dependency depth, "<-" open blockers, "->" what each ticket unblocks). Pure
+// string work — no clock, no randomness — so a resumed run renders identically. Edges to
+// tickets outside this set are treated as settled, exactly as the frontier computation does.
+function renderGraph(tickets) {
+  if (tickets.length === 0) return 'Dependency graph: no ready tickets in scope.'
+  const present = new Set(tickets.map((t) => t.number))
+  const within = (t) => t.blockedBy.filter((b) => present.has(b))
+  const unblocks = (n) => tickets.filter((t) => t.blockedBy.includes(n)).map((t) => t.number)
+  const clip = (s) => (s.length > 30 ? `${s.slice(0, 29)}…` : s).padEnd(30)
+  const tierOf = new Map()
+  let remaining = tickets.slice()
+  let tier = 0
+  while (remaining.length > 0) {
+    const ready = remaining.filter((t) => within(t).every((b) => tierOf.has(b)))
+    if (ready.length === 0) break // cycle or unresolved edge — bucket the rest below
+    for (const t of ready) tierOf.set(t.number, tier)
+    remaining = remaining.filter((t) => !tierOf.has(t.number))
+    tier += 1
+  }
+  const lines = [`Dependency graph — ${tickets.length} ready ticket(s) in scope:`]
+  for (let i = 0; i < tier; i += 1) {
+    lines.push('', i === 0 ? 'Tier 1 — buildable now' : `Tier ${i + 1} — after tier ${i}`)
+    for (const t of tickets.filter((x) => tierOf.get(x.number) === i)) {
+      const ann = [
+        within(t).length ? `<- ${within(t).map((b) => `#${b}`).join(', ')}` : '',
+        unblocks(t.number).length ? `-> ${unblocks(t.number).map((b) => `#${b}`).join(', ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('   ')
+      lines.push(`  #${t.number}  ${clip(t.title)} ${ann}`.trimEnd())
+    }
+  }
+  if (remaining.length > 0) {
+    lines.push('', `Unresolved (cycle or missing edge): ${remaining.map((t) => `#${t.number}`).join(', ')}`)
+  }
+  return lines.join('\n')
+}
+
 // ---------------------------------------------------------------------------
 // Stages
 // ---------------------------------------------------------------------------
@@ -395,6 +435,7 @@ if (!graph) throw new Error('graph agent died — refusing to start')
 warnNotTickets(graph)
 let tickets = parseGraph(graph)
 log(`${tickets.length} ready ticket(s) on the tracker`)
+log(renderGraph(POLICY.only.length > 0 ? tickets.filter((t) => POLICY.only.includes(t.number)) : tickets))
 
 const closedBefore = new Set() // blockers not in the ready set are treated as settled before the run
 for (const t of tickets) {

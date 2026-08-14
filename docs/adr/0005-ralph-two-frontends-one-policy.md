@@ -1,7 +1,7 @@
 # ADR-0005: Ralph release orchestration — two frontends, one policy, verification-gated completion
 
 ## Status
-Accepted — amended by [ADR-0018](0018-implement-front-door.md): the user-typed hard gate (`disable-model-invocation`) moved from the `ralph` skill to the `/launchrail:implement` front door, and the workflow file installs with `init` (migration for existing projects) rather than only via `launchrail add ralph`
+Accepted — amended by [ADR-0018](0018-implement-front-door.md): the user-typed hard gate (`disable-model-invocation`) moved from the `ralph` skill to the `/launchrail:implement` front door, and the workflow file installs with `init` (migration for existing projects) rather than only via `launchrail add ralph`. Amended by [ADR-0022](0022-implement-front-door-renders-graph.md): both frontends render the ticket dependency graph before the first dispatch.
 
 ## Context
 Phase 4 of the roadmap: Ralph implements a ticket backlog autonomously and cannot declare success while required verification fails. Wemuda supplied a working Ralph design from another project (handoff document) with two interchangeable frontends over one policy set: a skill (an orchestrator session dispatching fresh-context implementer subagents) and a dynamic workflow script (the same loop as deterministic code). The open questions were which frontend to ship, how each distributes through Launchrail's ownership model, and how completion is gated on this toolchain's verification surface.

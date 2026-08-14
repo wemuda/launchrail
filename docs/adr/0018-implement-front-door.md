@@ -1,7 +1,7 @@
 # ADR-0018: One front door for implementation, one planning conductor
 
 ## Status
-Accepted — supersedes [ADR-0014](0014-start-feature-conductor.md); amends [ADR-0005](0005-ralph-two-frontends-one-policy.md) (gate placement, workflow-file distribution) and [ADR-0017](0017-implementation-loop-provider.md) (stage-10 handoff target)
+Accepted — supersedes [ADR-0014](0014-start-feature-conductor.md); amends [ADR-0005](0005-ralph-two-frontends-one-policy.md) (gate placement, workflow-file distribution) and [ADR-0017](0017-implementation-loop-provider.md) (stage-10 handoff target). Amended by [ADR-0022](0022-implement-front-door-renders-graph.md): the door renders the dependency graph then starts immediately, and the single-ticket path unifies on `launch-ralph-implement` instead of the textually-parallel contract this ADR introduced (resolving its own revisit clause).
 
 ## Context
 Field use surfaced a sharp DevEx failure at the exact moment of maximum momentum. A consuming project finished planning — spec published, thirteen dependency-ordered tickets cut — and the user had to ask which of four commands starts the build: `launch` (routes but never starts the loop), `start-feature` (sounds like "start building", is a planning conductor), `ralph` (the loop, but its workflow file needed a separate `launchrail add ralph` nobody had run), or `ralph-implement` (one ticket). Answering took a comparison table, module archaeology in the manifest, and an explanation of the skill-vs-workflow frontends and the provider dimension — six concepts standing between the user and one verb.

@@ -1,46 +1,48 @@
 ---
 name: launch-implement
-description: Start building — the single entry point for implementation (stage 10). Drives ready tickets to verified merges through the Ralph loop. `/launch-implement` works the whole ready frontier; `/launch-implement 15` builds one ticket end to end in this session; several numbers scope the loop to just those tickets; a count ("the next 5") caps the run; a spec or slice reference ("spec #2's tickets") resolves to its tickets. It repairs its own setup (missing loop materials install via `launchrail sync`) instead of stopping. Only ever started explicitly by the user.
+description: Start building — the one door to implementation (stage 10). Renders the ticket dependency graph as ASCII in the chat, then drives the ready tickets to verified merges through the Ralph loop, watchable in this session. `/launch-implement` builds the whole ready frontier; `/launch-implement 15` scopes it to one ticket; several numbers, "the next 5", or "spec #2's tickets" scope and cap a run. Repairs its own setup instead of stopping. Only ever started explicitly by the user.
 disable-model-invocation: true
 ---
 
 # Implement — the one door to building
 
-Everything before this skill produces tickets; this skill turns them into verified, merged code. The user never has to know how the engine runs behind the door: read the manifest, fix the setup if it's incomplete, and route. The engine (`launch-ralph`) stays where it is — you compose it, never reimplement it.
+Planning produced tickets; this door turns them into merged, verified code. There is **one engine — the Ralph loop** (`launch-ralph`, the parallel orchestrator) — and one job here: show the graph, then start it. Don't deliberate over which engine or which path; there is only one. Read two things, draw the graph, launch. The loop self-corrects as it runs — getting started is worth more than getting the plan perfect.
 
-## Step 1 — Read the project and resolve the scope
+## Just start
 
-From `.launchrail.yml`: `issueTracker` and the `testing` commands. From the arguments, the scope — in whatever form the user gave it:
+1. **Read two things, once.** From `.launchrail.yml`: `issueTracker` and the `testing` commands. From the arguments: the scope — default is the whole ready frontier. Scope forms, briefly: one number = that ticket; several numbers = just those; "the next 5" / "max 5" = a cap (the frontier picks which, in dependency order); "spec #2's tickets" / "the rest of slice 1" = resolve to the open ticket numbers that belong to it against the live tracker, plus any open in-set blockers so the scope stays dependency-closed. Echo the resolved scope in one line — then move.
 
-- **no arguments** → the whole ready frontier (every open ticket labeled `ready-for-agent` whose blockers are settled);
-- **one ticket number** → that ticket, built end to end in this session;
-- **several numbers** → the loop, scoped to those tickets and the order their `Blocked by: #n` edges impose;
-- **a count** — "the next 5", "max 5" → the loop with a merge cap. Don't hand-pick which five: the cap is a stop condition, and the frontier decides the order — the loop stops after that many *verified merges* and leaves the rest ready;
-- **a spec, slice, or epic reference** — "spec #2's tickets", "the rest of slice 1" → resolve it to explicit numbers against the live tracker: the open tickets that belong to it (a "Part of: #n" line, the spec issue's ticket list, or a label), plus any open in-set blockers so the scope stays dependency-closed. Combinations compose: "the next 5 of spec #2" → that spec's tickets *and* a cap of 5.
+2. **Render the dependency graph in the chat** (format below). Read the scoped `ready-for-agent` tickets and their verbatim `Blocked by: #n` edges and draw them as a compact ASCII graph, so the user sees the plan before anything builds. This is the one "look before you leap" — a wrong scope or a surprise edge is caught here for the price of a sentence.
 
-**Resolve prose to data before anything launches.** The loop's inputs are ticket numbers and policy values (`only`, `max`, `width`) — the workflow form takes them as JSON args and refuses a natural-language string by design. Translating the user's words into that scope, against live tracker state, is *your* job, and it ends with an echo before any dispatch: "Scope: #14, #15, #19 — the remaining slice-1 tickets; #19 builds after #14. Cap: none." A misread scope corrected here costs a sentence; corrected after launch it costs a run.
+3. **Start the loop.** Hand the resolved scope to **`launch-ralph`** and run it **watchably in this session** — you see each dispatch build and can interrupt. For a long, wide, or walk-away run, launch its workflow form instead (`.claude/workflows/ralph.js`, scope as JSON args like `{ only: [14, 15, 19], max: 5 }`); `launch-ralph` owns that call and its supervision contract. **One ticket** (`/launch-implement 15`) is not a separate path: invoke **`launch-ralph-implement`** on that number right here — dependency-gate first — then open the PR, merge, and confirm the merge and closed issue on the remote. Name the skills; never paraphrase their contracts inline.
 
-## Step 2 — Repair setup, don't gatekeep
+**Repair, don't gatekeep.** If the loop's materials are missing — `modules.ralph` off in the manifest, or `.claude/workflows/ralph.js` absent — run `npx @wemuda/launchrail sync` first (additive, idempotent; its migration installs them) and say what it did. Never answer "build this" with "go run a command." What you genuinely cannot repair, name plainly: no tracker (`issueTracker: none`), or an empty `testing` contract — `verify` can't gate an empty contract, so the loop refuses a start it cannot verify.
 
-If the loop's materials are missing — `modules.ralph` off in the manifest, or `.claude/workflows/ralph.js` absent — run `npx @wemuda/launchrail sync` (additive and idempotent; its migration installs them) and say what it did. Never answer the user's "build this" with "first go run a command" for anything this skill can run itself. What you cannot repair, report precisely: no tracker configured (`issueTracker: none`), or an empty verification contract (no `testing` commands — `verify` fails on an empty contract and the loop refuses a start it cannot gate).
+## Rendering the graph
 
-## Step 3 — Route by scope
+Group the scoped tickets into **tiers** by dependency depth: tier 1 is every scoped ticket whose blockers are all settled (closed, or outside the scope); each later tier holds tickets whose blockers all sit in earlier tiers. Annotate each ticket with `←` its still-open blockers and `→` the scoped tickets it unblocks. Keep it compact — this is a plan preview, not an art project.
 
-**The frontier (or a resolved scope):** run the loop under the `launch-ralph` skill — it owns the policies (width, attempts, cap, deferrals, remote-verified merges) and the orchestrator's contract. For a wide dependency graph or a long run, prefer its workflow form (`.claude/workflows/ralph.js`) — the skill explains when — passing the resolved scope as JSON args, e.g. `{ only: [14, 15, 19], max: 5, width: 1 }`.
+```
+Ralph loop — scope: slice-1 (6 tickets) · cap: none · 3 buildable now
 
-**One ticket:** build it here, watchable, under the same contract a Ralph dispatch carries (kept textually parallel with `launch-ralph` — change one, change both):
+Tier 1 — buildable now
+  #11  Auth data model        → #14, #15
+  #12  Database schema        → #16
+  #13  Structured logging     ·
 
-1. **Dependency gate:** every ticket on the `Blocked by:` line is closed with its work merged. An open blocker stops you before any code — name it and offer to build it first.
-2. Read the ticket and everything it links (spec sections, ADRs, journeys), plus `AGENTS.md`/`CLAUDE.md`.
-3. Label the ticket `ralph:building`; branch `ralph/<n>-<short-slug>` from a fresh sync of the base.
-4. Implement by the **`launch-ralph-implement`** contract — TDD, the `verify` gate, browser smoke for user-facing changes, self-review, commit conventions. Name the skill; don't paraphrase it.
-5. Pre-PR sync: merge the latest base; resolve conflicts with `launch-resolving-merge-conflicts`; re-run the gate if anything changed.
-6. Open a PR titled from the ticket with `Closes #<n>`; adopt an existing `ralph/<n>-*` branch or PR rather than opening a second.
-7. Wait for CI (Monitor or a background sleep, never a foreground busy-wait); fix what the branch broke; merge; confirm on the remote that the PR merged and the issue closed — close it explicitly if squash-merge didn't. Remove `ralph:building`.
-8. **Integrity:** no placeholders, no stubs, never delete or weaken a test to get green, never claim verification you didn't run.
+Tier 2 — after tier 1
+  #14  Login API              ← #11   → #19
+  #15  Session store          ← #11
+  #16  Schema migrations      ← #12
+
+Tier 3
+  #19  Login screen           ← #14
+```
+
+Then flag whatever the shape reveals, in a line under the graph: a scoped ticket blocked by an **open** ticket outside the scope (it will defer until that lands — name it), an edge that resolves to no real ticket, or a cycle (stop and report — the loop cannot order a cycle). A single-ticket scope is just that ticket with any open blockers stacked above it.
 
 ## Ground rules
 
-- **Only the user starts this.** Conductors and other skills hand over the command (`/launch-implement`); they never invoke it. The engines behind it inherit the same rule — reaching them through this door *is* the explicit user start.
+- **Only the user starts this.** Conductors and other skills hand over the command (`/launch-implement`); they never invoke it. The never-unprompted rule holds through the door into the engine — reaching Ralph through this door *is* the explicit user start.
 - **Nothing is done until `npx @wemuda/launchrail verify` is green** — per ticket, and once more on the final base when a loop run ends. Where `modules.browser-testing` is enabled and the change is user-facing, a `launch-browser-smoke` journey is part of done.
 - **Report evidence, not assertions:** PR numbers, merge commits, issues closed, the verify outcome — and what was parked or punted, with why.
