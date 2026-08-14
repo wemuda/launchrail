@@ -1,7 +1,7 @@
 # ADR-0008: Release automation via release-please, one version for the whole toolchain
 
 ## Status
-Accepted
+Accepted — one version for the whole toolchain stands. The plugin `extra-files` entry died with the plugin ([ADR-0019](0019-vendor-skills-retire-plugin.md)); the version of record now covers the root and `packages/cli` package.json only.
 
 ## Context
 Open-source readiness requires automated releases and a changelog, and ADR-0002 adopted Conventional Commits explicitly to enable them. The repo ships two artifacts that must not drift apart: the `@wemuda/launchrail` npm package and the Claude Code plugin (versioned in `plugins/launchrail/.claude-plugin/plugin.json`). Consuming projects record toolchain versions in their lockfile, so a single coherent version is simpler to reason about than per-artifact versions. Releases must stay reviewable — this toolchain writes into other people's repositories, so an unreviewed auto-publish on every push is the wrong risk posture.

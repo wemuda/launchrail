@@ -23,7 +23,7 @@ The Launchrail **toolchain monorepo**: the `@wemuda/launchrail` CLI, the Claude 
 ## Conventions
 
 - TypeScript, Node ≥ 22, ESM only. pnpm workspace under `packages/*`.
-- Meaningful decisions become ADRs in `docs/adr/`, numbered `NNNN-short-title.md`, using [docs/adr/0000-template.md](docs/adr/0000-template.md). ADRs for meaningful decisions, not every dependency.
+- Meaningful decisions become ADRs in `docs/adr/`, numbered `NNNN-short-title.md`, using [docs/adr/0000-template.md](docs/adr/0000-template.md). ADRs for meaningful decisions, not every dependency. The registry index [docs/adr/README.md](docs/adr/README.md) tracks each ADR's live status — when a new ADR supersedes or amends an old one, update the old ADR's Status line and the index in the same commit; superseded ADRs are never deleted.
 - **The workflow skills are Launchrail's own complete set** ([ADR-0020](docs/adr/0020-independent-skill-set.md)): every stage owner is a `launch-*` skill under `packages/cli/assets/skills/launchrail/`, written to the rail's artifact contract. Several absorb methodology and text from [Matt Pocock's skills](https://github.com/mattpocock/skills) under its MIT license — derived files carry a derivation note, and `packages/cli/assets/skills/NOTICE.md` reproduces the license. Upstream is monitored as inspiration: improvements worth having are translated into our skills, never re-vendored.
 - Compose the runtime tools the workflow *drives* (Claude Design, Playwright) rather than reimplementing them; own the skills the workflow *is*.
 - Stay lightweight: no empty directories, no ceremony ahead of need, no speculative abstraction.

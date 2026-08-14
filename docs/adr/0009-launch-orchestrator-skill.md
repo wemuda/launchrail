@@ -1,7 +1,7 @@
 # ADR-0009: A single orchestrator skill fronts the workflow
 
 ## Status
-Accepted
+Accepted — amended by [ADR-0018](0018-implement-front-door.md): `launch` absorbed feature sizing (from the retired `start-feature`), slimmed to routing, and `workflow.md` became the single normative contract. The skill is invoked `/launch` and ships as a managed file since [ADR-0019](0019-vendor-skills-retire-plugin.md). Stage numbers in this ADR predate the [ADR-0015](0015-discovery-research-stage.md) renumber — the canonical stage map is the `launch` skill's `workflow.md`.
 
 ## Context
 The core workflow is a chain of stages ([plugins/launchrail/docs/workflow.md](../../plugins/launchrail/docs/workflow.md)): vision, visual exploration, complexity grill, technical research, ADRs, spec, design validation, tickets, then implementation and verification. Each stage is already owned by exactly one tool — a Launchrail skill, an upstream Matt Pocock skill, or a CLI command. But a user in a consuming project has no single place to begin: they must know the stage order, remember which artifact gates which stage, and invoke the right skill by name. Newcomers stall, and it is easy to skip a stage or run one out of order. We want one entry point a user can invoke without knowing the map — one that figures out where the project is and does the next thing — while a user who *does* know the map can use the same entry point to jump straight to a stage.

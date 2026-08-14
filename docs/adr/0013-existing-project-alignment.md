@@ -1,7 +1,7 @@
 # ADR-0013: Adopting existing projects — the `existing` origin and the alignment on-ramp
 
 ## Status
-Accepted — builds on [ADR-0009](0009-launch-orchestrator-skill.md) (the `launch` conductor) and [ADR-0012](0012-init-wires-imports-into-existing-claude-md.md) (init adopting an existing repo's files).
+Accepted — builds on [ADR-0009](0009-launch-orchestrator-skill.md) (the `launch` conductor) and [ADR-0012](0012-init-wires-imports-into-existing-claude-md.md) (init adopting an existing repo's files). The skill ships as the managed `launch-project-alignment` skill since [ADR-0019](0019-vendor-skills-retire-plugin.md)/[ADR-0020](0020-independent-skill-set.md); stage numbers in this ADR predate the [ADR-0015](0015-discovery-research-stage.md) renumber.
 
 ## Context
 ADR-0012 made `init` safe and additive on a repository that already exists. But adoption was only half-solved. The workflow itself (ADR-0009) is written for a greenfield start: `launch` detects the frontier from committed artifacts and, finding none, treats a mid-development project as stage 0 — routing the user to `vision-creation`, which interviews for a vision from scratch. A project that already has a working app, a design system, tests, and a README is asked to start as if from an idea. That re-derives what the code already answers and makes Launchrail feel bolted-on rather than adopted.
