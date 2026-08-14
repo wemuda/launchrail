@@ -1,7 +1,7 @@
 # ADR-0020: Launchrail owns its complete skill set
 
 ## Status
-Accepted — supersedes the vendoring half of [ADR-0019](0019-vendor-skills-retire-plugin.md) (skills still ship as managed files in the consuming repo; the pinned upstream snapshot is retired); amends [ADR-0017](0017-implementation-loop-provider.md) (the `superpowers` provider and the `implementationLoop` manifest field are removed — Ralph is the implementation loop)
+Accepted — supersedes the vendoring half of [ADR-0019](0019-vendor-skills-retire-plugin.md) (skills still ship as managed files in the consuming repo; the pinned upstream snapshot is retired) and [ADR-0017](0017-implementation-loop-provider.md) (the provider seam is removed — Ralph is the implementation loop; the verify-gate contract survives as Ralph's)
 
 ## Context
 ADR-0019 made skills travel as files in the consuming repo — that part works and stays. But it filled the skill set two ways: Launchrail's own `launch-*` skills plus a pinned, MIT-attributed snapshot of Matt Pocock's skills under their bare upstream names, refreshed deliberately through a vendoring pipeline. Separately, ADR-0017 made stage 10 a provider seam so obra/superpowers could replace Ralph.

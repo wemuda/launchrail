@@ -1,7 +1,7 @@
 # ADR-0017: The implementation loop is a provider, not a fixed stage
 
 ## Status
-Accepted — amended by [ADR-0018](0018-implement-front-door.md): stage 10's handoff target is the `/launchrail:implement` front door, which reads `implementationLoop` and routes to the provider; the provider registry and both-edges contract are unchanged. Amended by [ADR-0020](0020-independent-skill-set.md): the `superpowers` provider, the provider registry, and the `implementationLoop` manifest field are removed — Ralph is the implementation loop; the both-edges contract (`ready-for-agent` tickets in, `launchrail verify` gating every merge) survives as Ralph's contract.
+Superseded by [ADR-0020](0020-independent-skill-set.md) — the provider seam is removed: the `superpowers` provider, the provider registry, and the `implementationLoop` manifest field are gone, and Ralph is the implementation loop. What survives is the both-edges contract (`ready-for-agent` tickets in, `launchrail verify` gating every merge) — now Ralph's contract, and the design to build on if a second loop ever earns a new ADR. (Historical: [ADR-0018](0018-implement-front-door.md) had amended the stage-10 handoff to route through the implement front door while the seam existed.)
 
 ## Context
 Launchrail's rail runs Vision → … → Tickets (stages 1–9), then **Implementation** (stage 10): the loop that turns ready tickets into verified, merged code. Stage 10 is hard-wired to one owner, **the Ralph loop** — `launchrail:ralph` plus the managed `.claude/workflows/ralph.js` (ADR-0005). Both conductors name it directly (`launch` stage map, `start-feature` step 5), and `workflow.md` describes stage 10 as Ralph.

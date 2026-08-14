@@ -1,7 +1,7 @@
 # ADR-0001: Provisional implementation stack for the Launchrail CLI
 
 ## Status
-Proposed — to be confirmed or revised after the v0.1 grill and technical-landscape research (handoff §5.4–5.6).
+Accepted — the provisional stack was confirmed in practice: TypeScript on Node ≥ 22, ESM only, pnpm workspace, published as `@wemuda/launchrail`. The conventions are recorded in `AGENTS.md` and have held since.
 
 ## Context
 Launchrail is distributed as an npm CLI intended to run via `npx @wemuda/launchrail`, plus a Claude Code plugin. The runtime and repo tooling must support that distribution model, work on macOS/Linux/Windows, and be testable against temporary Git repositories. The handoff (§11) proposes a provisional stack and explicitly asks for a short ADR before implementation.
