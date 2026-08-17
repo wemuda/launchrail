@@ -1,7 +1,7 @@
 # ADR-0010: Ralph field revision — deterministic edges, dependency-gate deferrals, supervised workflow runs
 
 ## Status
-Accepted (amends ADR-0005)
+Accepted (amends ADR-0005) — amended by [ADR-0022](0022-ralph-campaign-revision.md) (the CI wait moves out of implementer dispatches into a loop-owned merge gate)
 
 ## Context
 ADR-0005 shipped Ralph from a supplied design and listed "real campaign data suggests different defaults" as its revisit trigger. That data now exists: the first real Ralph campaigns ran against a Wemuda project (outside this repo), and the run-hardened workflow script and orchestrator skill that came back carry mechanics the shipped version lacks. Per the promotion loop, the reusable lessons move upstream into the toolchain; the project-specific parts (hardcoded repo, base branch, and commands) do not — ADR-0005's environment-agnostic preflight already covers those and stays.

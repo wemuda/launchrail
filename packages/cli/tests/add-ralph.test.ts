@@ -109,8 +109,22 @@ describe("launchrail add ralph", () => {
     // Cap policy: 0 = uncapped; batches never exceed the remainder, so a run
     // cannot overshoot; hitting the cap is reported, not silent.
     expect(content).toContain("max: A.max ?? 0");
-    expect(content).toContain("Math.min(POLICY.width, capLeft)");
+    expect(content).toContain("Math.min(width, capLeft)");
     expect(content).toContain("maxReached");
+  });
+
+  test("the workflow carries the ADR-0022 campaign mechanics", () => {
+    const content = ralphWorkflowContent();
+    // One integration target per run: trunk by default, a consolidation branch via args.
+    expect(content).toContain("target: A.target ?? ''");
+    expect(content).toContain("'consolidation' : 'trunk'");
+    // Implementers hand off at PR-open; a per-ticket gate agent owns CI, merge, close.
+    expect(content).toContain("'pr-open'");
+    expect(content).toContain("phase: 'Gate'");
+    // Canary holds width at 1 until the first verified merge.
+    expect(content).toContain("canary: A.canary ?? false");
+    // The recap is structured output: where the work lives and the one next step.
+    expect(content).toContain("nextStep");
   });
 
   test("the workflow carries the ADR-0010 field-revision mechanics", () => {

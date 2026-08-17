@@ -3,21 +3,23 @@
 //
 // The Ralph loop as a deterministic workflow: the plan, the frontier bookkeeping,
 // and every intermediate report live in script variables — not in any context window —
-// so long or wide runs cannot compact away their own state. The watchable, checkpointed
-// variant of the same loop is the launch-ralph skill; the two share one policy block,
-// and a policy change belongs in both places (ADR-0005, field-revised by ADR-0010).
+// so long or wide runs cannot compact away their own state. This is the engine for
+// every multi-ticket run (ADR-0022); the launch-ralph skill carries the same policy
+// block as the supervisor's contract and the declared-exception watchable mode, and
+// a policy change belongs in both places (ADR-0005, field-revised by ADR-0010, ADR-0022).
 export const meta = {
   name: 'ralph',
   description: 'Autonomous Ralph loop: implement ready tickets with fresh-context subagents, verification-gated',
   whenToUse:
-    'Run the Ralph implementation loop over the ticket backlog when the dependency graph is wide or the run is long. Scope a run via args: { only: [9, 10], width: 2 }, just [9, 10], or { max: 5 } to stop after 5 verified merges ("the next five" — the frontier picks which, in dependency order). Args must be JSON — resolve any natural-language scope to ticket numbers and a cap before launching. For a watchable, checkpointed run (or when something is already going wrong), use the launch-ralph skill instead.',
+    'The engine for any multi-ticket Ralph run. Scope a run via args: { only: [9, 10], width: 2 }, just [9, 10], or { max: 5 } to stop after 5 verified merges ("the next five" — the frontier picks which, in dependency order). Declare the integration target with { target: "spec/44-mvp" } to consolidate the campaign onto that branch (default branch untouched; release later with one PR) — omit it to merge each ticket into the default branch. { canary: true } holds width at 1 until the first verified merge. Args must be JSON — resolve any natural-language scope to ticket numbers, a cap, and a target before launching. For a watchable run (an explicit user ask, or a targeted intervention), use the launch-ralph skill instead — and say why.',
   phases: [
-    { title: 'Preflight', detail: 'read project config, sync the base, run the verification gate' },
+    { title: 'Preflight', detail: 'read project config, resolve the integration target, run the verification gate' },
     { title: 'Graph', detail: 'list ready tickets and their blocking edges, verbatim' },
-    { title: 'Build', detail: 'one fresh-context implementer per ticket, merge included' },
+    { title: 'Build', detail: 'one fresh-context implementer per ticket, handing off at PR-open' },
+    { title: 'Gate', detail: 'per-ticket merge gate: CI wait, squash-merge, explicit close' },
     { title: 'Verify', detail: 'remote ground truth for every claimed merge' },
     { title: 'Park', detail: 'comment failure history, label needs-info' },
-    { title: 'Release', detail: 'final verification gate and evidence summary' },
+    { title: 'Release', detail: 'final verification gate and the where-it-lives recap' },
   ],
 }
 
@@ -52,8 +54,17 @@ const POLICY = {
   max: A.max ?? 0,
   // Parallel implementers. Width also caps local build concurrency — several implementers
   // share one machine, and fanning out test runs buys backpressure, not speed. Use 1 until
-  // a run has landed tickets cleanly on this project.
+  // a run has landed tickets cleanly on this project — or pass canary: true, which does it
+  // for you. Tickets that add DB migrations collide on the next migration number when run
+  // in parallel; the pre-PR sync renumbers, but serializing them is cheaper.
   width: A.width ?? 3,
+  // Integration target: '' (trunk) merges each ticket PR into the default branch; a branch
+  // name consolidates the whole campaign onto that branch and never touches the default
+  // branch — the run ends by offering ONE release PR target -> default (ADR-0022).
+  target: A.target ?? '',
+  // Canary: hold width at 1 until the run's first verified merge proves the plumbing
+  // end to end (branch, PR, CI, merge gate, close). For a project's first campaign.
+  canary: A.canary ?? false,
   // Tries per ticket: 1 attempt + 1 retry with a fresh context, then park. Deferrals
   // (a declared blocker had not landed yet) hand their attempt back, capped separately.
   attempts: A.attempts ?? 2,
@@ -84,12 +95,14 @@ where it left off — do not start over. Never open a second PR for the same tic
 const PREFLIGHT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['green', 'base', 'trackerAccess', 'verifyCommand', 'localCommands', 'failures'],
+  required: ['green', 'base', 'defaultBranch', 'trackerAccess', 'verifyCommand', 'localCommands', 'failures'],
   properties: {
     green: { type: 'boolean', description: 'base is synced and the verification gate passed' },
     headSha: { type: 'string', description: 'commit sha the gate ran against' },
     repo: { type: 'string', description: 'owner/name from the git remote, or empty' },
-    base: { type: 'string', description: 'default branch name' },
+    base: { type: 'string', description: "the run's integration base: the declared target branch when one is set, else the default branch" },
+    defaultBranch: { type: 'string', description: 'the repository default branch name' },
+    targetCreated: { type: 'boolean', description: 'true when a declared target branch was missing from the remote and was created from the default branch tip' },
     issueTracker: { type: 'string', description: 'issueTracker from .launchrail.yml (github | linear | none)' },
     trackerAccess: {
       type: 'string',
@@ -145,7 +158,9 @@ const BUILD_SCHEMA = {
   properties: {
     status: {
       type: 'string',
-      enum: ['merged', 'already-done', 'blocked', 'ci-red', 'ci-timeout', 'conflict', 'verify-failed', 'failed'],
+      enum: ['pr-open', 'merged', 'already-done', 'blocked', 'conflict', 'verify-failed', 'failed'],
+      description:
+        '"pr-open" is the normal hand-off (the loop owns CI and merge); "merged" only when an adopted PR turned out to be merged already (idempotency)',
     },
     pr: { type: 'integer', description: 'PR number, when one was opened or adopted' },
     mergeCommit: { type: 'string' },
@@ -158,6 +173,24 @@ const BUILD_SCHEMA = {
       type: 'array',
       items: { type: 'string' },
       description: 'follow-up work discovered but deliberately left out of scope',
+    },
+  },
+}
+
+const GATE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['status', 'summary'],
+  properties: {
+    status: {
+      type: 'string',
+      enum: ['merged', 'ci-failed', 'ci-timeout', 'not-mergeable', 'failed'],
+    },
+    mergeCommit: { type: 'string' },
+    issueClosed: { type: 'boolean' },
+    summary: {
+      type: 'string',
+      description: 'on merged: the API facts; on failure: the failing check or conflicting files, enough for a fresh implementer to act on',
     },
   },
 }
@@ -211,24 +244,32 @@ Start clean: delete the failed ralph/${ticket.number}-* branch first, re-sync th
       : ''
   return `${preamble(pre)}
 
-Implement ticket #${ticket.number} ("${ticket.title}") end to end — merge included. You own it alone; assume no knowledge of any other session. Other implementers are working on other tickets against the same base right now, so ${pre.base} will move under you. That is expected.
+Implement ticket #${ticket.number} ("${ticket.title}") through to an open PR. You own the build alone; assume no knowledge of any other session. Other implementers are working on other tickets against the same base right now, so ${pre.base} will move under you. That is expected.
 ${retry}
 Steps, in order:
 1. Dependency gate: before anything else, confirm every ticket on this ticket's "Blocked by" line is CLOSED with its work merged into ${pre.base}. If any blocker is still open, do NOT build on a missing dependency — report status "blocked", name the open blocker in "failure", and stop. That is a deferral, not a failure; the loop retries you after the blocker lands.
-2. Read the ticket and everything it links (spec sections, ADRs, journeys). Report status "already-done" if it is already closed.
+2. Read the ticket and everything it links (spec sections, ADRs, journeys). If the tracker tool truncates the body (long code spans are a known trigger), fetch the full text by another route — the tracker's search API, the spec file in the repo — and never implement from a truncated ticket. Report status "already-done" if the ticket is already closed.
 3. Label the ticket ralph:building so a lost session leaves a trace.
 4. Branch from a fresh sync of ${pre.base}: ralph/${ticket.number}-<short-slug>.
 5. Implement by invoking the launch-ralph-implement skill — it owns the per-ticket contract: TDD, the verification gate, browser smoke for user-facing changes, self-review via /code-review, commit conventions.
-6. Pre-PR sync: merge the latest ${pre.base} into your branch. Conflicts are ordinary work — resolve them with the launch-resolving-merge-conflicts skill and re-run the verification gate if anything changed.
-7. Open a PR titled from the ticket, with "Closes #${ticket.number}" in the body. Never open a second PR if one already exists — adopt it. Opening against an up-to-date base means CI tests the state that will actually land.
-8. Wait for CI if the repository has it, spacing polls with the Monitor tool or a background sleep — never a foreground sleep, never a busy loop; treat ~20 minutes as the budget and report status "ci-timeout" beyond it. Fix what your branch broke and push. If a failure reproduces on ${pre.base} itself, report "ci-red" and stop — that is systemic, not this ticket's problem.
-9. Immediately before merging, re-sync with ${pre.base} once more (retry up to 3 times if the base keeps moving), then squash-merge. Squash-merge does not reliably fire "Closes" — read the issue back, close it explicitly if it is still open, and remove the ralph:building label. Never push to ${pre.base} directly; the PR is the only door.
+6. Pre-PR sync: merge the latest ${pre.base} into your branch. Conflicts are ordinary work — resolve them with the launch-resolving-merge-conflicts skill. If ${pre.base} gained DB migrations since you branched, regenerate yours to follow them with the project's migration tool — never hand-edit the migration journal. Re-run the verification gate if anything changed.
+7. Open a PR against ${pre.base}, titled from the ticket, with "Closes #${ticket.number}" in the body. Never open a second PR if one already exists — adopt it. Opening against an up-to-date base means CI tests the state that will actually land. Then report status "pr-open" with the PR number and STOP: the CI wait, the merge, and the issue close belong to the loop's merge gate, not to you — a subagent cannot wait on CI (a background sleep will not resume you). Never push to ${pre.base} directly; the PR is the only door.
 
 ${INTEGRITY}
 
 ${IDEMPOTENCY}
 
-Report honestly via the schema: "merged" only after the squash-merge API call succeeded; "blocked" when a declared blocker had not landed; "verify-failed" when the verification gate would not go green; "conflict" when a conflict was too ambiguous to resolve without losing behavior (say which files and why); "ci-red" / "ci-timeout" / "failed" otherwise, with a summary a fresh retry can act on. List deliberately-out-of-scope discoveries in "punted".`
+Report honestly via the schema: "pr-open" once the PR exists against ${pre.base}; "merged" only when an adopted PR turned out to be already merged; "blocked" when a declared blocker had not landed; "verify-failed" when the verification gate would not go green; "conflict" when a conflict was too ambiguous to resolve without losing behavior (say which files and why); "failed" otherwise, with a summary a fresh retry can act on. List deliberately-out-of-scope discoveries in "punted".`
+}
+
+function gatePrompt(pre, ticket, build) {
+  return `You are the merge gate for ticket #${ticket.number}: PR #${build.pr} is open against ${pre.base}.
+Tracker access from this environment: ${pre.trackerAccess}
+You own the CI wait, the squash-merge, and the tracker bookkeeping — and nothing else. You never write code, never push commits, never repair a failing branch; a failing PR is reported, not fixed here.
+1. Wait for CI on the PR, if the repository has it. Space checks with the Monitor tool — NEVER a bare background sleep (it will not resume you) and never a busy loop. Treat ~20 minutes as the budget; beyond it report status "ci-timeout".
+2. CI green (or absent): check mergeability against ${pre.base} — the base may have moved since CI started. Mergeable: squash-merge via the tracker API; if the base moves between check and merge, re-check and retry up to 3 times. A real conflict is status "not-mergeable" — name the conflicting files if the API reports them.
+3. Merged: read issue #${ticket.number} back and close it explicitly if it is still open — "Closes #n" only auto-fires from the default branch${POLICY.target ? ', and this run does not merge there' : ', and squash-merge does not reliably fire it even there'} — then remove the ralph:building label. Report status "merged" with the merge commit sha.
+4. CI failed on the PR: report status "ci-failed" with the failing check and a summary a fresh implementer can act on. Fix nothing.`
 }
 
 function verifyPrompt(pre, ticket, build) {
@@ -308,17 +349,39 @@ async function drive(pre, ticket) {
     s.failures.push(`still blocked after ${s.defers} deferrals: ${build.failure ?? build.summary}`)
     return { ticket, ok: false }
   }
-  if (build.status !== 'merged') {
+  if (build.status !== 'pr-open' && build.status !== 'merged') {
     s.failures.push(`[attempt ${s.attempts}] ${build.status}: ${build.failure ?? build.summary}`)
     return { ticket, ok: false }
   }
   if (!build.pr) {
-    s.failures.push(`[attempt ${s.attempts}] reported merged but returned no PR number`)
+    s.failures.push(`[attempt ${s.attempts}] reported ${build.status} but returned no PR number`)
     return { ticket, ok: false }
+  }
+  let mergeCommit = build.mergeCommit
+  if (build.status === 'pr-open') {
+    // The loop owns the merge gate (ADR-0022): an implementer cannot wait on CI (a
+    // subagent's background sleep never resumes it), and a single gate owner keeps
+    // merge ordering sane. A failing gate hands the ticket back as a failed attempt;
+    // the fresh retry adopts the PR via the idempotency clause, repairs, hands off again.
+    const gate = await agent(gatePrompt(pre, ticket, build), {
+      label: `gate:#${ticket.number}`,
+      phase: 'Gate',
+      schema: GATE_SCHEMA,
+      effort: 'low',
+    })
+    if (!gate) {
+      s.failures.push('gate agent died (infrastructure)')
+      return { ticket, ok: false, dead: true }
+    }
+    if (gate.status !== 'merged') {
+      s.failures.push(`[attempt ${s.attempts}] PR #${build.pr} ${gate.status}: ${gate.summary}`)
+      return { ticket, ok: false }
+    }
+    mergeCommit = gate.mergeCommit || mergeCommit
   }
   // Nothing is trusted from a report — a claimed merge is checked against the remote
   // by a separate, cheap agent with tracker access only.
-  const verdict = await agent(verifyPrompt(pre, ticket, build), {
+  const verdict = await agent(verifyPrompt(pre, ticket, { pr: build.pr, mergeCommit }), {
     label: `verify:#${ticket.number}`,
     phase: 'Verify',
     schema: VERIFY_SCHEMA,
@@ -328,7 +391,7 @@ async function drive(pre, ticket) {
   if (verdict?.merged && verdict.issueClosed) {
     s.status = 'merged'
     s.pr = build.pr
-    s.mergeCommit = verdict.mergeCommit || build.mergeCommit
+    s.mergeCommit = verdict.mergeCommit || mergeCommit
     return { ticket, ok: true }
   }
   // Merged-but-issue-open fails verification too: the retry adopts the merged PR (the
@@ -363,9 +426,13 @@ function frontier(tickets, closedBefore) {
 // ---------------------------------------------------------------------------
 phase('Preflight')
 const pre = await agent(
-  `Preflight for a Ralph loop run in this repository. Fix nothing; report actual state.
+  `Preflight for a Ralph loop run in this repository. Report actual state; fix nothing — the one permitted mutation is creating the declared integration branch in step 2.
 1. Read .launchrail.yml (issueTracker, testing commands, modules) and AGENTS.md (verbatim commands).
-2. Identify the repo (git remote) and the default/base branch; sync it fresh (clean tree). If the base branch does not exist on the remote, report not green and say the base is missing — do not guess another branch.
+2. Identify the repo (git remote) and its default branch; report the default branch name as defaultBranch. ${
+    POLICY.target
+      ? `This run consolidates onto the integration branch "${POLICY.target}" — that branch is the base. If it does not exist on the remote, create it from the default branch's tip (no force; the default branch itself is never touched) and report targetCreated: true. A missing DEFAULT branch is still not green — do not guess.`
+      : `This run merges into the default branch (trunk) — that branch is the base. If it does not exist on the remote, report not green and say the base is missing — do not guess another branch.`
+  } Sync the base fresh (clean tree) and report its name as base.
 3. Determine how the tracker is reachable from THIS environment: check whether the CLI the project docs assume (e.g. gh) is installed; if not, name the concrete substitute available here (e.g. GitHub MCP tools) as an instruction future agents can follow.
 4. Run the project's install command, then the verification gate: npx @wemuda/launchrail verify. Report the actual exit codes, not the reassuring summary line. An empty verification contract failing the gate is a refusal condition, not something to work around.
 green means: base synced AND the verification gate exited 0.`,
@@ -384,11 +451,14 @@ if ((pre.issueTracker ?? 'none') === 'none') {
 phase('Graph')
 log(
   `Base green at ${pre.headSha ?? pre.base} on ${pre.base}. ` +
+    (POLICY.target
+      ? `Consolidating onto ${pre.base}${pre.targetCreated ? ' (created from the default branch tip)' : ''}; ${pre.defaultBranch || 'the default branch'} stays untouched. `
+      : `Trunk mode — each ticket merges into ${pre.base}. `) +
     (POLICY.only.length > 0
       ? `Scoped to ${POLICY.only.map((n) => `#${n}`).join(', ')}.`
       : 'No scope — building the whole ready frontier.') +
     (POLICY.max > 0 ? ` Stopping after ${POLICY.max} verified merge(s).` : '') +
-    ` Width ${POLICY.width}, ${POLICY.attempts} attempts per ticket.`,
+    ` Width ${POLICY.width}${POLICY.canary ? ' (canary: width 1 until the first verified merge)' : ''}, ${POLICY.attempts} attempts per ticket.`,
 )
 let graph = await agent(graphPrompt(pre), { label: 'read-graph', phase: 'Graph', schema: GRAPH_SCHEMA, model: 'haiku', effort: 'low' })
 if (!graph) throw new Error('graph agent died — refusing to start')
@@ -424,7 +494,10 @@ while (rounds < POLICY.maxRounds) {
   const ready = frontier(tickets, closedBefore)
   if (ready.length === 0) break
   rounds += 1
-  const batch = ready.slice(0, Math.min(POLICY.width, capLeft))
+  // Canary: the first verified merge proves the plumbing end to end (branch, PR, CI,
+  // merge gate, explicit close); until it lands, dispatch one ticket at a time.
+  const width = POLICY.canary && mergedCount() === 0 ? 1 : POLICY.width
+  const batch = ready.slice(0, Math.min(width, capLeft))
   log(`round ${rounds}: dispatching ${batch.map((t) => `#${t.number}`).join(', ')} (${ready.length} unblocked)`)
   const results = await parallel(batch.map((t) => () => drive(pre, t)))
   const landed = results.filter((r) => r?.ok)
@@ -495,10 +568,18 @@ verified means: the verification gate exited 0${pre.browserTesting && merged.len
   { label: 'release-verification', phase: 'Release', schema: RELEASE_SCHEMA },
 )
 
+// The recap is part of the contract (ADR-0022): where the work lives and the one
+// next step, as data — the supervisor relays it, never reconstructs it.
+const mode = POLICY.target ? 'consolidation' : 'trunk'
 return {
   rounds,
   verified: release?.verified ?? false,
   maxReached,
+  target: { mode, base: pre.base, defaultBranch: pre.defaultBranch ?? '', headSha: release?.headSha ?? '' },
+  nextStep:
+    mode === 'consolidation'
+      ? `All campaign work is on ${pre.base}; ${pre.defaultBranch || 'the default branch'} is untouched. Release it with one PR ${pre.base} -> ${pre.defaultBranch || 'the default branch'} — offer it, and open it only when the user says so.`
+      : `Every merged ticket is live on ${pre.base}; nothing is left to integrate.`,
   release,
   merged: merged.map((s) => ({ ticket: s.ticket.number, title: s.ticket.title, pr: s.pr, mergeCommit: s.mergeCommit })),
   parked: parked.map((s) => ({ ticket: s.ticket.number, title: s.ticket.title, failures: s.failures })),

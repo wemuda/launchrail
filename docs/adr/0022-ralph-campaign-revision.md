@@ -1,0 +1,37 @@
+# ADR-0022: Ralph campaign revision — one engine, explicit integration target, loop-owned merge gate
+
+## Status
+Accepted (amends ADR-0005 and ADR-0010)
+
+## Context
+The first full-backlog Ralph campaign ran on a consuming project: twelve tickets across three dependency tracks, every one merged, verification green. Success — but the transcript shows the run's shape was improvised wherever the contract was silent:
+
+- **The workflow never ran.** "Prefer the workflow when the graph is wide or the run is long" was advice, and ADR-0005 blessed skill mode for first campaigns — so a 12-ticket, three-track graph (exactly the shape the workflow exists for) was orchestrated as hand-rolled skill-mode dispatches. It worked, but every campaign inventing its own fan-out defeats the point of shipping a deterministic loop.
+- **The merge target was an accident of environment.** The texts assume per-ticket merges into the default branch; the session's harness forbade pushing to it, so the orchestrator improvised an integration branch during preconditions. A defensible call, announced mid-run — but a mode the contract should own and the user should recognize, not a workaround.
+- **Implementers owned merges they could not perform.** The dispatch contract included the CI wait, but a subagent in that harness cannot wait: foreground sleep is blocked and a background sleep surfaces to the parent without resuming the child. The canary bounced against its CI wait and burned ~160k tokens on a docs-only ticket before the orchestrator moved, mid-run, to "implementer hands off at PR-open; the loop owns CI-gate → merge → close" — which also gave it the merge-ordering control it later needed.
+- **Smaller potholes, each costing a round-trip:** two parallel schema tickets both generated migration `0013` (resume, renumber, re-verify); the tracker's issue-read tool truncated two ticket bodies mid-code-span (the full text existed via the search API and the spec file in the repo); the integration branch did not exist on the remote, so the first PR 422'd; and `Closes #n` never auto-fired because the PRs did not target the default branch — the explicit-close rule was the only thing keeping tracker state consistent.
+
+## Decision
+Fold the campaign's lessons into both frontends, keeping their policy blocks parallel:
+
+- **One engine.** Every multi-ticket run executes as the `ralph` workflow (`.claude/workflows/ralph.js`), launched with the resolved scope and integration target as JSON args and supervised per the `launch-ralph` skill. Skill-mode orchestration is demoted from co-equal frontend to declared exception — the user asked to watch each dispatch, the Workflow tool is unavailable in the environment, or the run is a targeted intervention (one parked ticket, re-run watchably) — and the chosen engine is named in the pre-launch echo, so a hand-rolled run can never again be the silent default. A `canary: true` arg keeps width at 1 until the run's first verified merge, replacing the "first campaign" argument for skill mode.
+- **An explicit integration target.** Every run merges its per-ticket PRs into exactly one declared base. **Trunk** (default): the repository's default branch — each verified merge is immediately on mainline. **Consolidation**: one named integration branch collects the whole campaign and the default branch is never touched; the campaign ends by *offering* one release PR `<target> → <default>`, opened only when the user says so. Consolidation is chosen, never fallen into — the user names a branch, or the environment forbids pushing to the default branch and that constraint is announced as the reason. A named target missing from the remote is created from the default branch's tip; a missing *default* branch remains a refusal. In consolidation mode `Closes #n` never auto-fires (auto-close only triggers from the default branch), so the explicit post-merge close is load-bearing.
+- **The loop owns the merge gate.** Implementers build, open the PR, and hand off at PR-open. The gate — CI wait, mergeability re-check, squash-merge, explicit issue close, `ralph:building` removal — belongs to the loop: the orchestrator in skill mode, a per-ticket gate agent (Gate phase) in the workflow. Implementer subagents never sit in CI waits. A PR whose CI fails or that turns out unmergeable comes back as a failed attempt; the fresh retry adopts the PR (idempotency clause), repairs, and hands off again. One gate owner also serializes merges where it matters — schema-touching tickets in particular.
+- **The recap is part of the contract.** A run may not end with a bare "done": the close-out states where the work lives (target branch and head SHA; in consolidation mode, that the default branch is untouched), the ticket → PR → merge-commit table, parked and stuck tickets with why, punted follow-ups and operator steps in one list, and the single next step. The workflow returns these as structured fields (`target`, `nextStep`).
+- **Field mechanics in every dispatch:** a truncated ticket body is never implemented from — fetch the full text by another route (search API, the spec file in the repo); the pre-PR sync regenerates and renumbers DB migrations when the base gained any since branching (with the project's migration tool, never by hand-editing the journal); width guidance names parallel migration-adding tickets as a known collision to serialize.
+
+## Alternatives considered
+- **Retire skill-mode orchestration entirely** — rejected: targeted interventions and environments without the Workflow tool still need it, and the supervision contract lives in the skill regardless. It is demoted, not deleted.
+- **Infer the integration target silently from harness constraints** — rejected: the target changes what "done" means (live on mainline vs. waiting on one release PR), so it is declared in the echo before anything dispatches and restated in the recap.
+- **Keep implementer-owned merges where the environment can wait** — rejected: two ownership models is two failure surfaces, and the field run showed the single gate owner is also what prevents merge-order pile-ups; the gate is cheap.
+- **A repo-level config key for the target** — rejected: the target is per-run intent ("collect this spec on its branch"), not project structure; a workflow arg and the front door's resolution step carry it.
+
+## Consequences
+- Easier: campaigns are reproducible (one engine, deterministic bookkeeping); implementers spend no context on CI waits; users always learn where the work landed and what single action releases it; consolidation campaigns are first-class instead of improvised.
+- Harder: the workflow gains a phase (Gate) and two args (`target`, `canary`) to keep textually parallel with the skill; a CI failure now costs a full fresh attempt where an implementer mid-wait might have patched it cheaply.
+- Constrained: a run that cannot name its integration target does not start; a run that merged everything still ends "unverified" if the final gate fails — unchanged from ADR-0005, now with the recap obligation on top.
+
+## Revisit when
+- The harness lets subagents wait efficiently (a first-class Monitor/scheduling primitive in dispatched agents), which would reopen the merge-ownership split.
+- Campaign data shows the gate-agent retry loop (fresh implementer per CI failure) too expensive versus a repair-in-place step.
+- Consolidation campaigns need stacked targets (spec branch per track) rather than one branch per run.

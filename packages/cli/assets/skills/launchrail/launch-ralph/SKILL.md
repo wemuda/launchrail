@@ -1,6 +1,6 @@
 ---
 name: launch-ralph
-description: Orchestrate the bounded Ralph implementation loop — dispatch fresh-context implementer subagents over the ready ticket frontier, verify every claimed merge against the remote, and gate completion on the project's verification contract. Also the supervisor's contract when the loop runs as the ralph workflow. The engine behind /launch-implement (the user-typed front door) — never invoke it on your own initiative; reach it through that door or an explicit user request to run the loop.
+description: The Ralph implementation loop's contract — policies, dispatch steps, the loop-owned merge gate, and the supervisor's duties when the loop runs as the ralph workflow (the default engine for any multi-ticket run). Skill-mode orchestration of fresh-context implementers lives here too, as the declared exception. Behind /launch-implement (the user-typed front door) — never invoke it on your own initiative; reach it through that door or an explicit user request to run the loop.
 ---
 
 # Ralph — the autonomous implementation loop
@@ -9,13 +9,14 @@ The user starts this loop through `/launch-implement` (or by asking for it in so
 
 You are the orchestrator. **You do not write code. You do not read diffs. You do not fix failing branches yourself.** You compute what's ready, dispatch, verify, and keep a running log. Tracker state and subagent reports in, decisions out.
 
-One agent implementing a whole backlog in a single session degrades — context fills with diffs and half-remembered state, and quality drops with every ticket. This loop inverts that: every ticket gets a fresh-context implementer subagent that owns it end to end, merge included, and nothing an implementer reports is trusted until the remote confirms it.
+One agent implementing a whole backlog in a single session degrades — context fills with diffs and half-remembered state, and quality drops with every ticket. This loop inverts that: every ticket gets a fresh-context implementer subagent that owns the build through an open PR, the loop's merge gate lands it, and nothing anyone reports is trusted until the remote confirms it.
 
-This skill is the watchable, checkpointed frontend of the loop. The same loop exists as a deterministic workflow (`.claude/workflows/ralph.js`, installed by init; `launchrail sync` restores it) — prefer the workflow when the dependency graph is wide or the run is long (script state cannot be compacted away); prefer this skill when you want to watch each dispatch, the graph is a chain, or something is already going wrong. The two share one policy block: change a policy here, change it in the workflow too (ADR-0005, field-revised by ADR-0010).
+This skill is the loop's contract and its supervisor. The loop itself runs as the deterministic `ralph` workflow (`.claude/workflows/ralph.js`, installed by init; `launchrail sync` restores it) — **the workflow is the engine for every multi-ticket run**, launched with the resolved scope and integration target as JSON args and then supervised per this skill; its script state cannot be compacted away. Orchestrating dispatches from this session instead is the exception, and it is chosen out loud — name the engine and why before anything dispatches: the user asked to watch each dispatch, the Workflow tool is unavailable in this environment, or this is a targeted intervention (one parked ticket, re-run watchably). A hand-rolled fan-out that is neither is not the loop. The two forms share one policy block: change a policy here, change it in the workflow too (ADR-0005, field-revised by ADR-0010 and ADR-0022).
 
 ## Policies
 
-- **Width: 3** implementers at once. Width multiplies conflict rate and shared-machine load, not just throughput — use 1 until a run has landed tickets cleanly on this project. Cut a batch below width when its tickets would obviously collide (same module, same files); when in doubt, narrow.
+- **Integration target: declared, singular, restated.** Every run merges its per-ticket PRs into exactly one base, named before anything dispatches and again in the close-out. **Trunk** (the default): the repository's default branch — each verified merge is immediately on mainline, and when the run ends there is nothing left to integrate. **Consolidation**: one named integration branch (e.g. `spec/44-mvp`) collects the whole campaign and the default branch is never touched; the run ends by *offering* one release PR `<target> → <default>` — opened only when the user says so. Consolidation is chosen, never fallen into: the user names a branch or asks for it, or the environment forbids pushing to the default branch — announce that constraint as the reason. A named target missing from the remote is created from the default branch's tip before preflight verifies it; a missing *default* branch stays a refusal. In consolidation mode `Closes #n` never auto-fires (auto-close only triggers from the default branch), so the explicit post-merge close is load-bearing, not belt-and-suspenders.
+- **Width: 3** implementers at once. Width multiplies conflict rate and shared-machine load, not just throughput — use 1 until a run has landed tickets cleanly on this project (the workflow's `canary: true` encodes exactly that). Cut a batch below width when its tickets would obviously collide (same module, same files); when in doubt, narrow. Tickets that add DB migrations are a known collision: two parallel implementers both claim the next migration number — serialize them, or expect the second to renumber at pre-PR sync.
 - **Cap: none** by default. The user may bound a run ("the next 5"): stop once that many merges have been *verified*, keeping every batch within the remainder so the run cannot overshoot. Failed and deferred dispatches never consume the cap — their slots go to other tickets. Hitting the cap ends the run cleanly: the rest of the frontier stays ready (reported, never parked), and close-out runs as usual.
 - **Attempts: 2** — retry a failed ticket once with a fresh context, then park it.
 - **Deferrals are not attempts.** An implementer that stops at its dependency gate (a declared blocker had not actually landed) hands the attempt back and is retried after the blocker lands — capped at 2 deferrals, then it counts as a real failure.
@@ -23,14 +24,14 @@ This skill is the watchable, checkpointed frontend of the loop. The same loop ex
 - **Checkpoints: none** by default — run to completion, report once. The user may ask for a pause after each round instead.
 - **Review gate:** the implementer's own self-review via `/launch-code-review`, inside `launch-ralph-implement`.
 - **Verification gate:** `npx @wemuda/launchrail verify` — per ticket before the PR, and once more on the final base before the loop may report success.
-- **Merge ordering: optimistic, arbitrated by the remote.** Implementers re-sync immediately before merging and retry up to 3 times if the base moved. No merge locks.
+- **Merge ownership: the loop, not the implementer.** Implementers build, open the PR, and hand off at PR-open; the merge gate — CI wait, mergeability re-check, squash-merge, explicit issue close, `ralph:building` removal — belongs to the loop (you in skill mode, a per-ticket gate agent in the workflow). An implementer subagent must never sit in a CI wait: it cannot foreground-sleep, and a background sleep surfaces to its parent without resuming it — tokens burn, nothing advances. Merge ordering stays optimistic and remote-arbitrated (re-check mergeability immediately before merging, up to 3 retries if the base moves; no merge locks), and the single gate owner serializes where it matters — critical-path first, schema-touching tickets one at a time.
 - **Labels:** tickets enter as `ready-for-agent`, are marked `ralph:building` while owned, and leave as closed or `needs-info` (parked).
 
 ## Preconditions — refuse to start if any fails
 
 1. `.launchrail.yml` exists with `issueTracker` not `none`, and the tracker is reachable **from this environment**: check whether the CLI the project docs assume (e.g. `gh`) is installed here; if not, identify the substitute (e.g. GitHub MCP tools) and name it in every dispatch.
 2. Open tickets labeled `ready-for-agent` exist and carry explicit `Blocked by: #n` edges (or the tracker's native blocking relations). No tickets with edges → nothing to orchestrate; point the user at `launch-tickets`. If anything wearing `ready-for-agent` is plainly not an implementable ticket — a published spec, research notes, an epic — stop and have it relabeled (e.g. `spec`) before starting: the frontier is computed from the label alone and cannot tell prose from work.
-3. The base branch exists on the remote and is green on a fresh checkout: sync it, run the install command, then `npx @wemuda/launchrail verify` — report actual exit codes, not the reassuring summary line; a broken base poisons every implementer after it. A missing base branch is a refusal, not a cue to guess another. An **empty verification contract fails `verify` and is a refusal condition**: a run whose completion nothing can verify must not start. Tell the user to configure `testing` commands in `.launchrail.yml` first.
+3. The integration target is resolved (trunk or a named consolidation branch — see Policies) and its branch is green on a fresh checkout: sync it (creating a named consolidation branch from the default branch's tip if the remote lacks it), run the install command, then `npx @wemuda/launchrail verify` — report actual exit codes, not the reassuring summary line; a broken base poisons every implementer after it. A missing *default* branch is a refusal, not a cue to guess another. An **empty verification contract fails `verify` and is a refusal condition**: a run whose completion nothing can verify must not start. Tell the user to configure `testing` commands in `.launchrail.yml` first.
 4. The verbatim local commands are known (from `AGENTS.md` / `.launchrail.yml`), including which checks belong to CI rather than the shared local machine.
 
 ## The loop
@@ -43,16 +44,24 @@ Sync → compute frontier → dispatch batch → verify → handle outcomes → 
 
 ## The dispatch prompt
 
-Each implementer prompt is self-contained — assume it knows nothing about this session or the other implementers. It carries: the ticket number and title, the verbatim commands, how to reach the tracker from this environment, and these eight steps:
+Each implementer prompt is self-contained — assume it knows nothing about this session or the other implementers. It carries: the ticket number and title, the verbatim commands, how to reach the tracker from this environment, which branch is the base (the integration target), and these seven steps:
 
 1. **Dependency gate:** before anything else, confirm every ticket on the `Blocked by` line is closed with its work merged into the base. If any blocker is still open, do not build on a missing dependency — report "blocked" naming the open blocker, and stop. A deferral, not a failure; the loop retries after the blocker lands.
-2. Read the ticket and everything it links (spec sections, ADRs, journeys), plus `AGENTS.md`/`CLAUDE.md`. If the ticket is already closed, report "already-done" and stop.
+2. Read the ticket and everything it links (spec sections, ADRs, journeys), plus `AGENTS.md`/`CLAUDE.md`. If the tracker tool truncates the body (long code spans are a known trigger), fetch the full text by another route — the tracker's search API, the spec file in the repo — and never implement from a truncated ticket. If the ticket is already closed, report "already-done" and stop.
 3. Label the ticket `ralph:building` so a lost session leaves a trace.
 4. Branch from a fresh sync of the base: `ralph/<n>-<short-slug>`.
 5. Implement by invoking the **`launch-ralph-implement`** skill — it owns TDD, the verification gate, browser smoke for user-facing changes, self-review via `/launch-code-review`, and commit conventions. Name the skill; do not paraphrase it.
-6. Pre-PR sync: merge the latest base into the branch; resolve conflicts with the **`launch-resolving-merge-conflicts`** skill; re-run the verification gate if anything changed.
-7. Open a PR titled from the ticket with `Closes #<n>` in the body. Never open a second PR for a ticket — adopt an existing one. Opening against an up-to-date base means CI tests the state that will actually land.
-8. Wait for CI if the repository has it — space polls with the Monitor tool or a background sleep, never a foreground sleep or busy loop; ~20 minutes is the budget. Fix what the branch broke and push; a failure that reproduces on the base itself is "ci-red" — systemic, not this ticket's problem. Re-sync immediately before merging (up to 3 retries if the base moves), then squash-merge. Squash-merge does not reliably fire `Closes` — read the issue back, close it explicitly if still open, and remove `ralph:building`.
+6. Pre-PR sync: merge the latest base into the branch; resolve conflicts with the **`launch-resolving-merge-conflicts`** skill; if the base gained DB migrations since branching, regenerate yours to follow them with the project's migration tool — never hand-edit the journal; re-run the verification gate if anything changed.
+7. Open a PR against the base, titled from the ticket, with `Closes #<n>` in the body. Never open a second PR for a ticket — adopt an existing one. Opening against an up-to-date base means CI tests the state that will actually land. Then **report PR-open and stop**: the CI wait, the merge, and the issue close belong to the loop's merge gate, not to you. Never push to the base directly.
+
+## The merge gate — owned by the loop
+
+In skill mode, you run the gate for every PR the implementers hand off (the workflow runs it as a per-ticket gate agent). Order merges yourself — critical-path first, schema-touching PRs one at a time:
+
+1. Wait for the PR's CI from *this* session, spacing checks with your own timers (a background sleep here wakes you — the orchestrator can wait; implementer subagents cannot). ~20 minutes is the budget.
+2. Green → re-check mergeability (the base may have moved since CI started), then squash-merge; if the base moves between check and merge, re-check and retry up to 3 times.
+3. Merged → read the issue back and close it explicitly if still open — in consolidation mode auto-close never fires — and remove `ralph:building`. Then verify as always: the remote's word, not yours.
+4. CI failed on the PR, or a real conflict → the ticket becomes a failed attempt with the failing check or conflicting files as its summary; the fresh retry adopts the PR (idempotency clause), repairs, and hands off again. A failure that reproduces on the base itself is systemic — stop the run, not the ticket.
 
 Every dispatch — retries included — also carries these two clauses verbatim:
 
@@ -77,7 +86,7 @@ When the Ralph loop runs as the `ralph` workflow instead of through this skill, 
 1. **Read the resolved scope back, immediately.** The first `log()` lines state it ("Scoped to #11, #12", "Stopping after 5 verified merge(s)", or "No scope — building the whole ready frontier"). An unscoped run when the user asked for three tickets is the cheapest failure to catch and the most expensive to miss — stop and relaunch if it is wrong. Scan the listed numbers for anything that is not an implementable ticket: a spec or research issue wearing `ready-for-agent` will be built as if it were work (the workflow excludes and logs obvious cases, but the label is the fix — have it corrected).
 2. **Establish ground truth from the remote, never from the run's own reports.** On every check-in read the workflow journal (`journal.jsonl`) *and* the tracker/PRs. A merge is real only when the commit is on the base branch and the issue is closed.
 3. **Arm check-ins across the long waits.** If the session can schedule a self-message, arm one a few minutes out (confirm scope and the first dispatches) and a longer fallback (catch completion or a stall). The workflow's completion notification is the primary signal; the check-ins are the backstop so the run survives an interruption.
-4. **Know the healthy shapes so you don't cry wolf.** A ticket can appear twice in Build — that is the retry policy, or a *deferral* because its dependency had not landed yet (not a failure). A ticket only truly fails after two real attempts, then it parks.
+4. **Know the healthy shapes so you don't cry wolf.** A ticket can appear twice in Build — that is the retry policy, or a *deferral* because its dependency had not landed yet (not a failure). Build ending at PR-open with a separate Gate agent doing the merge is the design, not a stall. A ticket only truly fails after two real attempts, then it parks.
 5. **Intervene by exception, not by reflex.** Parked ticket → dispatch a fresh scoped run for just that one. Stall (an agent stops writing, CI never returns) → diagnose from the journal. Wrong scope or wrong base → stop, fix, relaunch. Otherwise stay out of the way; the loop is built to self-correct.
 6. **Report once at the end, concretely** — PR numbers, merge commits, issues closed, the verification outcome, anything punted — then disarm the check-ins.
 
@@ -87,12 +96,18 @@ When the frontier drains (or max rounds / a stop condition hits):
 
 1. Sync a fresh base and run `npx @wemuda/launchrail verify`. **The loop may not report success while this fails** — report "unverified" with the failures instead.
 2. If `.launchrail.yml` has `modules.browser-testing: true` and any merged ticket changed user-facing behavior, dispatch one smoke run per the `launch-browser-smoke` skill and reference its evidence bundle (`artifacts/verification/<run-id>/`).
-3. Report the release evidence summary: merged tickets (PR and merge commit each), parked tickets with their failure histories, stuck tickets and what blocks them, follow-ups implementers punted, and the verification outcome with its evidence. Evidence over assertion — link what was run, never summarize what wasn't.
+3. Report the campaign recap — it must let the user act without scrolling back:
+   - **Where the work lives:** the integration target and its head SHA; in consolidation mode, say explicitly that the default branch is untouched.
+   - The ticket → PR → merge-commit table; parked tickets with their failure histories; stuck tickets and what blocks them.
+   - Follow-ups and operator steps implementers punted, gathered into one list.
+   - The verification outcome with its evidence. Evidence over assertion — link what was run, never summarize what wasn't.
+   - **The single next step:** trunk — nothing; every merged ticket is live on the default branch. Consolidation — offer the one release PR `<target> → <default>` with this recap as its body, and open it only when the user says so.
 
 ## Rules
 
 - Fresh context per dispatch, per retry. No exceptions.
-- Never implement, review, or repair code in the orchestrator session — dispatch instead.
+- One integration target and one engine per run, both declared before the first dispatch and restated in the recap.
+- Never implement, review, or repair code in the orchestrator session — dispatch instead. Running the merge gate is bookkeeping, not repair.
 - Name the skills (`launch-ralph-implement`, `launch-resolving-merge-conflicts`, `launch-browser-smoke`); never paraphrase their contents into a prompt.
 - Blocking edges are parsed from the verbatim `Blocked by` line, by you — never resolved by a model in between.
 - Nothing counts as merged until the remote says so; nothing counts as done until `verify` is green.
