@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/wemuda/launchrail/compare/v1.8.0...v1.9.0) (2026-08-17)
+
+
+### Features
+
+* **cli:** unify Ralph on the workflow engine with a declared integration target ([d49928a](https://github.com/wemuda/launchrail/commit/d49928a1d05b8a5aecf02d088e554df21b7823cc))
+
 ## [1.8.0](https://github.com/wemuda/launchrail/compare/v1.7.0...v1.8.0) (2026-08-13)
 
 
