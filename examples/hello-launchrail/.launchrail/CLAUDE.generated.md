@@ -12,7 +12,7 @@
 ## The Ralph loop
 
 - Implementation starts with `/launch-implement` — all ready tickets, or one with `/launch-implement <ticket>`. Multi-ticket runs execute as the `ralph` workflow (`.claude/workflows/ralph.js`), supervised per the `launch-ralph` skill; single tickets build in-session. Only ever started explicitly by the user.
-- Every run declares one integration target: the default branch (trunk — the default) or a named consolidation branch via the `target` workflow arg, which collects the campaign and ends by offering one release PR to the default branch. The run's recap states where the work lives and the single next step.
+- Every run declares one integration target: by default a consolidation branch (named via the `target` workflow arg, it collects the campaign and ends by offering one release PR to the default branch, which stays untouched), or the default branch (trunk) as an explicit opt-in for per-ticket merges. The run's recap states where the work lives and the single next step.
 - Tickets enter the loop with the `ready-for-agent` label and explicit `Blocked by: #n` edges; parked tickets carry `needs-info` plus their failure history.
 - A ticket counts done only when its PR is merged on the remote, the issue is closed, and `npx @wemuda/launchrail verify` is green — agent reports are claims, not evidence.
 - `.claude/workflows/ralph.js` is managed by Launchrail: override policy per run via workflow args (e.g. `{ width: 1 }`), never by editing the file.
