@@ -25,7 +25,6 @@ import {
   serializeManifest,
   type IssueTracker,
   type Manifest,
-  type Mode,
   type Origin,
 } from "../lib/manifest.js";
 import { seedFiles } from "../lib/seeds.js";
@@ -75,7 +74,6 @@ function defaultModules(): Manifest["modules"] {
 function defaultManifestFor(detection: RepoDetection): Manifest {
   return {
     schemaVersion: 1,
-    mode: "standard-mvp",
     origin: detection.looksEstablished ? "existing" : "new",
     issueTracker: detection.gitRemoteUrl?.includes("github.com")
       ? "github"
@@ -113,16 +111,6 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
             },
           ],
         }),
-      mode: () =>
-        p.select({
-          message: "Project mode",
-          initialValue: defaults.mode as string,
-          options: [
-            { value: "standard-mvp", label: "Standard MVP", hint: "default product workflow" },
-            { value: "spike", label: "Spike", hint: "short experiment; disposable or highly uncertain" },
-            { value: "high-rigor", label: "High-rigor", hint: "security-sensitive, regulated, or multi-team" },
-          ],
-        }),
       issueTracker: () =>
         p.select({
           message: "Issue tracker",
@@ -133,12 +121,6 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
         p.confirm({
           message: "Use Conventional Commits? (recorded in the seeded AGENTS.md so agents follow it)",
           initialValue: defaults.conventions.conventionalCommits,
-        }),
-      unitCommand: () =>
-        p.text({
-          message: "Deterministic test command (empty to decide later)",
-          initialValue: defaults.testing.unitCommand ?? "",
-          placeholder: "e.g. pnpm test",
         }),
     },
     {
@@ -151,14 +133,13 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
 
   return {
     schemaVersion: 1,
-    mode: answers.mode as Mode,
     origin: answers.origin as Origin,
     issueTracker: answers.issueTracker as IssueTracker,
     conventions: { conventionalCommits: answers.conventionalCommits },
-    testing: {
-      ...defaultTesting(detection),
-      unitCommand: answers.unitCommand.trim() === "" ? null : answers.unitCommand.trim(),
-    },
+    // Testing commands are detected, never interviewed: a repo with a test
+    // script gets it recorded, anything else stays null until the workflow
+    // (or `add`, or a manifest edit) settles it once the stack exists.
+    testing: defaultTesting(detection),
     modules: defaultModules(),
   };
 }
@@ -293,7 +274,6 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   lockfile.launchrailVersion = VERSION;
   lockfile.decisions = {
     ...lockfile.decisions,
-    mode: manifest.mode,
     origin: manifest.origin,
     issueTracker: manifest.issueTracker,
     conventionalCommits: manifest.conventions.conventionalCommits,

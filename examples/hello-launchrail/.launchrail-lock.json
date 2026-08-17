@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "launchrailVersion": "1.8.0",
+  "launchrailVersion": "1.9.0",
   "files": {
     ".claude/hooks/ralph-permission-guard.py": {
       "class": "managed",
@@ -16,7 +16,7 @@
     },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
-      "checksum": "ab15cd625f82d6e339e7514dc963a877f356e58f24fa051026858eafa43ca192"
+      "checksum": "2bd820245206dd65582aa42c95e7c99f5b6cc59992ef27d05f7fb91c00d310b8"
     },
     ".claude/skills/launch-discovery/SKILL.md": {
       "class": "managed",
@@ -76,11 +76,11 @@
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "9becec102c605caaaca14b8498a4556d78bd863fd322703f6ce0d330d11d0325"
+      "checksum": "21cb8c80130ef5353aadda25544e72c7cf8c4c1a69d70e96cfd3a4b2730c92d9"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "07cc1fd390971bab8de4f1771c01f21830412a3bd935ca87cac5eb7b420856ed"
+      "checksum": "8899dc55acc732a62078075f4b1db0ef3419096705eb9c6154b2ad1428989bb9"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",
@@ -92,11 +92,11 @@
     },
     ".launchrail.yml": {
       "class": "seeded",
-      "checksum": "855830fd42519257a47d5a400d6120abe69b15571af7c91c1eeb40ec18e8ac41"
+      "checksum": "799c2bcc1fa0406e3d9c3202b944611a726177133d0cde5691e7e9665a1ec2e6"
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "e7d576251c18181af835aee75ac05bd23d786b2327cf8c2b3a1a6f9983685dd5"
+      "checksum": "0e7689a7c6266ac1e932bd89dcb83ea398916bb1c588a55f14379eea28d6c537"
     },
     "AGENTS.md": {
       "class": "seeded",
@@ -121,14 +121,14 @@
   },
   "migrations": [
     "2026-08-plugin-declaration",
+    "2026-08-ralph-permission-guard",
+    "2026-08-remove-project-mode",
     "2026-08-upstream-plugin-declarations",
     "2026-08-vendor-workflow-skills",
     "2026-08-wire-default-implementation-loop",
-    "2026-08-workflow-skills-independence",
-    "2026-08-ralph-permission-guard"
+    "2026-08-workflow-skills-independence"
   ],
   "decisions": {
-    "mode": "standard-mvp",
     "origin": "existing",
     "issueTracker": "github",
     "conventionalCommits": true,

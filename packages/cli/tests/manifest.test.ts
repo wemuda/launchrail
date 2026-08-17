@@ -3,7 +3,6 @@ import { parseManifest, serializeManifest, setModuleEnabled, type Manifest } fro
 
 const manifest: Manifest = {
   schemaVersion: 1,
-  mode: "standard-mvp",
   origin: "new",
   issueTracker: "github",
   conventions: { conventionalCommits: true },
@@ -28,34 +27,28 @@ describe("manifest", () => {
     expect(serializeManifest(manifest)).toBe(serializeManifest({ ...manifest }));
   });
 
-  test("rejects unknown mode", () => {
-    const parsed = parseManifest("schemaVersion: 1\nmode: yolo\n");
-    expect(parsed.manifest).toBeNull();
-    expect(parsed.errors.join(" ")).toContain("mode must be one of");
-  });
-
   test("rejects wrong schemaVersion", () => {
-    const parsed = parseManifest("schemaVersion: 2\nmode: spike\n");
+    const parsed = parseManifest("schemaVersion: 2\n");
     expect(parsed.manifest).toBeNull();
     expect(parsed.errors.join(" ")).toContain("schemaVersion");
   });
 
   test("rejects unknown origin", () => {
-    const parsed = parseManifest("schemaVersion: 1\nmode: spike\norigin: legacy\n");
+    const parsed = parseManifest("schemaVersion: 1\norigin: legacy\n");
     expect(parsed.manifest).toBeNull();
     expect(parsed.errors.join(" ")).toContain("origin must be one of");
   });
 
   test("origin round-trips and defaults to new when absent (older manifests stay valid)", () => {
-    const withOrigin = parseManifest("schemaVersion: 1\nmode: spike\norigin: existing\n");
+    const withOrigin = parseManifest("schemaVersion: 1\norigin: existing\n");
     expect(withOrigin.errors).toEqual([]);
     expect(withOrigin.manifest?.origin).toBe("existing");
-    const withoutOrigin = parseManifest("schemaVersion: 1\nmode: spike\n");
+    const withoutOrigin = parseManifest("schemaVersion: 1\n");
     expect(withoutOrigin.manifest?.origin).toBe("new");
   });
 
   test("applies defaults for optional fields", () => {
-    const parsed = parseManifest("schemaVersion: 1\nmode: spike\n");
+    const parsed = parseManifest("schemaVersion: 1\n");
     expect(parsed.manifest).toMatchObject({
       origin: "new",
       issueTracker: "none",
@@ -72,16 +65,21 @@ describe("manifest", () => {
   });
 
   test("ignores the retired implementationLoop key — pre-ADR-0020 manifests stay valid", () => {
-    const parsed = parseManifest("schemaVersion: 1\nmode: standard-mvp\nimplementationLoop: superpowers\n");
+    const parsed = parseManifest("schemaVersion: 1\nimplementationLoop: superpowers\n");
     expect(parsed.errors).toEqual([]);
     expect(parsed.manifest).not.toBeNull();
     expect("implementationLoop" in (parsed.manifest ?? {})).toBe(false);
   });
 
+  test("ignores the retired mode key — pre-ADR-0023 manifests stay valid", () => {
+    const parsed = parseManifest("schemaVersion: 1\nmode: high-rigor\n");
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.manifest).not.toBeNull();
+    expect("mode" in (parsed.manifest ?? {})).toBe(false);
+  });
+
   test("accepts a manifest written before the testing fields existed", () => {
-    const parsed = parseManifest(
-      "schemaVersion: 1\nmode: standard-mvp\ntesting:\n  unitCommand: pnpm test\n",
-    );
+    const parsed = parseManifest("schemaVersion: 1\ntesting:\n  unitCommand: pnpm test\n");
     expect(parsed.errors).toEqual([]);
     expect(parsed.manifest?.testing.unitCommand).toBe("pnpm test");
     expect(parsed.manifest?.testing.e2eCommand).toBeNull();
@@ -96,7 +94,7 @@ describe("manifest", () => {
 
 describe("setModuleEnabled", () => {
   const source =
-    "# my precious comment\nschemaVersion: 1\nmode: standard-mvp\ntesting:\n  unitCommand: pnpm test # keep this\nmodules:\n  core: true\n";
+    "# my precious comment\nschemaVersion: 1\ntesting:\n  unitCommand: pnpm test # keep this\nmodules:\n  core: true\n";
 
   test("enables the module and fills testing commands, preserving comments", () => {
     const result = setModuleEnabled(source, "browser-testing", {

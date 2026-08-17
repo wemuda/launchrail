@@ -1,7 +1,6 @@
 # Launchrail project manifest — https://github.com/wemuda/launchrail
 # This file is yours to edit; Launchrail reads it and never force-overwrites it.
 schemaVersion: 1
-mode: standard-mvp
 origin: existing
 issueTracker: github
 conventions:

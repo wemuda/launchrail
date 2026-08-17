@@ -6,7 +6,7 @@ A minimal Node app (dependency-free HTTP server + `node --test` tests) showing e
 
 | File | Ownership | Meaning |
 | --- | --- | --- |
-| `.launchrail.yml` | seeded | Project manifest — mode, tracker, conventions, test commands, modules. Yours to edit. |
+| `.launchrail.yml` | seeded | Project manifest — origin, tracker, conventions, test commands, modules. Yours to edit. |
 | `.launchrail-lock.json` | machine-managed | Versions, per-file ownership classes and checksums, applied migrations. Committed, never hand-edited. |
 | `AGENTS.md` | seeded | Agent operating contract with the chosen conventions baked in; fill in the TODOs. |
 | `CLAUDE.md` | seeded | Claude Code entry point importing `@AGENTS.md` and the generated instructions. |

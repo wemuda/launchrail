@@ -140,6 +140,7 @@ describe("launchrail init", () => {
   });
 
   test("respects an existing manifest's configuration", async () => {
+    // The retired mode key (pre-ADR-0023) stays valid and simply isn't a decision anymore.
     writeFileSync(
       join(tmp.root, ".launchrail.yml"),
       "schemaVersion: 1\nmode: spike\nconventions:\n  conventionalCommits: false\n",
@@ -148,7 +149,8 @@ describe("launchrail init", () => {
     expect(outcome.code).toBe(0);
     expect(readFileSync(join(tmp.root, "AGENTS.md"), "utf8")).not.toContain("Conventional Commits");
     const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
-    expect(lock.decisions.mode).toBe("spike");
+    expect(lock.decisions.conventionalCommits).toBe(false);
+    expect(lock.decisions.mode).toBeUndefined();
   });
 
   test("installs Ralph as the loop with no manifest field selecting it (ADR-0020)", async () => {
@@ -163,7 +165,7 @@ describe("launchrail init", () => {
   test("seeds the tracker doc matching the manifest's issueTracker", async () => {
     writeFileSync(
       join(tmp.root, ".launchrail.yml"),
-      "schemaVersion: 1\nmode: standard-mvp\nissueTracker: github\n",
+      "schemaVersion: 1\nissueTracker: github\n",
     );
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     const doc = readFileSync(join(tmp.root, "docs/agents/issue-tracker.md"), "utf8");
@@ -259,7 +261,7 @@ describe("launchrail init", () => {
   });
 
   test("fails cleanly on an invalid manifest", async () => {
-    writeFileSync(join(tmp.root, ".launchrail.yml"), "schemaVersion: 7\nmode: nonsense\n");
+    writeFileSync(join(tmp.root, ".launchrail.yml"), "schemaVersion: 7\n");
     const outcome = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(outcome.code).toBe(1);
     expect(existsSync(join(tmp.root, "AGENTS.md"))).toBe(false);

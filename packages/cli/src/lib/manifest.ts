@@ -2,9 +2,6 @@ import { parse, parseDocument, stringify } from "yaml";
 
 export const MANIFEST_FILENAME = ".launchrail.yml";
 
-export const MODES = ["spike", "standard-mvp", "high-rigor"] as const;
-export type Mode = (typeof MODES)[number];
-
 /**
  * Whether the repository is a greenfield start or a codebase being adopted.
  * `existing` sends `launch` down the alignment on-ramp — infer artifacts from
@@ -21,7 +18,6 @@ export type TestingKey = (typeof TESTING_KEYS)[number];
 
 export interface Manifest {
   schemaVersion: 1;
-  mode: Mode;
   origin: Origin;
   issueTracker: IssueTracker;
   conventions: {
@@ -41,7 +37,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Strict on the fields that change behavior (schemaVersion, mode), lenient
+ * Strict on the one field that changes behavior (schemaVersion), lenient
  * with defaults on the rest so hand-edited manifests stay valid.
  */
 export function validateManifest(data: unknown): ManifestParseResult {
@@ -52,9 +48,6 @@ export function validateManifest(data: unknown): ManifestParseResult {
 
   if (data.schemaVersion !== 1) {
     errors.push(`schemaVersion must be 1 (found ${JSON.stringify(data.schemaVersion ?? null)})`);
-  }
-  if (typeof data.mode !== "string" || !(MODES as readonly string[]).includes(data.mode)) {
-    errors.push(`mode must be one of: ${MODES.join(", ")}`);
   }
 
   // Optional with a default so manifests written before `origin` existed stay
@@ -116,14 +109,14 @@ export function validateManifest(data: unknown): ManifestParseResult {
   }
 
   // `implementationLoop` (ADR-0017) was removed by ADR-0020 — Ralph is the
-  // loop. Manifests that still carry the key stay valid: unknown keys are
-  // ignored here, and the independence migration deletes it.
+  // loop — and `mode` (spike / standard-mvp / high-rigor) was removed by
+  // ADR-0023. Manifests that still carry either key stay valid: unknown keys
+  // are ignored here, and the corresponding migrations delete them.
 
   if (errors.length > 0) return { manifest: null, errors };
   return {
     manifest: {
       schemaVersion: 1,
-      mode: data.mode as Mode,
       origin,
       issueTracker,
       conventions: { conventionalCommits },
