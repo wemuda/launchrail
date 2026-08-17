@@ -54,7 +54,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
     const parsed = parseManifest(readFileSync(join(cwd, MANIFEST_FILENAME), "utf8"));
     if (parsed.manifest) {
       manifest = parsed.manifest;
-      add("pass", "manifest", `valid (mode: ${parsed.manifest.mode})`);
+      add("pass", "manifest", `valid (origin: ${parsed.manifest.origin})`);
     } else {
       add("fail", "manifest", `invalid: ${parsed.errors.join("; ")}`);
     }

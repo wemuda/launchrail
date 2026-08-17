@@ -116,6 +116,24 @@ describe("migration engine", () => {
     expect(planned.find((p) => p.id === "2026-08-vendor-workflow-skills")?.changes).toEqual([]);
   });
 
+  test("2026-08-remove-project-mode drops the retired mode key, preserving comments, and is idempotent", () => {
+    const manifestPath = join(tmp.root, ".launchrail.yml");
+    writeFileSync(
+      manifestPath,
+      "# my precious comment\nschemaVersion: 1\nmode: high-rigor\norigin: existing # keep this\n",
+    );
+    const ctx = { cwd: tmp.root, lockfile };
+    const results = applyPendingMigrations(ctx, MIGRATIONS);
+    expect(results.find((r) => r.id === "2026-08-remove-project-mode")?.status).toBe("applied");
+    const migrated = readFileSync(manifestPath, "utf8");
+    expect(migrated).not.toContain("mode:");
+    expect(migrated).toContain("# my precious comment");
+    expect(migrated).toContain("origin: existing # keep this");
+    // Idempotent: with the key gone, a fresh lockfile plans no changes.
+    const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
+    expect(planned.find((p) => p.id === "2026-08-remove-project-mode")?.changes).toEqual([]);
+  });
+
   const RALPH_MANIFEST = [
     "schemaVersion: 1",
     "mode: standard-mvp",

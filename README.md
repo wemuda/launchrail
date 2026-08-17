@@ -36,7 +36,7 @@ Launchrail structures development as two movements. The **foundation** runs once
   <img src="assets/how-launchrail-works.png" alt="How Launchrail works — the foundation runs once per project (Vision → Visual exploration → Discovery research → Complexity grill → Technical research → Architecture decisions); the delivery loop then repeats once per slice (Specify features into tickets → Ralph loop → Verification) before looping back for the next slice." width="880" />
 </p>
 
-The skills are Launchrail's own complete, `launch-*` prefixed set ([ADR-0020](docs/adr/0020-independent-skill-set.md)); the methodology of several stages is inspired by [Matt Pocock's skills](https://github.com/mattpocock/skills) — see [Credits](#credits). The full stage contract — inputs, artifacts, composition rules, and per-mode rigor — lives in [the workflow doc](packages/cli/assets/skills/launchrail/launch/workflow.md).
+The skills are Launchrail's own complete, `launch-*` prefixed set ([ADR-0020](docs/adr/0020-independent-skill-set.md)); the methodology of several stages is inspired by [Matt Pocock's skills](https://github.com/mattpocock/skills) — see [Credits](#credits). The full stage contract — inputs, artifacts, composition rules, and deliberate-skip rules — lives in [the workflow doc](packages/cli/assets/skills/launchrail/launch/workflow.md).
 
 What makes projects **updatable** instead of copy-once-and-rot is the second half of the system: shared capabilities are *shipped as managed files and kept current on `sync`*, shared standards are *synchronized*, product knowledge stays *locally owned*, and reusable lessons are *deliberately promoted upstream*.
 

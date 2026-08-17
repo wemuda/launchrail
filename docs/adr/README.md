@@ -23,13 +23,14 @@ Superseded ADRs are **never deleted** — they are historical records and other 
 | [0013](0013-existing-project-alignment.md) | Adopting existing projects: `origin` and the alignment on-ramp | Accepted |
 | [0014](0014-start-feature-conductor.md) | The `start-feature` conductor | **Superseded by 0018** |
 | [0015](0015-discovery-research-stage.md) | Discovery research: a divergent stage before the grill | Accepted |
-| [0016](0016-design-validation-fidelity-ladder.md) | Design validation fidelity ladder | Accepted |
+| [0016](0016-design-validation-fidelity-ladder.md) | Design validation fidelity ladder | Accepted — amended by 0023 |
 | [0017](0017-implementation-loop-provider.md) | Implementation loop as a provider | **Superseded by 0020** |
 | [0018](0018-implement-front-door.md) | One front door for implementation (`/launch-implement`) | Accepted — supersedes 0014; amended by 0019, 0020 |
 | [0019](0019-vendor-skills-retire-plugin.md) | Skills as managed files; marketplace plugin retired | Accepted — supersedes 0003, 0011; partially superseded by 0020 |
 | [0020](0020-independent-skill-set.md) | Launchrail owns its complete skill set | Accepted — supersedes 0017 and the vendoring half of 0019 |
 | [0021](0021-ralph-unattended-permission-guard.md) | Ralph's unattended-launch permission guard | Accepted — extends 0005 |
 | [0022](0022-ralph-campaign-revision.md) | Ralph campaign revision (one engine, integration target, merge gate) | Accepted — amends 0005, 0010 |
+| [0023](0023-remove-project-mode.md) | Init asks only what the user can answer; project modes removed | Accepted — amends 0016 |
 
 ## The live picture
 
