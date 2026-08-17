@@ -1,6 +1,6 @@
 ---
 name: launch-spec
-description: Turn the current conversation into a spec committed under docs/specs/ — no interview, just synthesis of what has already been discussed and decided. Owns stage 7's synthesis half (launch-wayfinder owns the breakdown of work too big for one session).
+description: Turn the current conversation into a spec published to the project's tracker (a spec-labeled issue), or committed under docs/specs/ in local mode — no interview, just synthesis of what has already been discussed and decided. Owns stage 7's synthesis half (launch-wayfinder owns the breakdown of work too big for one session).
 disable-model-invocation: true
 ---
 
@@ -16,9 +16,12 @@ This skill takes the current conversation context and codebase understanding and
 
    Check with the user that these seams match their expectations.
 
-3. Write the spec using the template below and **commit it under `docs/specs/`** (`<feature-slug>.md`) — the committed file is stage 7's artifact, and it is project-owned. If the project's tracker should carry a copy, publish it labeled **`spec`** — never `ready-for-agent`: that label marks implementable tickets, the implementation loop computes its frontier from it, and it cannot tell prose from work.
+3. Write the spec using the template below and publish it to **its tracker-appropriate home** — the spec's home follows the configured tracker, exactly as tickets do ([ADR-0023](https://github.com/wemuda/launchrail/blob/master/docs/adr/0023-spec-home-follows-tracker.md)). Read `docs/agents/issue-tracker.md` to know which applies:
 
-The spec then flows on: design validation (stage 8) revises it in place, and `launch-tickets` (stage 9) breaks it into tickets.
+   - **A real tracker (GitHub, GitLab, Linear)** → publish the spec as an issue labeled **`spec`**. That issue is stage 7's canonical artifact — do not also commit a `docs/specs/` file. Never label it `ready-for-agent`: that label marks implementable tickets, the implementation loop computes its frontier from it, and it cannot tell prose from work.
+   - **Local mode (`local`, or no tracker)** → commit the spec under `docs/specs/` (`<feature-slug>.md`). There is no external store, so the committed file is the canonical artifact. It is project-owned.
+
+The spec then flows on: design validation (stage 8) revises it in place, and `launch-tickets` (stage 9) breaks it into tickets that reference it.
 
 <spec-template>
 
