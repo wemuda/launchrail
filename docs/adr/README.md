@@ -23,7 +23,7 @@ Superseded ADRs are **never deleted** — they are historical records and other 
 | [0013](0013-existing-project-alignment.md) | Adopting existing projects: `origin` and the alignment on-ramp | Accepted |
 | [0014](0014-start-feature-conductor.md) | The `start-feature` conductor | **Superseded by 0018** |
 | [0015](0015-discovery-research-stage.md) | Discovery research: a divergent stage before the grill | Accepted |
-| [0016](0016-design-validation-fidelity-ladder.md) | Design validation fidelity ladder | Accepted — amended by 0023 |
+| [0016](0016-design-validation-fidelity-ladder.md) | Design validation fidelity ladder | Accepted — amended by 0023, 0024 |
 | [0017](0017-implementation-loop-provider.md) | Implementation loop as a provider | **Superseded by 0020** |
 | [0018](0018-implement-front-door.md) | One front door for implementation (`/launch-implement`) | Accepted — supersedes 0014; amended by 0019, 0020 |
 | [0019](0019-vendor-skills-retire-plugin.md) | Skills as managed files; marketplace plugin retired | Accepted — supersedes 0003, 0011; partially superseded by 0020 |
@@ -31,13 +31,14 @@ Superseded ADRs are **never deleted** — they are historical records and other 
 | [0021](0021-ralph-unattended-permission-guard.md) | Ralph's unattended-launch permission guard | Accepted — extends 0005 |
 | [0022](0022-ralph-campaign-revision.md) | Ralph campaign revision (one engine, integration target, merge gate) | Accepted — amends 0005, 0010 |
 | [0023](0023-remove-project-mode.md) | Init asks only what the user can answer; project modes removed | Accepted — amends 0016 |
+| [0024](0024-design-handoff-onramp.md) | The design handoff on-ramp (`launch-design-handoff`) | Accepted — amends 0016 |
 
 ## The live picture
 
 How the accepted decisions compose into the current system:
 
 - **Skill distribution — read 0019 + 0020.** Every workflow skill is Launchrail's own, `launch-` prefixed, and ships as **managed files** written into consuming repos' `.claude/skills/` by `init`/`sync`. There is no Claude Code plugin, no marketplace, no `claude` CLI install, and no vendored upstream snapshot. The plugin era (0003 → 0011) and the vendored-snapshot half of 0019 are closed chapters.
-- **The rail — read 0009 (as amended by 0018), then 0015, 0016, 0013.** `/launch` is the planning conductor; `/launch-implement` is the build front door; the normative stage contract lives in the `launch` skill's `workflow.md`, not in any ADR. 0015 added the discovery stage and renumbered the rail — stage numbers in ADRs 0009 and 0013 predate that renumber. 0016 gives design validation its fidelity ladder; 0013 gives existing projects the alignment on-ramp.
+- **The rail — read 0009 (as amended by 0018), then 0015, 0016, 0013, 0024.** `/launch` is the planning conductor; `/launch-implement` is the build front door; the normative stage contract lives in the `launch` skill's `workflow.md`, not in any ADR. 0015 added the discovery stage and renumbered the rail — stage numbers in ADRs 0009 and 0013 predate that renumber. 0016 gives design validation its fidelity ladder; 0013 gives existing projects the alignment on-ramp; 0024 gives designs returning from Claude Design their on-ramp (`launch-design-handoff`), committing handoff packages under `docs/design/`.
 - **The implementation loop — read 0005, 0010, 0018, 0021, 0022.** Ralph is *the* loop (the provider seam of 0017 was removed by 0020). Two frontends share one policy, but since 0022 the workflow is the engine for every multi-ticket run (skill-mode orchestration is a declared exception; the skill supervises either way). Each run declares one integration target — trunk or a consolidation branch — implementers hand off at PR-open with the loop owning the merge gate, and every run ends with the where-it-lives recap. Completion is gated on `launchrail verify`; the user-typed hard gate lives on `/launch-implement`; the permission guard warns on unattended launches in interactive modes.
 - **The engine — read 0006, plus 0012 and 0004.** Sync is a checksum-gated safe subset with in-CLI migrations and eject-as-lockfile-state. Init additively wires imports into project-owned `CLAUDE.md` (0012) and the additive-merge model for `.claude/settings.json` established in 0003 survives its supersession — 0021 reuses it for hook registration. 0004 is the browser-testing module.
 - **Repo meta — 0001 (stack), 0002 (commits), 0007 (license), 0008 (releases).**
