@@ -1,7 +1,7 @@
 # ADR-0016: Design validation scales through a fidelity ladder
 
 ## Status
-Accepted
+Accepted — amended by [ADR-0023](0023-remove-project-mode.md): the manifest `mode` is retired, so the level recommendation reads the spec's design surface alone; the recommend-then-confirm contract and the ladder itself are unchanged. Amended by [ADR-0024](0024-design-handoff-onramp.md): the linked-evidence rule (and the rejection of committing under `docs/design/`) is scoped to stage-8 validation evidence — design *handoff* prototypes are a distinct artifact class that does commit there.
 
 ## Context
 Stage 8 (design validation) knew exactly two fidelities, chosen by tool availability rather than by fit: drive Claude Design, or — when it was unavailable in the session — "fall back to low-fidelity textual walkthroughs", plus a recorded skip for specs with no design surface. That shape had two problems. A textual walkthrough is weak evidence for the one failure mode the stage exists to catch — a flow that *reads fine in prose* but collapses on screen cannot be caught by more prose. And Claude Design is heavyweight for a spec with a modest design surface, so the real choice ("how much visual evidence does this spec deserve?") was never actually put to the user.

@@ -88,6 +88,28 @@ export const MIGRATIONS: Migration[] = [
     },
   },
   {
+    id: "2026-08-remove-project-mode",
+    description:
+      "drop the retired mode field (spike / standard-mvp / high-rigor) from the manifest — deliberate stage skips live in the vision's non-goals (ADR-0023)",
+    plan(ctx) {
+      const none = { changes: [], apply: () => {} };
+      const manifestPath = join(ctx.cwd, MANIFEST_FILENAME);
+      if (!existsSync(manifestPath)) return none;
+      const source = readFileSync(manifestPath, "utf8");
+      // An invalid manifest is sync's own precondition failure, not this
+      // migration's; a valid one without the key is already migrated.
+      if (!parseManifest(source).manifest) return none;
+      const removal = removeManifestKey(source, "mode");
+      if (!removal.changed) return none;
+      return {
+        changes: [`${MANIFEST_FILENAME} — remove the retired mode field`],
+        apply: () => {
+          writeFileSync(manifestPath, removal.source, "utf8");
+        },
+      };
+    },
+  },
+  {
     id: "2026-08-upstream-plugin-declarations",
     description: `declare the upstream workflow plugins (Matt Pocock's skills) in ${CLAUDE_SETTINGS_PATH} (ADR-0011)`,
     plan(ctx) {

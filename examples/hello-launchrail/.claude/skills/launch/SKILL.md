@@ -9,7 +9,7 @@ One command for the whole rail. You are the **conductor**, not a stage: find whe
 
 ## The stage map
 
-Read `.launchrail.yml` (`mode`, `origin`, `modules`, `issueTracker`) first — it is the source of truth for configuration; `npx @wemuda/launchrail status` for what's installed and current.
+Read `.launchrail.yml` (`origin`, `modules`, `issueTracker`) first — it is the source of truth for configuration; `npx @wemuda/launchrail status` for what's installed and current.
 
 | # | Stage | Owner (invoke / run) | Done when |
 |---|---|---|---|
@@ -41,12 +41,12 @@ Once the foundation exists (a real vision, ADRs beyond the template) and the use
 | **Semi** | Self-contained feature, some design surface, a handful of tickets | grill → `launch-spec` → design validation *(optional)* → `launch-tickets` |
 | **Small** | Well-understood change, little or no design surface, one or few tickets | grill → `launch-tickets` |
 
-Judgment calls: the grill here is feature-scoped (same `launch-grill`, narrower brief); discovery earns a place only when the feature opens genuinely new tech territory — a vendor category or storage engine the project hasn't used; design validation is for real UI surface; a genuine architecture decision gets an ADR before tickets. Between two sizes pick the smaller — it's cheaper to add a stage than to over-plan a small change. `mode` calibrates on top: `spike` may drop `launch-spec` and design validation (record the skip); `high-rigor` bumps one notch. Every size ends at `/launch-implement`.
+Judgment calls: the grill here is feature-scoped (same `launch-grill`, narrower brief); discovery earns a place only when the feature opens genuinely new tech territory — a vendor category or storage engine the project hasn't used; design validation is for real UI surface; a genuine architecture decision gets an ADR before tickets. Between two sizes pick the smaller — it's cheaper to add a stage than to over-plan a small change. Every size ends at `/launch-implement`.
 
 ## Running it
 
 1. **Did the user name a stage or a feature?** A stage keyword (below): sanity-check its inputs exist, offer the earlier stage if one is missing, but honor the jump if they insist — then invoke or hand off and stop. A new feature on a founded project: size it (above) and run the path.
-2. **Otherwise orient, then find the frontier.** A cheap read-only look first: `git status`, current branch, recent commits — is something already in flight for the stage you're about to start? If the tracker is configured and reachable, read the live discussion on relevant tickets and PRs, not just titles; skip what isn't there (orientation sharpens routing, never gates it). Then close stage-0 gaps yourself without asking (init, commit init output, `sync` — it seeds `docs/agents/` too). Walk stages 1 → 12 and stop at the first whose "done when" fails, skipping only what `mode` permits. `origin: existing` with no real vision → route to `launch-project-alignment`, not a blank vision.
+2. **Otherwise orient, then find the frontier.** A cheap read-only look first: `git status`, current branch, recent commits — is something already in flight for the stage you're about to start? If the tracker is configured and reachable, read the live discussion on relevant tickets and PRs, not just titles; skip what isn't there (orientation sharpens routing, never gates it). Then close stage-0 gaps yourself without asking (init, commit init output, `sync` — it seeds `docs/agents/` too). Walk stages 1 → 12 and stop at the first whose "done when" fails, skipping only what the vision's non-goals record as deliberately skipped. `origin: existing` with no real vision → route to `launch-project-alignment`, not a blank vision.
 3. **Confirm the read.** Say where you think the project is and why — which artifacts you found and which you didn't. Ambiguous signals (template-only vision, several specs) are questions, not guesses.
 4. **Route.** Invoke the owner by exact name, or prepare the handoff for a user-typed stage (†). For stage 7, name the authoritative inputs in order; if the stack isn't stood up yet, tell it to name its seams but leave harness mechanics to the foundation work. For stage 10, hand over `/launch-implement` — never start it yourself.
 5. **Leave an explained map.** Current stage, the next one with a sentence on what it does and whether it's optional here, then the rest of the arc to the destination — and that any stage is reachable by keyword. A bare stage name reads as a turnstile; explain, don't gate.
@@ -62,6 +62,6 @@ Case-insensitive direct jumps:
 
 Unrecognized keyword → show this list and ask.
 
-## Mode calibration
+## Deliberate skips
 
-`mode` calibrates rigor, not stage order: `spike` may skip stages 2–5 and 8 when the vision's non-goals record it (don't nag); `standard-mvp` skips nothing silently; `high-rigor` skips nothing, wants an ADR per stage-6 decision, and design validation covers error and edge states. When a stage looks skipped, check the vision's non-goals before deciding — and if you can't tell, ask.
+Skip nothing silently. A stage may be skipped only when the vision's non-goals record the skip — then honor it and don't nag. When a stage looks skipped, check the vision's non-goals before deciding — and if you can't tell, ask.

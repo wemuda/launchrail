@@ -16,7 +16,7 @@ This skill takes the current conversation context and codebase understanding and
 
    Check with the user that these seams match their expectations.
 
-3. Write the spec using the template below and publish it to **its tracker-appropriate home** — the spec's home follows the configured tracker, exactly as tickets do ([ADR-0023](https://github.com/wemuda/launchrail/blob/master/docs/adr/0023-spec-home-follows-tracker.md)). Read `docs/agents/issue-tracker.md` to know which applies:
+3. Write the spec using the template below and publish it to **its tracker-appropriate home** — the spec's home follows the configured tracker, exactly as tickets do ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)). Read `docs/agents/issue-tracker.md` to know which applies:
 
    - **A real tracker (GitHub, GitLab, Linear)** → publish the spec as an issue labeled **`spec`**. That issue is stage 7's canonical artifact — do not also commit a `docs/specs/` file. Never label it `ready-for-agent`: that label marks implementable tickets, the implementation loop computes its frontier from it, and it cannot tell prose from work.
    - **Local mode (`local`, or no tracker)** → commit the spec under `docs/specs/` (`<feature-slug>.md`). There is no external store, so the committed file is the canonical artifact. It is project-owned.

@@ -34,9 +34,9 @@ Two commands cover the whole rail:
 
 Stage notes:
 
-- **Stages 3 → 4 → 5 are one arc** (`deep-research`): discovery *diverges* — it maps the real option space for the vision's hard parts (all the auth vendors, not one) and never picks winners; the grill *converges* — it narrows that landscape into constraints; research de-risks what survives. Don't collapse discovery into the grill outside `spike` mode: a grill with no discovery narrows whatever stack was assumed upstream, the exact failure discovery exists to prevent ([ADR-0015](https://github.com/wemuda/launchrail/blob/master/docs/adr/0015-discovery-research-stage.md)).
+- **Stages 3 → 4 → 5 are one arc** (`deep-research`): discovery *diverges* — it maps the real option space for the vision's hard parts (all the auth vendors, not one) and never picks winners; the grill *converges* — it narrows that landscape into constraints; research de-risks what survives. Don't collapse discovery into the grill unless the vision's non-goals record the skip: a grill with no discovery narrows whatever stack was assumed upstream, the exact failure discovery exists to prevent ([ADR-0015](https://github.com/wemuda/launchrail/blob/master/docs/adr/0015-discovery-research-stage.md)).
 - **Stage 4 ends in a committed file, always.** `launch-grill` closes its interview by writing the surviving constraints to `docs/research/` — the conversation alone never closes the stage, and the skill treats the committed doc as part of its own contract.
-- **‡ The stage-7 spec's home follows the tracker** ([ADR-0023](https://github.com/wemuda/launchrail/blob/master/docs/adr/0023-spec-home-follows-tracker.md)), exactly as stage-9 tickets do. On a real tracker (GitHub, GitLab, Linear) the spec **is** a `spec`-labeled issue and no `docs/specs/` file is written; in local mode (`local`, or no tracker) it is a committed `docs/specs/<slug>.md` file. Detection is therefore tracker-aware — read `docs/agents/issue-tracker.md` to know where to look. `ready-for-agent` still marks tickets only; the spec issue wears `spec` so the loop never dispatches prose as work.
+- **‡ The stage-7 spec's home follows the tracker** ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)), exactly as stage-9 tickets do. On a real tracker (GitHub, GitLab, Linear) the spec **is** a `spec`-labeled issue and no `docs/specs/` file is written; in local mode (`local`, or no tracker) it is a committed `docs/specs/<slug>.md` file. Detection is therefore tracker-aware — read `docs/agents/issue-tracker.md` to know where to look. `ready-for-agent` still marks tickets only; the spec issue wears `spec` so the loop never dispatches prose as work.
 - **Stage 8 scales to the spec's design surface** through a fidelity ladder ([ADR-0016](https://github.com/wemuda/launchrail/blob/master/docs/adr/0016-design-validation-fidelity-ladder.md)): recorded skip, flow diagrams, screen mockups, or Claude Design. The level choice lives inside `design-validation` (recommend, user confirms). It exists to catch "specified but wrong on screen" while the finding still costs a spec edit rather than re-cut tickets — that's why it precedes stage 9 and is not stage 11, which checks the *built* product. Even a skip is recorded through the skill, so the gate stays artifact-based.
 - **Stage 10 is one door.** `/launch-implement` drives the Ralph loop ([ADR-0017](https://github.com/wemuda/launchrail/blob/master/docs/adr/0017-implementation-loop-provider.md) as amended by [ADR-0020](https://github.com/wemuda/launchrail/blob/master/docs/adr/0020-independent-skill-set.md)). Launchrail owns both edges of the loop: `ready-for-agent` tickets with `Blocked by: #n` edges in, `launchrail verify` (+ browser smoke where enabled) gating every merge.
 
@@ -49,6 +49,14 @@ The stages above take a fresh project to its first release. After that, the deli
 - **Small feature** — a grill straight to `launch-tickets`.
 
 Every size ends the same way: `/launch-implement`, gated by `launchrail verify`. Sizing changes *how many* planning stages a feature needs, never *who owns* them.
+
+A feature may arrive **design-first**: as a Claude Design prototype dropped into the session rather than a described idea. That arrival goes through the design handoff on-ramp (below) before sizing — the committed `handoff.md` then serves as the feature brief sizing consumes.
+
+## Returning from Claude Design
+
+The stages drive Claude Design code→design (stages 2 and 8). The delivery loop also runs the reverse trip: design work done *in* Claude Design — a tweak, the next few pages, a redesign — comes back as files, typically a zip of artboards. The Launchrail `design-handoff` skill owns that arrival ([ADR-0024](https://github.com/wemuda/launchrail/blob/master/docs/adr/0024-design-handoff-onramp.md)): it reads the prototype against the current code and design system, asks only the questions documenting needs, and commits a **handoff package** under `docs/design/<feature-slug>/` — the prototype verbatim plus a distilled `handoff.md`, both project-owned, in the same accumulating `docs/design/` home as earlier handoffs.
+
+From there the normal sizing paths apply, with two design-first twists: the handoff doc's open questions become the feature grill's agenda (the handoff feeds the grill, as the grill feeds research), and the spec cites `docs/design/<feature-slug>/` as its UX/UI reference — so design validation typically becomes a recorded skip citing the package, recorded through the `design-validation` skill as always. Like alignment, this is an on-ramp onto the same rail, not a second workflow; the handoff skill routes and never starts implementation.
 
 ## Adopting an existing project
 
@@ -65,14 +73,10 @@ The contract for `launch`, `/launch-implement`, and any agent driving the rail. 
 - **`ready-for-agent` marks tickets, never specs.** The implementation loop's frontier is every open issue wearing that label, and it cannot tell prose from work — a spec or research note published to the tracker takes a different label (e.g. `spec`), or the loop will dispatch the document as work. Relabel before anyone starts the loop.
 - **Implementation is never started unprompted.** Stage 10 belongs to the user: conductors hand over `/launch-implement` and explain; they do not launch it.
 - **Everything the workflow produces is project-owned.** Vision, research, ADRs, specs, tickets — Launchrail tooling never overwrites them.
-- **Setup gaps are action, not conversation.** Known, additive fixes (commit untracked init output, run `init` when the manifest is missing, `sync` when loop materials are absent) get applied and reported; questions are saved for product artifacts, where intent is genuinely unknowable. Init owns installs — never improvise a dependency install from the web.
+- **Setup gaps are action, not conversation.** Known, additive fixes (commit untracked init output, run `init` when the manifest is missing, `sync` when loop materials are absent, record the project's test command as `testing.unitCommand` in `.launchrail.yml` once a real test runner exists — init detects it where it can and otherwise leaves it null) get applied and reported; questions are saved for product artifacts, where intent is genuinely unknowable. Init owns installs — never improvise a dependency install from the web.
 
-## Stage-skipping by project mode
+## Stage-skipping
 
-The manifest's `mode` calibrates rigor, not stage order:
-
-- `spike` — stages 2–5 and 8 may be skipped deliberately; record the skip in the vision's non-goals.
-- `standard-mvp` — the default path; skip nothing silently.
-- `high-rigor` — no skips; ADRs for every stage-6 decision, and design validation covers error and edge states, not just happy paths.
+Skip nothing silently. A stage may be skipped deliberately — a short experiment might drop visual exploration, discovery, research, or design validation — but only when the vision's non-goals record the skip. A recorded skip is honored without nagging.
 
 When a stage looks skipped, check the vision's non-goals before deciding whether it's deliberate — and if you still can't tell, ask.

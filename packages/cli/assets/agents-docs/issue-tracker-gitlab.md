@@ -42,7 +42,7 @@ Run `glab issue view <number> --comments`.
 
 ## Specs and their tickets
 
-The stage-7 spec ([ADR-0023](https://github.com/wemuda/launchrail/blob/master/docs/adr/0023-spec-home-follows-tracker.md)) is itself an issue here — created by `launch-spec`, labelled **`spec`**, never `ready-for-agent`. There is no `docs/specs/` file; the issue is the canonical spec. When `launch-tickets` breaks it down, each ticket carries `Part of #<spec>` at the top of its description (on tiers with native epics, the spec may be an epic holding the tickets instead). Design validation revises the spec issue in place (its `## Design validation` section lives in the issue description).
+The stage-7 spec ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)) is itself an issue here — created by `launch-spec`, labelled **`spec`**, never `ready-for-agent`. There is no `docs/specs/` file; the issue is the canonical spec. When `launch-tickets` breaks it down, each ticket carries `Part of #<spec>` at the top of its description (on tiers with native epics, the spec may be an epic holding the tickets instead). Design validation revises the spec issue in place (its `## Design validation` section lives in the issue description).
 
 ## Wayfinding operations
 
