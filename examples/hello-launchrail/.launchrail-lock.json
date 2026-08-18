@@ -14,6 +14,10 @@
       "class": "managed",
       "checksum": "5e396abeaff70ca8efda44730ababa143c8d85c5ddab3d65e410481625a7ea9f"
     },
+    ".claude/skills/launch-design-handoff/SKILL.md": {
+      "class": "managed",
+      "checksum": "a067b4c1c3824bd6219bf721e952a265f7b5c83d60acd6af419af50836871152"
+    },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
       "checksum": "2bd820245206dd65582aa42c95e7c99f5b6cc59992ef27d05f7fb91c00d310b8"
@@ -36,7 +40,7 @@
     },
     ".claude/skills/launch-implement/SKILL.md": {
       "class": "managed",
-      "checksum": "06b5fc0af3e8d64f1a7fdccdc63492bff6deb309eab837aeaeff64466615d5f2"
+      "checksum": "c05dc9e1410922ddf1d981c3678be011014c0c13498da0f6f909173901c553f5"
     },
     ".claude/skills/launch-project-alignment/SKILL.md": {
       "class": "managed",
@@ -48,7 +52,7 @@
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
-      "checksum": "c9c294862f795fdef74214b3e66681b1ad3a80fa0e1e63090e01837c09e914fa"
+      "checksum": "975581933b6ca092ad522d02b8c75cd17fe673fe8083d0b686502d028d02ad5b"
     },
     ".claude/skills/launch-research/SKILL.md": {
       "class": "managed",
@@ -64,7 +68,7 @@
     },
     ".claude/skills/launch-tickets/SKILL.md": {
       "class": "managed",
-      "checksum": "6a7ec4f7bd4630fc0e17bebe8df04453fefd03f5d8c8be35ee6a85b9690e7978"
+      "checksum": "4903d1ee7c01be017b299faa80d1218c70ea247c7b28cff0b77767edc751c16a"
     },
     ".claude/skills/launch-vision-creation/SKILL.md": {
       "class": "managed",
@@ -76,11 +80,11 @@
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "21cb8c80130ef5353aadda25544e72c7cf8c4c1a69d70e96cfd3a4b2730c92d9"
+      "checksum": "fc82d338081568eb68e12faf390b383a16b30bb43f1160acf23ae3eda3399f19"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "8899dc55acc732a62078075f4b1db0ef3419096705eb9c6154b2ad1428989bb9"
+      "checksum": "cfd8dd09b158bd377b009a1ae4b0d34dadfb9768719c371882f28492aefb1c36"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",
@@ -88,7 +92,7 @@
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
-      "checksum": "5af88006ead054c659b65d3afdee9be44b16af43fb5ca871fefeae1433ca7635"
+      "checksum": "2551840405bcdde93f09d03e485498f1c988073a9dd2cf264743295e7cbc482e"
     },
     ".launchrail.yml": {
       "class": "seeded",
@@ -116,7 +120,7 @@
     },
     "docs/agents/issue-tracker.md": {
       "class": "seeded",
-      "checksum": "1123b65c6e8aa8de1c8edd3af2e46412cdd352e9e194722de287ba5e11d5bcdb"
+      "checksum": "830e93b23b764daf9e7624cd96c3d7a6f87e613b9060ee5dfda2efa7a62a8078"
     }
   },
   "migrations": [

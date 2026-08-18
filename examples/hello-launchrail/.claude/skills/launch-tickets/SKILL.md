@@ -62,11 +62,11 @@ Iterate until the user approves the breakdown.
 Publish the approved tickets. **How** depends on the tracker configured in `docs/agents/issue-tracker.md` — the tickets are the same either way, only the shape of the blocking edges changes:
 
 - **Local files** → write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` in dependency order (blockers first). Each file's "Blocked by" lists the numbers/titles it depends on. Use the per-ticket file template below — one ticket per file, never a single combined file.
-- **A real issue tracker (GitHub, GitLab, …)** → publish one issue per ticket in dependency order (blockers first) so each ticket's blocking edges can reference real identifiers. Use the platform's native blocking / sub-issue relationship where it has one; otherwise set each ticket's "Blocked by" to the blocking issues. Apply the **`ready-for-agent`** label unless instructed otherwise — the tickets are agent-grabbable by construction. Only tickets wear that label: a spec or research note published to the tracker takes a different label (e.g. `spec`), or the loop will dispatch the document as work.
+- **A real issue tracker (GitHub, GitLab, Linear, …)** → publish one issue per ticket in dependency order (blockers first) so each ticket's edges reference real identifiers. Wire every blocking edge and any parent as the tracker's **native relationship** — GitHub/GitLab issue dependencies and sub-issues, Linear's blocked-by and sub-issue relations — the canonical, UI-visible form the implementation loop's frontier reads. The body's `Parent` / `Blocked by` lines then only mirror it, becoming the gate itself only on a tracker that lacks the native relationship. `docs/agents/issue-tracker.md` carries the exact per-tracker API. Apply the **`ready-for-agent`** label unless instructed otherwise — the tickets are agent-grabbable by construction. Only tickets wear that label: a spec or research note published to the tracker takes a different label (e.g. `spec`), or the loop will dispatch the document as work.
 
 Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
 
-Do NOT close or modify any parent issue.
+Do NOT close or modify any parent issue. Each new ticket is closed later by its own implementing PR (`Closes #n`, per the tracker doc's Issue ↔ PR linkage), not by hand here.
 
 <local-ticket-template>
 
@@ -87,7 +87,7 @@ Do NOT close or modify any parent issue.
 
 ## Parent
 
-A reference to the parent issue on the tracker (if the source was an existing issue, otherwise omit this section).
+A reference to the parent issue — mirrors the native parent/sub-issue link (omit this section if there is no parent).
 
 ## What to build
 
@@ -100,7 +100,7 @@ The end-to-end behaviour this ticket makes work, from the user's perspective —
 
 ## Blocked by
 
-- A reference to each blocking ticket, or "None — can start immediately".
+**Blocked by:** #n, #n — one line mirroring the native blocking relationship (the canonical gate), or "None — can start immediately". Where the tracker has no native dependencies, this line *is* the gate.
 
 </issue-template>
 
