@@ -40,6 +40,10 @@ Create a Linear issue in the team above.
 
 Fetch the issue by its identifier (`ENG-123`) including comments.
 
+## Specs and their tickets
+
+The stage-7 spec ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)) is itself an issue here — created by `launch-spec`, labelled **`spec`**, never `ready-for-agent`. There is no `docs/specs/` file; the issue is the canonical spec. When `launch-tickets` breaks it down, each ticket is a **sub-issue of the spec** (Linear's native parent/child). Design validation revises the spec issue in place (its `## Design validation` section lives in the issue description).
+
 ## Wayfinding operations
 
 Used by `launch-wayfinder`. The **map** is a single issue with **child** issues as tickets.
