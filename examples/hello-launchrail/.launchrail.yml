@@ -4,7 +4,7 @@ schemaVersion: 1
 origin: existing
 issueTracker: github
 conventions:
-  conventionalCommits: true
+  conventionalCommits: false
 testing:
   unitCommand: npm test
   devCommand: npm run dev

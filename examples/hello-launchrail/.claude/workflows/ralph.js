@@ -11,7 +11,7 @@ export const meta = {
   name: 'ralph',
   description: 'Autonomous Ralph loop: implement ready tickets with fresh-context subagents, verification-gated',
   whenToUse:
-    'The engine for any multi-ticket Ralph run. Scope a run via args: { only: [9, 10], width: 2 }, just [9, 10], or { max: 5 } to stop after 5 verified merges ("the next five" — the frontier picks which, in dependency order). Declare the integration target with { target: "spec/44-mvp" } to consolidate the campaign onto that branch (default branch untouched; release later with one PR) — omit it to merge each ticket into the default branch. { canary: true } holds width at 1 until the first verified merge. Args must be JSON — resolve any natural-language scope to ticket numbers, a cap, and a target before launching. For a watchable run (an explicit user ask, or a targeted intervention), use the launch-ralph skill instead — and say why.',
+    'The engine for any multi-ticket Ralph run. Scope a run via args: { only: [9, 10], width: 2 }, just [9, 10], or { max: 5 } to stop after 5 verified merges ("the next five" — the frontier picks which, in dependency order). The front door consolidates by DEFAULT (ADR-0026): it passes { target: "spec/44-mvp" } to collect the campaign onto that branch (default branch untouched; released later by one offered PR). Omitting target is the explicit trunk opt-in — each ticket merged straight into the default branch. { canary: true } holds width at 1 until the first verified merge. Args must be JSON — resolve any natural-language scope to ticket numbers, a cap, and a target before launching. For a watchable run (an explicit user ask, or a targeted intervention), use the launch-ralph skill instead — and say why.',
   phases: [
     { title: 'Preflight', detail: 'read project config, resolve the integration target, run the verification gate' },
     { title: 'Graph', detail: 'list ready tickets and their blocking edges, verbatim' },
@@ -58,9 +58,11 @@ const POLICY = {
   // for you. Tickets that add DB migrations collide on the next migration number when run
   // in parallel; the pre-PR sync renumbers, but serializing them is cheaper.
   width: A.width ?? 3,
-  // Integration target: '' (trunk) merges each ticket PR into the default branch; a branch
-  // name consolidates the whole campaign onto that branch and never touches the default
-  // branch — the run ends by offering ONE release PR target -> default (ADR-0022).
+  // Integration target. The front door consolidates by DEFAULT (ADR-0026): it resolves a
+  // scope-native branch name and passes it here, so the campaign collects on that branch and
+  // the default branch is never touched — the run ends by offering ONE release PR
+  // target -> default. '' is the explicit trunk opt-in: each ticket PR merged straight into
+  // the default branch; a bare launch with no target is therefore trunk mode — non-default.
   target: A.target ?? '',
   // Canary: hold width at 1 until the run's first verified merge proves the plumbing
   // end to end (branch, PR, CI, merge gate, close). For a project's first campaign.

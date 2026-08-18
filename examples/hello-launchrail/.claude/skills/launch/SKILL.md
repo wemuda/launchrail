@@ -43,6 +43,8 @@ Once the foundation exists (a real vision, ADRs beyond the template) and the use
 
 Judgment calls: the grill here is feature-scoped (same `launch-grill`, narrower brief); discovery earns a place only when the feature opens genuinely new tech territory — a vendor category or storage engine the project hasn't used; design validation is for real UI surface; a genuine architecture decision gets an ADR before tickets. Between two sizes pick the smaller — it's cheaper to add a stage than to over-plan a small change. Every size ends at `/launch-implement`.
 
+A feature that arrives **design-first** — a dropped zip or folder of Claude Design artboards, "here is the prototype of X" — routes through `launch-design-handoff` before sizing: it commits the package under `docs/design/<slug>/` and proposes a size; sizing then consumes its `handoff.md` as the feature brief, the grill takes the doc's open questions as its agenda, the spec cites the package as its UX/UI reference, and design validation usually becomes a recorded skip citing it.
+
 ## Running it
 
 1. **Did the user name a stage or a feature?** A stage keyword (below): sanity-check its inputs exist, offer the earlier stage if one is missing, but honor the jump if they insist — then invoke or hand off and stop. A new feature on a founded project: size it (above) and run the path.
@@ -57,7 +59,7 @@ Case-insensitive direct jumps:
 
 - `status` / `where` — report the detected stage and stop.
 - `next` — detect the frontier and drive it (the default).
-- `setup` / `init` — 0 · `align` / `adopt` — the existing-project on-ramp · `vision` — 1 · `explore` — 2 · `discovery` / `landscape` — 3 · `grill` — 4 · `research` — 5 · `deep-research` — 3→5 · `adr` / `architecture` — 6 · `spec` — 7 · `design-validation` / `validate` — 8 · `tickets` — 9 · `implement` / `build` / `ralph` / `loop` — hand over `/launch-implement` · `verify` / `smoke` — 11 · `release` — 12.
+- `setup` / `init` — 0 · `align` / `adopt` — the existing-project on-ramp · `vision` — 1 · `explore` — 2 · `discovery` / `landscape` — 3 · `grill` — 4 · `research` — 5 · `deep-research` — 3→5 · `adr` / `architecture` — 6 · `spec` — 7 · `design-validation` / `validate` — 8 · `tickets` — 9 · `implement` / `build` / `ralph` / `loop` — hand over `/launch-implement` · `verify` / `smoke` — 11 · `release` — 12 · `handoff` / `design-handoff` — the design→code on-ramp (`launch-design-handoff`).
 - `feature` / `size` — size a described feature (recommend a path; route on request).
 
 Unrecognized keyword → show this list and ask.

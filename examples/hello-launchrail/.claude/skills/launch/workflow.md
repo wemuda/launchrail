@@ -50,6 +50,14 @@ The stages above take a fresh project to its first release. After that, the deli
 
 Every size ends the same way: `/launch-implement`, gated by `launchrail verify`. Sizing changes *how many* planning stages a feature needs, never *who owns* them.
 
+A feature may arrive **design-first**: as a Claude Design prototype dropped into the session rather than a described idea. That arrival goes through the design handoff on-ramp (below) before sizing — the committed `handoff.md` then serves as the feature brief sizing consumes.
+
+## Returning from Claude Design
+
+The stages drive Claude Design code→design (stages 2 and 8). The delivery loop also runs the reverse trip: design work done *in* Claude Design — a tweak, the next few pages, a redesign — comes back as files, typically a zip of artboards. The Launchrail `design-handoff` skill owns that arrival ([ADR-0024](https://github.com/wemuda/launchrail/blob/master/docs/adr/0024-design-handoff-onramp.md)): it reads the prototype against the current code and design system, asks only the questions documenting needs, and commits a **handoff package** under `docs/design/<feature-slug>/` — the prototype verbatim plus a distilled `handoff.md`, both project-owned, in the same accumulating `docs/design/` home as earlier handoffs.
+
+From there the normal sizing paths apply, with two design-first twists: the handoff doc's open questions become the feature grill's agenda (the handoff feeds the grill, as the grill feeds research), and the spec cites `docs/design/<feature-slug>/` as its UX/UI reference — so design validation typically becomes a recorded skip citing the package, recorded through the `design-validation` skill as always. Like alignment, this is an on-ramp onto the same rail, not a second workflow; the handoff skill routes and never starts implementation.
+
 ## Adopting an existing project
 
 When `.launchrail.yml` records `origin: existing`, stage 1 is reached through the Launchrail `project-alignment` skill: it inventories what the codebase already has, infers a draft vision from the code, interviews only the gaps, and detects the existing design system as the baseline for stages 2 and 8, then hands to `vision-creation` to commit ([ADR-0013](https://github.com/wemuda/launchrail/blob/master/docs/adr/0013-existing-project-alignment.md)). Alignment is an on-ramp onto the same rail, not a second workflow.

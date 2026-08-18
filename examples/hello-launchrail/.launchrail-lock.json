@@ -14,9 +14,13 @@
       "class": "managed",
       "checksum": "5e396abeaff70ca8efda44730ababa143c8d85c5ddab3d65e410481625a7ea9f"
     },
+    ".claude/skills/launch-design-handoff/SKILL.md": {
+      "class": "managed",
+      "checksum": "a067b4c1c3824bd6219bf721e952a265f7b5c83d60acd6af419af50836871152"
+    },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
-      "checksum": "2bd820245206dd65582aa42c95e7c99f5b6cc59992ef27d05f7fb91c00d310b8"
+      "checksum": "35ab2ed72d90ee13623c99ba5195e3e9d92eede8a43f5d6a50f36b1728f69810"
     },
     ".claude/skills/launch-discovery/SKILL.md": {
       "class": "managed",
@@ -36,7 +40,7 @@
     },
     ".claude/skills/launch-implement/SKILL.md": {
       "class": "managed",
-      "checksum": "866770cb9fcf27e4806d4c2c668c829d1b4a0c493caf2d1d1fcf35eb58ccfd47"
+      "checksum": "8a6a05d4a5f912f36256bb2c295648d129b7f2dca915f8db7f8ed1b1d9ffb6af"
     },
     ".claude/skills/launch-project-alignment/SKILL.md": {
       "class": "managed",
@@ -48,7 +52,7 @@
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
-      "checksum": "c26ce0d0cd910b92efad0abfc4c2b5201b1a950c7522ee964e308929ea46e095"
+      "checksum": "3c27bf13203c1610cc0e5c06cad69b06ed87146c27bb0f9e68fd050497fa66d0"
     },
     ".claude/skills/launch-research/SKILL.md": {
       "class": "managed",
@@ -60,11 +64,11 @@
     },
     ".claude/skills/launch-spec/SKILL.md": {
       "class": "managed",
-      "checksum": "11ed52c48d1b32e55b1fdd7f8f8356b0175f7e6714929d4689b04ce4d55db10c"
+      "checksum": "013d1e656b45222d12e6255d5a9f51ca9162eb54ae441e234a1688690a94a2bb"
     },
     ".claude/skills/launch-tickets/SKILL.md": {
       "class": "managed",
-      "checksum": "6a7ec4f7bd4630fc0e17bebe8df04453fefd03f5d8c8be35ee6a85b9690e7978"
+      "checksum": "0dfe5078874a2ff0bb7f86b1da5035912efff52735f6076b8b9740f8d34c1acc"
     },
     ".claude/skills/launch-vision-creation/SKILL.md": {
       "class": "managed",
@@ -72,15 +76,15 @@
     },
     ".claude/skills/launch-wayfinder/SKILL.md": {
       "class": "managed",
-      "checksum": "77d74a4ec735ff9418afc6daf82dbb2b92fe21af4bba7d808df1ce84d9b60ebf"
+      "checksum": "c984d182848640ddad73049499f59220d218e76563fdf609c3bbb6c4bae569a9"
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "21cb8c80130ef5353aadda25544e72c7cf8c4c1a69d70e96cfd3a4b2730c92d9"
+      "checksum": "66853983b2864f8a0560426322725da8b8da41b130de3880093d23cbbed6980a"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "8899dc55acc732a62078075f4b1db0ef3419096705eb9c6154b2ad1428989bb9"
+      "checksum": "4aa67ff5853d59651e16813752243b45e24f7ff072eaa20f6a85cc7b96832675"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",
@@ -88,19 +92,19 @@
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
-      "checksum": "5f53f26a126be4fb7707c915114c8a9227431f0d84e2e6f992ebffb5214d70f7"
+      "checksum": "bddb1b4cc7df2b75e20d06d94640c714423363d250755c46226bde89f0805b75"
     },
     ".launchrail.yml": {
       "class": "seeded",
-      "checksum": "799c2bcc1fa0406e3d9c3202b944611a726177133d0cde5691e7e9665a1ec2e6"
+      "checksum": "7ff4dc289b0162f2af1166caba1d11097ebc0991f6cdd73f9bfc6d089828072c"
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "0e7689a7c6266ac1e932bd89dcb83ea398916bb1c588a55f14379eea28d6c537"
+      "checksum": "096890e765147c088c50c918e4944572b1f705d62682c08cc13a569dc72922ac"
     },
     "AGENTS.md": {
       "class": "seeded",
-      "checksum": "2b9c94dcd177cfdfc52def80bf58fbe2e1102be7ddfb564cc36634253a1fc011"
+      "checksum": "199cd9c69369c1bad277d5cb751ad2c908b173bee6a04723bc60147f5b2a9bdc"
     },
     "CLAUDE.md": {
       "class": "seeded",
@@ -116,7 +120,7 @@
     },
     "docs/agents/issue-tracker.md": {
       "class": "seeded",
-      "checksum": "1123b65c6e8aa8de1c8edd3af2e46412cdd352e9e194722de287ba5e11d5bcdb"
+      "checksum": "29a66333bd59a10271c666247c68eb7a3f573ff0fdbd8b77a57339da635211e3"
     }
   },
   "migrations": [
@@ -131,7 +135,7 @@
   "decisions": {
     "origin": "existing",
     "issueTracker": "github",
-    "conventionalCommits": true,
+    "conventionalCommits": false,
     "unitCommand": "npm test"
   }
 }

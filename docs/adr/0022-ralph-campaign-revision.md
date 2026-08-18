@@ -1,7 +1,7 @@
 # ADR-0022: Ralph campaign revision — one engine, explicit integration target, loop-owned merge gate
 
 ## Status
-Accepted (amends ADR-0005 and ADR-0010)
+Accepted (amends ADR-0005 and ADR-0010) — amended by [ADR-0026](0026-ralph-default-consolidation.md) (consolidation becomes the default integration target; trunk is now an explicit opt-in)
 
 ## Context
 The first full-backlog Ralph campaign ran on a consuming project: twelve tickets across three dependency tracks, every one merged, verification green. Success — but the transcript shows the run's shape was improvised wherever the contract was silent:

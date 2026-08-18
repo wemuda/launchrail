@@ -18,10 +18,6 @@ TODO: One paragraph on what this project is, who it serves, and what it is not.
 npm test
 ```
 
-## Commit conventions
-
-Conventional Commits: `type(scope): summary` — types `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `build`, `ci`.
-
 ## Workflow rules
 
 - Ask, don't guess. On product decisions, data-model or schema changes, security-relevant behaviour, or anything genuinely ambiguous, stop and ask rather than guessing — a wrong guess on these costs more than the question.
