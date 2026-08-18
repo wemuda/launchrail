@@ -11,7 +11,7 @@ Issues and specs for this repo live as markdown files in `.scratch/`.
 ## Conventions
 
 - One feature per directory: `.scratch/<feature-slug>/`
-- The spec is committed under `docs/specs/` (the rail's stage-7 artifact); `.scratch/<feature-slug>/spec.md` may hold a working copy
+- The spec is committed under `docs/specs/<feature-slug>.md` — the rail's stage-7 artifact and its single home in local mode (there is no external tracker to hold it)
 - Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` — never a single combined tickets file
 - Ticket state is recorded as a `Status:` line near the top of each issue file, using the label vocabulary below
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading

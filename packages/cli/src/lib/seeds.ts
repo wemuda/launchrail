@@ -13,6 +13,13 @@ function agentsMd(ctx: SeedContext): string {
     ? "```bash\n" + manifest.testing.unitCommand + "\n```"
     : "TODO: document the commands agents must run (setup, tests, checks).";
 
+  // The stage-7 spec's home follows the tracker (ADR-0023): a `spec`-labelled
+  // issue on a real tracker, or a committed file in local mode.
+  const specPointer =
+    manifest.issueTracker === "local" || manifest.issueTracker === "none"
+      ? "[docs/specs/](docs/specs/) — approved specifications"
+      : "approved specifications — `spec`-labelled issues on the project tracker (see [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md))";
+
   const commitSection = manifest.conventions.conventionalCommits
     ? `
 ## Commit conventions
@@ -33,7 +40,7 @@ TODO: One paragraph on what this project is, who it serves, and what it is not.
 
 1. [docs/vision.md](docs/vision.md) — product vision and non-goals
 2. [docs/adr/](docs/adr/) — accepted architecture decisions
-3. [docs/specs/](docs/specs/) — approved specifications
+3. ${specPointer}
 
 ## Commands
 

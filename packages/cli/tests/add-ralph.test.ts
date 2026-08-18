@@ -116,7 +116,7 @@ describe("launchrail add ralph", () => {
   test("the workflow carries the ADR-0022 campaign mechanics", () => {
     const content = ralphWorkflowContent();
     // One integration target per run: consolidation by default (the front door supplies a
-    // scope-native target arg, ADR-0025), trunk ('') the explicit opt-in.
+    // scope-native target arg, ADR-0026), trunk ('') the explicit opt-in.
     expect(content).toContain("target: A.target ?? ''");
     expect(content).toContain("'consolidation' : 'trunk'");
     // Implementers hand off at PR-open; a per-ticket gate agent owns CI, merge, close.

@@ -70,6 +70,10 @@ Create a GitHub issue. When the ticket declares blocking edges or a parent, wire
 
 Run `gh issue view <number> --comments`.
 
+## Specs and their tickets
+
+The stage-7 spec ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)) is itself an issue here — created by `launch-spec`, labelled **`spec`**, never `ready-for-agent`. There is no `docs/specs/` file; the issue is the canonical spec. When `launch-tickets` breaks it down, each ticket is a **GitHub sub-issue of the spec** (`gh api` on the sub-issues endpoint), or carries `Part of #<spec>` at the top of its body where sub-issues aren't enabled. Design validation revises the spec issue in place (its `## Design validation` section lives in the issue body).
+
 ## Wayfinding operations
 
 Used by `launch-wayfinder`. The **map** is a single issue with **child** issues as tickets.

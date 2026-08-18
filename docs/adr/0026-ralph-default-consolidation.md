@@ -1,4 +1,4 @@
-# ADR-0025: Ralph default integration target — consolidate by default, trunk is opt-in
+# ADR-0026: Ralph default integration target — consolidate by default, trunk is opt-in
 
 ## Status
 Accepted (amends [ADR-0022](0022-ralph-campaign-revision.md))

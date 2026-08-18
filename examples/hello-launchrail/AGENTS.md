@@ -10,17 +10,13 @@ TODO: One paragraph on what this project is, who it serves, and what it is not.
 
 1. [docs/vision.md](docs/vision.md) — product vision and non-goals
 2. [docs/adr/](docs/adr/) — accepted architecture decisions
-3. [docs/specs/](docs/specs/) — approved specifications
+3. approved specifications — `spec`-labelled issues on the project tracker (see [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md))
 
 ## Commands
 
 ```bash
 npm test
 ```
-
-## Commit conventions
-
-Conventional Commits: `type(scope): summary` — types `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `build`, `ci`.
 
 ## Workflow rules
 
