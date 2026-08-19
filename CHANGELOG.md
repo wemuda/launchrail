@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/wemuda/launchrail/compare/v1.10.1...v1.11.0) (2026-08-19)
+
+
+### Features
+
+* **cli:** target the hosted session's designated branch in Ralph runs ([182e5bd](https://github.com/wemuda/launchrail/commit/182e5bd713fa8950840fc110bcb1fb5633a180dc))
+
 ## [1.10.1](https://github.com/wemuda/launchrail/compare/v1.10.0...v1.10.1) (2026-08-19)
 
 
