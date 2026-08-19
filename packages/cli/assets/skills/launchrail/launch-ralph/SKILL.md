@@ -9,6 +9,8 @@ The user starts this loop through `/launch-implement` (or by asking for it in so
 
 You are the orchestrator. **You do not write code. You do not read diffs. You do not fix failing branches yourself.** You compute what's ready, dispatch, verify, and keep a running log. Tracker state and subagent reports in, decisions out.
 
+**Output budget: decisions, not working.** You owe the user two reports per run — a one-line pre-launch echo (scope, target, engine) and the close-out recap — plus any *failure* or *changed plan* the moment it happens. Everything else is working, not output: precondition checks, base-branch resolution, guard-hook state, journal reads, arming check-ins. Do it silently. A passing check is not a status update; a launched run is not a recap; the scope, target, and engine are stated once at the echo and once at close-out, never restated between. Keep the running log for yourself — surface it only at those two moments.
+
 One agent implementing a whole backlog in a single session degrades — context fills with diffs and half-remembered state, and quality drops with every ticket. This loop inverts that: every ticket gets a fresh-context implementer subagent that owns the build through an open PR, the loop's merge gate lands it, and nothing anyone reports is trusted until the remote confirms it.
 
 This skill is the loop's contract and its supervisor. The loop itself runs as the deterministic `ralph` workflow (`.claude/workflows/ralph.js`, installed by init; `launchrail sync` restores it) — **the workflow is the engine for every multi-ticket run**, launched with the resolved scope and integration target as JSON args and then supervised per this skill; its script state cannot be compacted away. Orchestrating dispatches from this session instead is the exception, and it is chosen out loud — name the engine and why before anything dispatches: the user asked to watch each dispatch, the Workflow tool is unavailable in this environment, or this is a targeted intervention (one parked ticket, re-run watchably). A hand-rolled fan-out that is neither is not the loop. The two forms share one policy block: change a policy here, change it in the workflow too (ADR-0005, field-revised by ADR-0010, ADR-0022, and ADR-0026).
@@ -28,6 +30,8 @@ This skill is the loop's contract and its supervisor. The loop itself runs as th
 - **Labels:** tickets enter as `ready-for-agent`, are marked `ralph:building` while owned, and leave as closed or `needs-info` (parked).
 
 ## Preconditions — refuse to start if any fails
+
+Verify them silently: a green base and a reachable tracker are the expected case, not news — surface a precondition only when it fails.
 
 1. `.launchrail.yml` exists with `issueTracker` not `none`, and the tracker is reachable **from this environment**: check whether the CLI the project docs assume (e.g. `gh`) is installed here; if not, identify the substitute (e.g. GitHub MCP tools) and name it in every dispatch.
 2. Open tickets labeled `ready-for-agent` exist and carry explicit `Blocked by: #n` edges (or the tracker's native blocking relations). No tickets with edges → nothing to orchestrate; point the user at `launch-tickets`. If anything wearing `ready-for-agent` is plainly not an implementable ticket — a published spec, research notes, an epic — stop and have it relabeled (e.g. `spec`) before starting: the frontier is computed from the label alone and cannot tell prose from work.
@@ -106,7 +110,7 @@ When the frontier drains (or max rounds / a stop condition hits):
 ## Rules
 
 - Fresh context per dispatch, per retry. No exceptions.
-- One integration target and one engine per run, both declared before the first dispatch and restated in the recap.
+- One integration target and one engine per run, declared in the pre-launch echo and restated once in the close-out recap — never in between.
 - Never implement, review, or repair code in the orchestrator session — dispatch instead. Running the merge gate is bookkeeping, not repair.
 - Name the skills (`launch-ralph-implement`, `launch-resolving-merge-conflicts`, `launch-browser-smoke`); never paraphrase their contents into a prompt.
 - Blocking edges are parsed from the verbatim `Blocked by` line, by you — never resolved by a model in between.
