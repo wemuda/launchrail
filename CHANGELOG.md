@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.1](https://github.com/wemuda/launchrail/compare/v1.10.0...v1.10.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* **ralph:** re-poll a still-running CI in place instead of rebuilding ([c890054](https://github.com/wemuda/launchrail/commit/c890054deda593205c78d015c19c1e47e7dc3ffd))
+
 ## [1.10.0](https://github.com/wemuda/launchrail/compare/v1.9.0...v1.10.0) (2026-08-19)
 
 
