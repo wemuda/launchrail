@@ -128,6 +128,19 @@ describe("launchrail add ralph", () => {
     expect(content).toContain("nextStep");
   });
 
+  test("the merge gate re-polls CI in place instead of rebuilding (ADR-0027)", () => {
+    const content = ralphWorkflowContent();
+    // A gate agent cannot idle-wait, so a still-running CI comes back "ci-timeout" — not
+    // a failure. The loop re-polls the cheap gate up to POLICY.gateWaits times before a
+    // ticket ever spends a fresh implementer attempt, so a slow CI cannot cost a rebuild.
+    expect(content).toContain("gateWaits: A.gateWaits ?? 6");
+    expect(content).toContain("waited >= POLICY.gateWaits");
+    expect(content).toContain(":ci-wait");
+    // "ci-timeout" is the one status that keeps the gate loop going; every real verdict
+    // (merged, ci-failed, not-mergeable) leaves it.
+    expect(content).toContain("gate.status !== 'ci-timeout'");
+  });
+
   test("the workflow carries the ADR-0010 field-revision mechanics", () => {
     const content = ralphWorkflowContent();
     // Blocking edges cross the model boundary verbatim and are parsed in script code.
@@ -265,5 +278,114 @@ describe("doctor with the ralph module", () => {
     const outcome = runDoctor(tmp.root);
     expect(outcome.checks.find((c) => c.name === "ralph tracker")?.status).toBe("pass");
     expect(outcome.checks.find((c) => c.name === "ralph verification gate")?.status).toBe("pass");
+  });
+});
+
+describe("ralph workflow — merge-gate CI wait (ADR-0027)", () => {
+  type AgentResult = Record<string, unknown> | null;
+  type RalphResult = {
+    merged: { ticket: number; title: string; pr?: number; mergeCommit?: string }[];
+    parked: { ticket: number; title: string; failures: string[] }[];
+  };
+
+  // Execute the seeded workflow script against mock hooks so the test can assert on the
+  // *sequence of agent dispatches* — the strongest evidence that a premature CI timeout
+  // is absorbed by a cheap in-place gate re-poll and never by a fresh implementer build.
+  // The script body runs in an async-function context with these hooks in scope, exactly
+  // as the Workflow tool runs it (mirrors the parse test above, but executes it).
+  async function runRalph(opts: {
+    args?: Record<string, unknown>;
+    tickets?: { number: number; title: string; blockedByLine?: string }[];
+    onAgent: (label: string) => AgentResult;
+  }): Promise<{ result: RalphResult; labels: string[]; logs: string[] }> {
+    const tickets = opts.tickets ?? [{ number: 1, title: "T1", blockedByLine: "" }];
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
+      ...args: string[]
+    ) => (...args: unknown[]) => Promise<unknown>;
+    const body = ralphWorkflowContent().replace("export const meta", "const meta");
+    const fn = new AsyncFunction("args", "budget", "agent", "parallel", "pipeline", "phase", "log", "workflow", body);
+
+    const labels: string[] = [];
+    const logs: string[] = [];
+    const budget = { total: null, spent: () => 0, remaining: () => Number.POSITIVE_INFINITY };
+    const agent = async (_prompt: string, o: { label?: string } = {}): Promise<AgentResult> => {
+      const label = o.label ?? "";
+      labels.push(label);
+      // The run's plumbing agents (preflight, graph, release, park) return canned green
+      // state; the per-ticket build/gate/verify agents are the scenario under test.
+      if (label === "preflight")
+        return {
+          green: true, headSha: "base0", repo: "wemuda/x", base: "master", defaultBranch: "master",
+          issueTracker: "github", trackerAccess: "GitHub MCP tools",
+          verifyCommand: "npx @wemuda/launchrail verify", localCommands: ["pnpm install"], failures: [],
+        };
+      if (label.startsWith("read-graph"))
+        return { tickets: tickets.map((t) => ({ number: t.number, title: t.title, blockedByLine: t.blockedByLine ?? "" })) };
+      if (label === "release-verification") return { verified: true, headSha: "final0", summary: "green", failures: [] };
+      if (label === "park") return { done: true };
+      return opts.onAgent(label);
+    };
+    const parallel = (thunks: Array<() => Promise<unknown>>) => Promise.all(thunks.map((t) => t()));
+    const pipeline = async () => {
+      throw new Error("pipeline is not used by the ralph workflow");
+    };
+    const phase = () => {};
+    const log = (m: string) => logs.push(m);
+    const workflow = async () => {
+      throw new Error("nested workflow is not used by the ralph workflow");
+    };
+
+    const result = (await fn(opts.args ?? {}, budget, agent, parallel, pipeline, phase, log, workflow)) as RalphResult;
+    return { result, labels, logs };
+  }
+
+  test("a premature ci-timeout re-polls the gate in place — no fresh build attempt", async () => {
+    let gateChecks = 0;
+    const { result, labels } = await runRalph({
+      args: { only: [1], width: 1, target: "", gateWaits: 3 },
+      onAgent: (label) => {
+        if (label.startsWith("build:#1")) return { status: "pr-open", pr: 100, summary: "built" };
+        if (label.startsWith("gate:#1")) {
+          gateChecks += 1;
+          // First look: CI still running. Re-poll: finished green, merged.
+          return gateChecks === 1
+            ? { status: "ci-timeout", summary: "CI still in progress" }
+            : { status: "merged", mergeCommit: "m100", issueClosed: true, summary: "merged" };
+        }
+        if (label.startsWith("verify:#1"))
+          return { merged: true, issueClosed: true, mergeCommit: "m100", evidence: "merge commit on master" };
+        return null;
+      },
+    });
+    // The premature timeout was absorbed by a cheap in-place re-poll ...
+    expect(labels).toContain("gate:#1");
+    expect(labels).toContain("gate:#1:ci-wait1");
+    // ... and never triggered the expensive fresh implementer (the old build:#n:retry waste).
+    expect(labels.filter((l) => l.startsWith("build:#1"))).toEqual(["build:#1"]);
+    expect(labels).not.toContain("build:#1:retry");
+    // The ticket merged on its first and only attempt.
+    expect(result.merged).toEqual([{ ticket: 1, title: "T1", pr: 100, mergeCommit: "m100" }]);
+    expect(result.parked).toEqual([]);
+  });
+
+  test("re-polls are bounded: a CI that never lands falls back to a fresh attempt, then parks", async () => {
+    const { result, labels } = await runRalph({
+      args: { only: [1], width: 1, target: "", gateWaits: 2, attempts: 2 },
+      onAgent: (label) => {
+        if (label.startsWith("build:#1")) return { status: "pr-open", pr: 100, summary: "built" };
+        if (label.startsWith("gate:#1")) return { status: "ci-timeout", summary: "CI never finishes" };
+        if (label.startsWith("verify:#1")) return { merged: false, issueClosed: false, evidence: "not merged" };
+        return null;
+      },
+    });
+    // The re-poll loop is capped at gateWaits — it never spins unboundedly.
+    expect(labels).toContain("gate:#1:ci-wait1");
+    expect(labels).toContain("gate:#1:ci-wait2");
+    expect(labels).not.toContain("gate:#1:ci-wait3");
+    // A genuinely stuck CI still degrades to the old safety net — a fresh implementer attempt ...
+    expect(labels).toContain("build:#1:retry");
+    // ... and after its attempts are spent the ticket parks rather than looping forever.
+    expect(result.parked.map((p) => p.ticket)).toEqual([1]);
+    expect(result.merged).toEqual([]);
   });
 });

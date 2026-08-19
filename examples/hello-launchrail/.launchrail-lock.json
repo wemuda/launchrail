@@ -92,7 +92,7 @@
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
-      "checksum": "bddb1b4cc7df2b75e20d06d94640c714423363d250755c46226bde89f0805b75"
+      "checksum": "546a89ebfd2aa690696dceec0cbe6f059e52a0f5e058a80bdda56f31fd1b6eb8"
     },
     ".launchrail.yml": {
       "class": "seeded",
