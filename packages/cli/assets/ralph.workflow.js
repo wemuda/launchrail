@@ -70,6 +70,13 @@ const POLICY = {
   // Tries per ticket: 1 attempt + 1 retry with a fresh context, then park. Deferrals
   // (a declared blocker had not landed yet) hand their attempt back, capped separately.
   attempts: A.attempts ?? 2,
+  // CI-wait re-polls for the merge gate — distinct from build attempts. A gate agent
+  // gets one turn and cannot idle-wait (a background sleep never resumes it), so a PR
+  // whose CI is still running comes back "ci-timeout": not done yet, not a failure.
+  // Re-poll the cheap gate this many times (reads only until it can merge) before the
+  // ticket spends a fresh implementer attempt — a slow CI must never cost a rebuild
+  // (ADR-0027). Concurrent tickets in the round supply the wall-clock CI needs.
+  gateWaits: A.gateWaits ?? 6,
   // Backstop against a graph that never drains; deferral rounds spend from this too.
   maxRounds: A.maxRounds ?? 25,
   // Re-read the tracker between rounds so externally closed tickets unblock things.
@@ -264,11 +271,11 @@ ${IDEMPOTENCY}
 Report honestly via the schema: "pr-open" once the PR exists against ${pre.base}; "merged" only when an adopted PR turned out to be already merged; "blocked" when a declared blocker had not landed; "verify-failed" when the verification gate would not go green; "conflict" when a conflict was too ambiguous to resolve without losing behavior (say which files and why); "failed" otherwise, with a summary a fresh retry can act on. List deliberately-out-of-scope discoveries in "punted".`
 }
 
-function gatePrompt(pre, ticket, build) {
+function gatePrompt(pre, ticket, build, waited = 0) {
   return `You are the merge gate for ticket #${ticket.number}: PR #${build.pr} is open against ${pre.base}.
 Tracker access from this environment: ${pre.trackerAccess}
 You own the CI wait, the squash-merge, and the tracker bookkeeping — and nothing else. You never write code, never push commits, never repair a failing branch; a failing PR is reported, not fixed here.
-1. Wait for CI on the PR, if the repository has it. Space checks with the Monitor tool — NEVER a bare background sleep (it will not resume you) and never a busy loop. Treat ~20 minutes as the budget; beyond it report status "ci-timeout".
+${waited > 0 ? `This is CI re-poll ${waited}: the CI was still running when the gate last looked, so the loop sent you back — it has very likely finished by now. Start again from step 1.\n` : ''}1. Check the PR's CI, if the repository has it. You have ONE turn and cannot idle-wait — a background sleep will not resume you, so do NOT try to sit on a long wait. Poll a handful of times, spacing the checks with the Monitor tool (never a bare sleep, never a busy loop), across the minute or two you can cover, then act on what you see: green → step 2; still in progress when your turn is ending → report status "ci-timeout" and STOP. A "ci-timeout" is not a failure — the loop simply re-polls you, cheaply, until CI lands; never merge on a run that has not finished green.
 2. CI green (or absent): check mergeability against ${pre.base} — the base may have moved since CI started. Mergeable: squash-merge via the tracker API; if the base moves between check and merge, re-check and retry up to 3 times. A real conflict is status "not-mergeable" — name the conflicting files if the API reports them.
 3. Merged: read issue #${ticket.number} back and close it explicitly if it is still open — "Closes #n" only auto-fires from the default branch${POLICY.target ? ', and this run does not merge there' : ', and squash-merge does not reliably fire it even there'} — then remove the ralph:building label. Report status "merged" with the merge commit sha.
 4. CI failed on the PR: report status "ci-failed" with the failing check and a summary a fresh implementer can act on. Fix nothing.`
@@ -365,15 +372,28 @@ async function drive(pre, ticket) {
     // subagent's background sleep never resumes it), and a single gate owner keeps
     // merge ordering sane. A failing gate hands the ticket back as a failed attempt;
     // the fresh retry adopts the PR via the idempotency clause, repairs, hands off again.
-    const gate = await agent(gatePrompt(pre, ticket, build), {
-      label: `gate:#${ticket.number}`,
-      phase: 'Gate',
-      schema: GATE_SCHEMA,
-      effort: 'low',
-    })
-    if (!gate) {
-      s.failures.push('gate agent died (infrastructure)')
-      return { ticket, ok: false, dead: true }
+    //
+    // But the gate agent cannot idle-wait either — given one turn it can only poll CI a
+    // few times, so a PR whose CI is still running comes back "ci-timeout": not done
+    // yet, not a failure of the code. Re-poll the cheap gate in place (reads + at most
+    // one merge, effort low) up to POLICY.gateWaits times before the ticket falls back
+    // to a fresh implementer attempt, so a slow CI can never cost a full rebuild
+    // (ADR-0027). Only a real verdict — merged, ci-failed, not-mergeable — leaves the
+    // loop early; a CI that never lands still parks the ticket once re-polls run out.
+    let gate
+    for (let waited = 0; ; waited += 1) {
+      gate = await agent(gatePrompt(pre, ticket, build, waited), {
+        label: `gate:#${ticket.number}${waited > 0 ? `:ci-wait${waited}` : ''}`,
+        phase: 'Gate',
+        schema: GATE_SCHEMA,
+        effort: 'low',
+      })
+      if (!gate) {
+        s.failures.push('gate agent died (infrastructure)')
+        return { ticket, ok: false, dead: true }
+      }
+      if (gate.status !== 'ci-timeout' || waited >= POLICY.gateWaits) break
+      log(`#${ticket.number}: CI still running on PR #${build.pr} — re-polling the gate (${waited + 1}/${POLICY.gateWaits})`)
     }
     if (gate.status !== 'merged') {
       s.failures.push(`[attempt ${s.attempts}] PR #${build.pr} ${gate.status}: ${gate.summary}`)
