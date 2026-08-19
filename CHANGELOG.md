@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.10.0](https://github.com/wemuda/launchrail/compare/v1.9.0...v1.10.0) (2026-08-19)
+
+
+### Features
+
+* **cli:** add launch-design-handoff — the design-to-code on-ramp (ADR-0024) ([1779e84](https://github.com/wemuda/launchrail/commit/1779e8421da0cad89474fb021ac3c97623a9737e))
+* **cli:** shrink the init interview — retire project modes, detect the test command ([8fa9886](https://github.com/wemuda/launchrail/commit/8fa988684bdc3b331b799068bd5c1cf3a0efcdd7))
+* **cli:** spec home follows the configured tracker ([31cfd40](https://github.com/wemuda/launchrail/commit/31cfd409e890fe35f9d130e773c529ef43e1efbb))
+* **cli:** spec home follows the configured tracker ([32cb894](https://github.com/wemuda/launchrail/commit/32cb894b1701998456a9ed8ba1cbb2e04fa32496))
+* **cli:** use native GitHub issue relationships for tickets and PR linkage ([6e0b832](https://github.com/wemuda/launchrail/commit/6e0b832705693f2ff36464fdfcf7b404aee2ce2e))
+* **ralph:** default multi-ticket runs to consolidation, not trunk ([6f8f667](https://github.com/wemuda/launchrail/commit/6f8f6679ad2155e133f585ee713923b7d51c5302))
+* **ralph:** default multi-ticket runs to consolidation, not trunk ([041dfb9](https://github.com/wemuda/launchrail/commit/041dfb9f0ef5136259046f78c48ab667b62fbddd))
+
+
+### Bug Fixes
+
+* **ralph:** give the supervisor an output budget to curb verbose narration ([2e627de](https://github.com/wemuda/launchrail/commit/2e627de0084259e1df3a4dfbeab8aebb8f3a9b7d))
+
 ## [1.9.0](https://github.com/wemuda/launchrail/compare/v1.8.0...v1.9.0) (2026-08-17)
 
 
