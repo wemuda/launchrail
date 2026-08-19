@@ -1,7 +1,7 @@
 # ADR-0026: Ralph default integration target — consolidate by default, trunk is opt-in
 
 ## Status
-Accepted (amends [ADR-0022](0022-ralph-campaign-revision.md))
+Accepted (amends [ADR-0022](0022-ralph-campaign-revision.md); amended by [ADR-0028](0028-hosted-session-designated-branch-target.md) — in a pinned-branch hosted session the integration target is the session's designated branch)
 
 ## Context
 ADR-0022 gave every Ralph run an explicit integration target and made **trunk the default**: each verified ticket merges straight into the repository's default branch, live on mainline the moment its CI passes. Consolidation onto a named branch — default branch untouched, one release PR offered at the end — existed but was opt-in, reached only when the user named a branch or the environment forbade pushing to the default branch.
