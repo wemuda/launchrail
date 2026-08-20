@@ -68,6 +68,10 @@ Work the **frontier**: any ticket whose blockers are all done. For a purely line
 
 Do NOT close or modify any parent issue. Each new ticket is closed later by its own implementing PR (`Closes #n`, per the tracker doc's Issue ↔ PR linkage), not by hand here.
 
+### 6. Close with the rail banner
+
+End by rendering the banner from [`workflow.md`](../launch/workflow.md)'s phase view: the published tickets under Done (count and where they live), Build as Now, and `➤ /launch-implement` — the user-typed door — as the one next command. Never start it yourself.
+
 <local-ticket-template>
 
 # <NN> — <Ticket title>

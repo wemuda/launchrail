@@ -18,7 +18,7 @@ Produce `docs/vision.md`: a short, honest statement of what this product is, who
 ## Process
 
 1. **Read what exists.** Check for `docs/vision.md`, a README, and any notes the user points at. Do not ask questions the repository already answers.
-2. **Interview the user** — briefly, a few questions at a time, in their language:
+2. **Interview the user** — briefly, in their language, at most three questions per round with your recommended answer where you have one (the interaction contract in [`workflow.md`](../launch/workflow.md) applies here as everywhere):
    - What problem hurts, and for whom? How do those people cope today?
    - Why this, why now — what is the bet that makes this worth building?
    - Who is the first concrete user (a person or team you could name), as opposed to the eventual market?
@@ -30,7 +30,7 @@ Produce `docs/vision.md`: a short, honest statement of what this product is, who
 5. **Present and iterate** until the user approves.
 6. **Sync the agent contract.** If the seeded `AGENTS.md` still carries the TODO under `## Project purpose`, replace it with a one-paragraph distillation of the approved vision — what this is, who it serves, what it is not. Touch only that section: `AGENTS.md` belongs to the project, and the rest of it is not this skill's business.
 7. **Commit** `docs/vision.md` and the `AGENTS.md` update together (respect the project's commit conventions).
-8. **Hand off.** Point the user at the next stages of the loop: visual exploration in Claude Design to make the intent concrete, discovery research (`launch-discovery`) to map the real options for the vision's hard parts, then the complexity grill (`launch-grill`) to attack the assumptions just recorded. See [`workflow.md`](../launch/workflow.md) for the full stage order.
+8. **Hand off with the rail banner.** Close with the banner from [`workflow.md`](../launch/workflow.md)'s phase view — the committed vision under Done, visual exploration (Claude Design, to make the intent concrete) as Now, discovery research (`launch-discovery`, mapping the real options for the vision's hard parts) as Next, and the grill on the Later arc — so the user sees exactly where they are and what one thing comes next.
 
 ## Template
 
