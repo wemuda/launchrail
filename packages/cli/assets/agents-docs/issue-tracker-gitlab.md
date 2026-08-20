@@ -44,6 +44,17 @@ Run `glab issue view <number> --comments`.
 
 The stage-7 spec ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)) is itself an issue here — created by `launch-spec`, labelled **`spec`**, never `ready-for-agent`. There is no `docs/specs/` file; the issue is the canonical spec. When `launch-tickets` breaks it down, each ticket carries `Part of #<spec>` at the top of its description (on tiers with native epics, the spec may be an epic holding the tickets instead). Design validation revises the spec issue in place (its `## Design validation` section lives in the issue description).
 
+## The spec's milestone (rollup view)
+
+The spec issue and its tickets are also bundled under a **GitLab milestone** named for the feature, so the tracker shows one progress rollup as tickets close. The milestone is a **rollup, not the spec's home**: the `spec`-labelled issue stays canonical ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)), and the milestone description holds only a one-line goal and a link back to that issue.
+
+- **Create it** (`launch-spec`, once per spec): a project milestone — `glab api --method POST "projects/:id/milestones" -f title='<feature>' -f description='<one-line goal> — spec: <spec-issue-url>'` (or make it in the GitLab UI). A group-level milestone works too where the feature spans projects.
+- **Put an issue in it**: pass `--milestone '<feature>'` to `glab issue create`, or `glab issue update <n> --milestone '<feature>'` after the fact. `launch-spec` adds the spec issue; `launch-tickets` adds every ticket to the same milestone.
+- **Find the milestone a spec already carries** (`launch-tickets`): `glab issue view <spec> -F json` and read its `milestone`.
+- **Progress** is computed by GitLab from closed-vs-open issues — no upkeep.
+
+An issue belongs to at most one milestone, so each ticket rolls up to exactly one spec. Milestones carry no labels and take no part in the implementation loop's frontier — they are purely the human-facing rollup, never a substitute for the `spec` issue.
+
 ## Wayfinding operations
 
 Used by `launch-wayfinder`. The **map** is a single issue with **child** issues as tickets.

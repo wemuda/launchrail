@@ -21,6 +21,8 @@ This skill takes the current conversation context and codebase understanding and
    - **A real tracker (GitHub, GitLab, Linear)** → publish the spec as an issue labeled **`spec`**. That issue is stage 7's canonical artifact — do not also commit a `docs/specs/` file. Never label it `ready-for-agent`: that label marks implementable tickets, the implementation loop computes its frontier from it, and it cannot tell prose from work.
    - **Local mode (`local`, or no tracker)** → commit the spec under `docs/specs/` (`<feature-slug>.md`). There is no external store, so the committed file is the canonical artifact. It is project-owned.
 
+On a real tracker, also bundle the spec under a **milestone** named for the feature: create the milestone, put the spec issue in it, and set its description to a one-line goal plus a link back to the spec issue. That milestone is the rollup `launch-tickets` hangs every ticket on, so the whole feature reads as one progress bar — a *view*, not the spec's home; the `spec`-labelled issue stays canonical. See `docs/agents/issue-tracker.md` for the exact per-tracker commands; local mode has no milestone (the feature's files are its bundle).
+
 The spec then flows on: design validation (stage 8) revises it in place, and `launch-tickets` (stage 9) breaks it into tickets that reference it.
 
 <spec-template>

@@ -44,6 +44,16 @@ Fetch the issue by its identifier (`ENG-123`) including comments.
 
 The stage-7 spec ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)) is itself an issue here — created by `launch-spec`, labelled **`spec`**, never `ready-for-agent`. There is no `docs/specs/` file; the issue is the canonical spec. When `launch-tickets` breaks it down, each ticket is a **sub-issue of the spec** (Linear's native parent/child). Design validation revises the spec issue in place (its `## Design validation` section lives in the issue description).
 
+## The spec's rollup (milestone)
+
+Linear's analog of a milestone is a **project milestone** inside a project — or, if the feature is big enough to stand alone, a **project** of its own. Either way it bundles the spec issue with its tickets so Linear shows one progress rollup for the feature. It is a **rollup, not the spec's home**: the `spec`-labelled issue stays canonical ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)).
+
+- **Create it** (`launch-spec`): `save_milestone` for a project milestone named for the feature under the configured project (create the project with `save_project` first if the feature warrants its own).
+- **Attach issues**: set each issue's project / project-milestone via `save_issue` — `launch-spec` for the spec issue, `launch-tickets` for every ticket.
+- **Find the rollup a spec already carries** (`launch-tickets`): read the spec issue's project milestone via `get_issue`.
+
+Linear computes the rollup's progress from its issues' states. If no project is configured (the field above is blank), skip the milestone — a bare Linear issue has nowhere to hang one.
+
 ## Wayfinding operations
 
 Used by `launch-wayfinder`. The **map** is a single issue with **child** issues as tickets.

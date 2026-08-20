@@ -74,6 +74,17 @@ Run `gh issue view <number> --comments`.
 
 The stage-7 spec ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)) is itself an issue here — created by `launch-spec`, labelled **`spec`**, never `ready-for-agent`. There is no `docs/specs/` file; the issue is the canonical spec. When `launch-tickets` breaks it down, each ticket is a **GitHub sub-issue of the spec** (`gh api` on the sub-issues endpoint), or carries `Part of #<spec>` at the top of its body where sub-issues aren't enabled. Design validation revises the spec issue in place (its `## Design validation` section lives in the issue body).
 
+## The spec's milestone (rollup view)
+
+The spec issue and its tickets are also bundled under a **GitHub milestone** named for the feature, so the tracker shows one progress rollup — the milestone's bar fills as tickets close. The milestone is a **rollup, not the spec's home**: the `spec`-labelled issue stays canonical ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)), and the milestone's description holds only a one-line goal and a link back to that issue.
+
+- **Create it** (`launch-spec`, once per spec): `gh api --method POST repos/{owner}/{repo}/milestones -f title='<feature>' -f description='<one-line goal> — spec: <spec-issue-url>'`. The response's `number` is the milestone id.
+- **Put an issue in it**: pass `--milestone '<feature>'` to `gh issue create`, or `gh issue edit <n> --milestone '<feature>'` after the fact. `launch-spec` adds the spec issue; `launch-tickets` adds every ticket to the same milestone.
+- **Find the milestone a spec already carries** (`launch-tickets`): `gh issue view <spec> --json milestone --jq .milestone.title`.
+- **Progress** is computed by GitHub from closed-vs-open issues — no upkeep.
+
+An issue belongs to at most one milestone, so each ticket rolls up to exactly one spec. Milestones carry no labels and take no part in the implementation loop's frontier — they are purely the human-facing rollup, never a substitute for the `spec` issue or the native sub-issue links.
+
 ## Wayfinding operations
 
 Used by `launch-wayfinder`. The **map** is a single issue with **child** issues as tickets.
