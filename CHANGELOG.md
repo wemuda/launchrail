@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/wemuda/launchrail/compare/v1.11.0...v1.12.0) (2026-08-20)
+
+
+### Features
+
+* **cli:** bundle the spec under a tracker milestone ([9d8b891](https://github.com/wemuda/launchrail/commit/9d8b891fee6840219b0915e0b531dbfeb51c9fc7))
+
 ## [1.11.0](https://github.com/wemuda/launchrail/compare/v1.10.1...v1.11.0) (2026-08-19)
 
 
