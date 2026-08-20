@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/wemuda/launchrail/compare/v1.12.0...v1.13.0) (2026-08-20)
+
+
+### Features
+
+* **cli:** adopt the planning interaction contract and phase-legible rail (ADR-0029) ([bd0a2de](https://github.com/wemuda/launchrail/commit/bd0a2de207a8d0878f6d50ec3791d4484e1d4c28))
+
 ## [1.12.0](https://github.com/wemuda/launchrail/compare/v1.11.0...v1.12.0) (2026-08-20)
 
 
