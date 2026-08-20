@@ -15,6 +15,7 @@ Issues and specs for this repo live as markdown files in `.scratch/`.
 - Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` — never a single combined tickets file
 - Ticket state is recorded as a `Status:` line near the top of each issue file, using the label vocabulary below
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading
+- No milestones: the `.scratch/<feature-slug>/` directory is itself the feature's bundle (spec at `docs/specs/<feature-slug>.md`, tickets alongside), and progress is just how many of its issue files are closed — there is nothing to create when a skill mentions the spec's milestone
 
 ## Labels
 
