@@ -1,6 +1,6 @@
 ---
 name: launch-wayfinder
-description: Plan a huge chunk of work — more than one agent session can hold — as a shared map of decision tickets on the project's issue tracker, and resolve them one at a time until the way to the destination is clear. Stage 7's breakdown half for large features; launch-spec synthesizes once the way is clear.
+description: Plan a huge chunk of work — more than one agent session can hold — as a shared map of decision tickets on the project's issue tracker, and resolve them one at a time until the way to the destination is clear. Decisions only — execution stays out of the map and follows the spec. Stage 7's breakdown half for large features; launch-spec synthesizes once the way is clear.
 disable-model-invocation: true
 ---
 
@@ -12,7 +12,12 @@ The destination varies per effort, and naming it is the first act of charting �
 
 ## Plan, don't do
 
-Wayfinder is **planning** by default: each ticket resolves a decision, and the map is done when the way is clear — nothing left to decide before someone goes and does the thing. The pull to just do the work is usually the signal you've reached the edge of the map and it's time to hand off. An effort can override this in its **Notes** — carrying execution into the map itself — but absent that, produce decisions, not deliverables.
+Wayfinder is **planning, only**: each ticket resolves a decision, and the map is done when the way is clear — nothing left to decide before someone goes and does the thing. **Execution never enters the map** ([ADR-0029](https://github.com/wemuda/launchrail/blob/master/docs/adr/0029-planning-interaction-contract.md)): a ticket that would *deliver* part of the destination — build the worker, ship the page, migrate the data for real — is implementation wearing a planning label, and it belongs after the spec, in `launch-tickets` and the build loop. The test, applied at creation and again if a ticket balloons: **name the decision this ticket unblocks.** No decision named, no ticket. The pull to just do the work is usually the signal you've reached the edge of the map and it's time to hand off.
+
+Two more bounds keep the map from recursing into itself:
+
+- **One layer of map.** A ticket never spawns its own map, and its grill never re-runs the foundation's. If a single ticket looks big enough to need either, the destination is drawn too far out — redraw this map instead.
+- **Touch ground every two tickets.** Never resolve more than **two planning tickets in a row without a runnable or visual checkpoint** — a prototype ticket, a spike, or pausing the map to build a slice that's already safe. When charting, sequence the frontier so those checkpoints land; when working the map, track the count and force the checkpoint before the third.
 
 ## Refer by name
 
@@ -78,8 +83,8 @@ Every ticket is either **HITL** — human in the loop, worked _with_ a human who
 
 - **Research** (AFK): Reading documentation, third-party APIs, or local resources like knowledge bases to surface a fact a decision waits on. Resolved by a `launch-research` **subagent**. Use when knowledge outside the current working directory is required.
 - **Prototype** (HITL): Raise the fidelity of the discussion by making a cheap, rough, concrete artifact to react to — an outline, a rough take, a stub, or throwaway UI/logic code. Links the prototype as an asset. Use when "how should it look" or "how should it behave" is the key question.
-- **Grilling** (HITL): Conversation. The default case. Always invoke the `launch-grill` skill — the ticket's resolution comment is the artifact, in place of the grill's usual `docs/research/` doc.
-- **Task** (HITL or AFK): Manual work that must happen before a _decision_ can be made — nothing to decide, prototype, or research, but the discussion is blocked until it's done. Signing up for a service so its API can be judged, provisioning access, moving data so its shape can be seen. This is the one type that _does_ rather than decides — and it earns its place by unblocking a decision, not by delivering the destination. The agent drives it alone where it can (AFK); otherwise it hands the human a precise checklist (HITL). Resolved when the work is done; the answer records what was done and any resulting facts (credentials location, new URLs, row counts) later tickets depend on.
+- **Grilling** (HITL): Conversation. The default case. Always invoke the `launch-grill` skill — the ticket's resolution comment is the artifact, in place of the grill's usual `docs/research/` doc. The ticket's question is the grill's **entire scope**, and the map's Decisions-so-far (plus the foundation's constraints) are **inherited, never re-opened** — hand the grill those settled decisions as context and a tight budget (a few decide-now questions, not a fresh session's six). A ticket grill that re-converges what the map already closed is the recursion this rule exists to stop.
+- **Task** (HITL or AFK): Manual work that must happen before a _decision_ can be made — nothing to decide, prototype, or research, but the discussion is blocked until it's done. Signing up for a service so its API can be judged, provisioning access, moving data so its shape can be seen. This is the one type that _does_ rather than decides — and it earns its place **only** by unblocking a decision: its body names that decision (an "Unblocks:" line pointing at the ticket or fog patch that waits on it), and a task that can't name one is implementation mis-filed on the map — delivering the destination belongs after the spec, in `launch-tickets` (see [Plan, don't do](#plan-dont-do)). The agent drives it alone where it can (AFK); otherwise it hands the human a precise checklist (HITL). Resolved when the work is done; the answer records what was done and any resulting facts (credentials location, new URLs, row counts) later tickets depend on.
 
 ## Fog of war
 
@@ -111,7 +116,7 @@ Two modes. Either way, **never resolve more than one ticket per session** — wi
 User invokes with a loose idea.
 
 1. **Name the destination.** Run a `launch-grill` session to pin down what this map is finding its way to — the spec, decision, or change. The destination fixes the scope, so it's settled first.
-2. **Map the frontier.** Grill again, **breadth-first** this time: fan out across the whole space rather than deep on any one thread, surfacing the open decisions and the first steps takeable now. **If this surfaces no fog** — the way to the destination is already clear, the whole journey small enough for one session — you don't need a map. Stop and ask the user how they'd like to proceed.
+2. **Map the frontier.** Grill again, **breadth-first** this time: fan out across the whole space rather than deep on any one thread, surfacing the open decisions and the first steps takeable now. Both charting grills share **one session budget** — breadth-mapping is mostly triage (the agent's job: label, default, park), and the user's questions go to naming the destination and the genuinely consequential forks. **If this surfaces no fog** — the way to the destination is already clear, the whole journey small enough for one session — you don't need a map. Stop and ask the user how they'd like to proceed.
 3. **Create the map** (label `wayfinder:map`): Destination and Notes filled in, Decisions-so-far empty, the fog sketched into **Not yet specified**.
 4. **Create the tickets you can specify now** as child issues of the map — then wire blocking edges in a **second pass** (issues need ids before they can reference each other). Wiring sorts them into the frontier and the blocked; everything you can't yet specify stays in the fog — the **Not yet specified** section.
 5. **Fire the research subagents.** For each `research` ticket you just created, spin up a `launch-research` subagent to resolve it in parallel, capturing its findings on a throwaway `research/<name>` branch with a context pointer from the ticket.
@@ -126,5 +131,6 @@ User invokes with a map (URL or number). A ticket is **optional** — without on
 3. Resolve it — **zoom as needed**: fetch the full body of any related or closed ticket on demand; invoke the skills the `## Notes` block names. If in doubt, use `launch-grill`.
 4. Record the resolution: post the answer as a **resolution comment**, **close** the issue, and **append a context pointer** to the map's Decisions-so-far.
 5. Add newly-surfaced tickets (create-then-wire); graduate any fog the answer has made specifiable, clearing each graduated patch from **Not yet specified** so it lives only as its new ticket. If the answer reveals a ticket — this one or another — sits beyond the destination, **rule it out of scope** rather than resolving it on the route. If the decision invalidates other parts of the map, update or delete those tickets.
+6. **Close legibly.** End the session with the rail banner and the four-block summary — **Locked** (this resolution), **Provisional**, **Deferred**, **Next command** (the next frontier ticket by name, the checkpoint now due, or the handoff once the way is clear) — per [`workflow.md`](../launch/workflow.md)'s phase view. Check the checkpoint count here: if this was the second planning ticket since the last runnable or visual checkpoint, the next move is the checkpoint, not another ticket.
 
 The user may run unblocked tickets in parallel, so expect other sessions to be editing the tracker concurrently.

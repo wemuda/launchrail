@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user — just synthesize what you already know: the vision, the grill's surviving constraints, the research notes, and the ADRs are the inputs; a conductor handing off this stage names them.
 
+Synthesis preserves the grill's labels ([ADR-0029](https://github.com/wemuda/launchrail/blob/master/docs/adr/0029-planning-interaction-contract.md)): **Locked** decisions are stated as decisions; **Provisional** agent-defaults stay marked provisional in the spec (changeable without re-planning); **Deferred** questions land in Out of Scope with the trigger that reopens them — never silently dropped, never silently promoted into scope.
+
 ## Process
 
 1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary (`CONTEXT.md`) throughout the spec, and respect any ADRs in the area you're touching.
@@ -21,7 +23,9 @@ This skill takes the current conversation context and codebase understanding and
    - **A real tracker (GitHub, GitLab, Linear)** → publish the spec as an issue labeled **`spec`**. That issue is stage 7's canonical artifact — do not also commit a `docs/specs/` file. Never label it `ready-for-agent`: that label marks implementable tickets, the implementation loop computes its frontier from it, and it cannot tell prose from work.
    - **Local mode (`local`, or no tracker)** → commit the spec under `docs/specs/` (`<feature-slug>.md`). There is no external store, so the committed file is the canonical artifact. It is project-owned.
 
-The spec then flows on: design validation (stage 8) revises it in place, and `launch-tickets` (stage 9) breaks it into tickets that reference it.
+On a real tracker, also bundle the spec under a **milestone** named for the feature: create the milestone, put the spec issue in it, and set its description to a one-line goal plus a link back to the spec issue. That milestone is the rollup `launch-tickets` hangs every ticket on, so the whole feature reads as one progress bar — a *view*, not the spec's home; the `spec`-labelled issue stays canonical. See `docs/agents/issue-tracker.md` for the exact per-tracker commands; local mode has no milestone (the feature's files are its bundle).
+
+The spec then flows on: design validation (stage 8) revises it in place, and `launch-tickets` (stage 9) breaks it into tickets that reference it. Close by rendering the rail banner ([`workflow.md`](../launch/workflow.md)'s phase view) — the published spec under Done, design validation as Now, tickets as Next — with the one next command on the `➤` line.
 
 <spec-template>
 
@@ -43,7 +47,7 @@ A LONG, numbered list of user stories. Each user story should be in the format o
 1. As a mobile bank customer, I want to see balance on my accounts, so that I can make better informed decisions about my spending
 </user-story-example>
 
-This list of user stories should be extremely extensive and cover all aspects of the feature.
+This list of user stories should be extremely extensive and cover all aspects of the feature *as decided* — behavior an approved prototype shows is in scope by presumption, while questions the grill deferred belong in Out of Scope, not as invented stories.
 
 ## Implementation Decisions
 
@@ -71,7 +75,7 @@ A list of testing decisions that were made. Include:
 
 ## Out of Scope
 
-A description of the things that are out of scope for this spec.
+A description of the things that are out of scope for this spec — including every question the grill deferred, each with the trigger that reopens it.
 
 ## Further Notes
 
