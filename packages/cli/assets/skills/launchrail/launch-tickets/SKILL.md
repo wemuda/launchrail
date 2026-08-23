@@ -49,13 +49,12 @@ Present the proposed breakdown as a numbered list. For each ticket, show:
 - **Blocked by**: which other tickets (if any) must complete first
 - **What it delivers**: the end-to-end behaviour this ticket makes work
 
-Ask the user:
+Then put the checkpoint through the structured question tool (`AskUserQuestion`) instead of freetext prose questions — one round, at most three questions, each shipping its recommended answer first ([ADR-0029](https://github.com/wemuda/launchrail/blob/master/docs/adr/0029-planning-interaction-contract.md)):
 
-- Does the granularity feel right? (too coarse / too fine)
-- Are the blocking edges correct — does each ticket only depend on tickets that genuinely gate it?
-- Should any tickets be merged or split further?
+- **Granularity** — recommended answer: publish as proposed. The other options are the concrete folds or splits you already weighed against this breakdown ("Fold #5 into #4", "Split #2"), never abstract "too coarse / too fine".
+- **Blocking edges** — recommended answer: the edges as drawn. The other options name the specific edge to add or drop ("Make capture serial", "Let #4 start without #2").
 
-Iterate until the user approves the breakdown.
+Selecting the recommended answers **is** the approval — go straight to publishing (step 5), no freetext confirmation in between. An adjustment answer reshapes the breakdown: apply it, re-present what changed, and ask again. Freetext stays available through the tool's own "Other" escape, but the quick path never requires typing. In an environment without a structured question tool, fall back to the same questions as a numbered list, each carrying a ➡️ recommended answer.
 
 ### 5. Publish the tickets to the configured tracker
 
