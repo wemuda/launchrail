@@ -1,7 +1,7 @@
 # ADR-0027: Ralph merge gate — re-poll CI in place instead of rebuilding
 
 ## Status
-Accepted (amends [ADR-0022](0022-ralph-campaign-revision.md))
+Accepted (amends [ADR-0022](0022-ralph-campaign-revision.md)) — amended by [ADR-0030](0030-ralph-ci-wait-cheap-watcher.md): the in-place re-polls now ride on cheap read-only small-model watchers, with the full gate recalled only once CI resolves
 
 ## Context
 ADR-0022 gave the loop ownership of the merge gate: implementers hand off at PR-open, and a per-ticket **gate agent** owns the CI wait, the squash-merge, and the tracker bookkeeping. That ADR closed with two "Revisit when" triggers — the harness gaining a way for subagents to wait efficiently, and *campaign data showing the gate-agent retry loop too expensive versus a repair-in-place step*. A field run produced exactly that data.

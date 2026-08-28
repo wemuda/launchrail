@@ -74,9 +74,12 @@ const POLICY = {
   // CI-wait re-polls for the merge gate — distinct from build attempts. A gate agent
   // gets one turn and cannot idle-wait (a background sleep never resumes it), so a PR
   // whose CI is still running comes back "ci-timeout": not done yet, not a failure.
-  // Re-poll the cheap gate this many times (reads only until it can merge) before the
-  // ticket spends a fresh implementer attempt — a slow CI must never cost a rebuild
-  // (ADR-0027). Concurrent tickets in the round supply the wall-clock CI needs.
+  // The wait itself is pure reading, so it rides on cheap read-only small-model
+  // watchers: up to this many watch turns before the ticket spends a fresh implementer
+  // attempt, with the full gate recalled only once a watcher sees the run finish — a
+  // slow CI must never cost a rebuild (ADR-0027), and waiting must never cost
+  // full-model gate dispatches (ADR-0030). Concurrent tickets in the round supply the
+  // wall-clock CI needs.
   gateWaits: A.gateWaits ?? 6,
   // Backstop against a graph that never drains; deferral rounds spend from this too.
   maxRounds: A.maxRounds ?? 25,
@@ -205,6 +208,19 @@ const GATE_SCHEMA = {
   },
 }
 
+// The CI wait is pure reading, so it rides on the cheapest agent there is — a
+// read-only small-model watcher with this tiny schema — never on a full merge-gate
+// dispatch (ADR-0030). "running" keeps the watch going; "green"/"red" recalls the gate.
+const CI_WATCH_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ci', 'note'],
+  properties: {
+    ci: { type: 'string', enum: ['green', 'red', 'running'] },
+    note: { type: 'string', description: 'on red: the failing check name(s); otherwise a short status' },
+  },
+}
+
 const VERIFY_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -276,10 +292,22 @@ function gatePrompt(pre, ticket, build, waited = 0) {
   return `You are the merge gate for ticket #${ticket.number}: PR #${build.pr} is open against ${pre.base}.
 Tracker access from this environment: ${pre.trackerAccess}
 You own the CI wait, the squash-merge, and the tracker bookkeeping — and nothing else. You never write code, never push commits, never repair a failing branch; a failing PR is reported, not fixed here.
-${waited > 0 ? `This is CI re-poll ${waited}: the CI was still running when the gate last looked, so the loop sent you back — it has very likely finished by now. Start again from step 1.\n` : ''}1. Check the PR's CI, if the repository has it. You have ONE turn and cannot idle-wait — a background sleep will not resume you, so do NOT try to sit on a long wait. Poll a handful of times, spacing the checks with the Monitor tool (never a bare sleep, never a busy loop), across the minute or two you can cover, then act on what you see: green → step 2; still in progress when your turn is ending → report status "ci-timeout" and STOP. A "ci-timeout" is not a failure — the loop simply re-polls you, cheaply, until CI lands; never merge on a run that has not finished green.
+${waited > 0 ? `The CI was still running when the gate last looked; a cheap read-only watcher has been polling since (${waited} watch turn(s)) and reports the run has finished. Start again from step 1 and act on what the API shows NOW — never on the watcher's word.\n` : ''}1. Check the PR's CI, if the repository has it. You have ONE turn and cannot idle-wait — a background sleep will not resume you, so do NOT try to sit on a long wait. Poll a handful of times, spacing the checks with the Monitor tool (never a bare sleep, never a busy loop), across the minute or two you can cover, then act on what you see: green → step 2; still in progress when your turn is ending → report status "ci-timeout" and STOP. A "ci-timeout" is not a failure — the loop hands the wait to a cheap read-only watcher and recalls you once CI lands; never merge on a run that has not finished green.
 2. CI green (or absent): check mergeability against ${pre.base} — the base may have moved since CI started. Mergeable: squash-merge via the tracker API; if the base moves between check and merge, re-check and retry up to 3 times. A real conflict is status "not-mergeable" — name the conflicting files if the API reports them.
 3. Merged: read issue #${ticket.number} back and close it explicitly if it is still open — "Closes #n" only auto-fires from the default branch${POLICY.target ? ', and this run does not merge there' : ', and squash-merge does not reliably fire it even there'} — then remove the ralph:building label. Report status "merged" with the merge commit sha.
 4. CI failed on the PR: report status "ci-failed" with the failing check and a summary a fresh implementer can act on. Fix nothing.`
+}
+
+// The watcher's whole job is to be cheap: it reads CI state and nothing else, so the
+// prompt stays minimal — no project preamble, no merge steps, no tracker bookkeeping.
+function ciWatchPrompt(pre, ticket, build, waited) {
+  return `Watch CI for PR #${build.pr}${pre.repo ? ` in ${pre.repo}` : ''} (ticket #${ticket.number}, base ${pre.base}). READ-ONLY: you never merge, comment, label, push, or write anything.
+Tracker access from this environment: ${pre.trackerAccess}
+This is watch turn ${waited}/${POLICY.gateWaits}; the merge gate returns the moment you see a finished run. You have ONE turn and cannot idle-wait (a background sleep will not resume you): poll the PR's checks a handful of times, spacing the polls with the Monitor tool (never a bare sleep, never a busy loop) to cover as much of the turn as you can, then report exactly what the API shows:
+- every check completed and none failed (or the repository runs no CI on PRs) → ci: "green"
+- at least one check completed as failed → ci: "red", naming the failing check(s) in note
+- anything still queued or in progress as your turn ends → ci: "running"
+Never guess a verdict from an unfinished run — "running" is always the honest fallback.`
 }
 
 function verifyPrompt(pre, ticket, build) {
@@ -376,15 +404,18 @@ async function drive(pre, ticket) {
     //
     // But the gate agent cannot idle-wait either — given one turn it can only poll CI a
     // few times, so a PR whose CI is still running comes back "ci-timeout": not done
-    // yet, not a failure of the code. Re-poll the cheap gate in place (reads + at most
-    // one merge, effort low) up to POLICY.gateWaits times before the ticket falls back
-    // to a fresh implementer attempt, so a slow CI can never cost a full rebuild
-    // (ADR-0027). Only a real verdict — merged, ci-failed, not-mergeable — leaves the
-    // loop early; a CI that never lands still parks the ticket once re-polls run out.
+    // yet, not a failure of the code. Waiting is pure reading, so the wait rides on
+    // cheap read-only small-model watchers (up to POLICY.gateWaits turns, shared across
+    // the whole wait) and the full gate is recalled only once a watcher sees the run
+    // finish — a slow CI can never cost a full rebuild (ADR-0027), and the wait itself
+    // never costs full-model gate dispatches (ADR-0030). Only a real verdict — merged,
+    // ci-failed, not-mergeable — leaves the loop early; a CI that never lands still
+    // parks the ticket once the watch turns run out.
     let gate
-    for (let waited = 0; ; waited += 1) {
+    let waited = 0
+    for (;;) {
       gate = await agent(gatePrompt(pre, ticket, build, waited), {
-        label: `gate:#${ticket.number}${waited > 0 ? `:ci-wait${waited}` : ''}`,
+        label: `gate:#${ticket.number}${waited > 0 ? `:ci-done${waited}` : ''}`,
         phase: 'Gate',
         schema: GATE_SCHEMA,
         effort: 'low',
@@ -394,7 +425,23 @@ async function drive(pre, ticket) {
         return { ticket, ok: false, dead: true }
       }
       if (gate.status !== 'ci-timeout' || waited >= POLICY.gateWaits) break
-      log(`#${ticket.number}: CI still running on PR #${build.pr} — re-polling the gate (${waited + 1}/${POLICY.gateWaits})`)
+      let watch = null
+      while (waited < POLICY.gateWaits) {
+        waited += 1
+        log(`#${ticket.number}: CI still running on PR #${build.pr} — cheap watch (${waited}/${POLICY.gateWaits})`)
+        watch = await agent(ciWatchPrompt(pre, ticket, build, waited), {
+          label: `gate:#${ticket.number}:ci-wait${waited}`,
+          phase: 'Gate',
+          schema: CI_WATCH_SCHEMA,
+          model: 'haiku',
+          effort: 'low',
+        })
+        // A dead watcher costs one watch turn, never the run; "running" keeps watching.
+        if (watch && watch.ci !== 'running') break
+      }
+      // Watch turns spent with CI still unfinished: keep the gate's honest "ci-timeout"
+      // verdict and fall through to the unchanged attempt/park safety net.
+      if (!watch || watch.ci === 'running') break
     }
     if (gate.status !== 'merged') {
       s.failures.push(`[attempt ${s.attempts}] PR #${build.pr} ${gate.status}: ${gate.summary}`)

@@ -128,10 +128,10 @@ describe("launchrail add ralph", () => {
     expect(content).toContain("nextStep");
   });
 
-  test("the merge gate re-polls CI in place instead of rebuilding (ADR-0027)", () => {
+  test("the merge gate waits out CI with cheap watchers instead of rebuilding (ADR-0027, ADR-0030)", () => {
     const content = ralphWorkflowContent();
     // A gate agent cannot idle-wait, so a still-running CI comes back "ci-timeout" — not
-    // a failure. The loop re-polls the cheap gate up to POLICY.gateWaits times before a
+    // a failure. The loop absorbs it with up to POLICY.gateWaits watch turns before a
     // ticket ever spends a fresh implementer attempt, so a slow CI cannot cost a rebuild.
     expect(content).toContain("gateWaits: A.gateWaits ?? 6");
     expect(content).toContain("waited >= POLICY.gateWaits");
@@ -139,6 +139,10 @@ describe("launchrail add ralph", () => {
     // "ci-timeout" is the one status that keeps the gate loop going; every real verdict
     // (merged, ci-failed, not-mergeable) leaves it.
     expect(content).toContain("gate.status !== 'ci-timeout'");
+    // The wait itself is read-only and rides on a small model — never on a full
+    // merge-gate dispatch (ADR-0030); the real gate is recalled once CI resolves.
+    expect(content).toContain("CI_WATCH_SCHEMA");
+    expect(content).toContain(":ci-done");
   });
 
   test("the workflow carries the ADR-0010 field-revision mechanics", () => {
@@ -281,8 +285,9 @@ describe("doctor with the ralph module", () => {
   });
 });
 
-describe("ralph workflow — merge-gate CI wait (ADR-0027)", () => {
+describe("ralph workflow — merge-gate CI wait (ADR-0027, ADR-0030)", () => {
   type AgentResult = Record<string, unknown> | null;
+  type Dispatch = { label: string; model?: string; effort?: string };
   type RalphResult = {
     merged: { ticket: number; title: string; pr?: number; mergeCommit?: string }[];
     parked: { ticket: number; title: string; failures: string[] }[];
@@ -290,14 +295,15 @@ describe("ralph workflow — merge-gate CI wait (ADR-0027)", () => {
 
   // Execute the seeded workflow script against mock hooks so the test can assert on the
   // *sequence of agent dispatches* — the strongest evidence that a premature CI timeout
-  // is absorbed by a cheap in-place gate re-poll and never by a fresh implementer build.
+  // is absorbed by cheap read-only watch turns and never by a fresh implementer build
+  // (ADR-0027) nor by full-model gate re-dispatches (ADR-0030).
   // The script body runs in an async-function context with these hooks in scope, exactly
   // as the Workflow tool runs it (mirrors the parse test above, but executes it).
   async function runRalph(opts: {
     args?: Record<string, unknown>;
     tickets?: { number: number; title: string; blockedByLine?: string }[];
     onAgent: (label: string) => AgentResult;
-  }): Promise<{ result: RalphResult; labels: string[]; logs: string[] }> {
+  }): Promise<{ result: RalphResult; labels: string[]; dispatches: Dispatch[]; logs: string[] }> {
     const tickets = opts.tickets ?? [{ number: 1, title: "T1", blockedByLine: "" }];
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
       ...args: string[]
@@ -306,11 +312,13 @@ describe("ralph workflow — merge-gate CI wait (ADR-0027)", () => {
     const fn = new AsyncFunction("args", "budget", "agent", "parallel", "pipeline", "phase", "log", "workflow", body);
 
     const labels: string[] = [];
+    const dispatches: Dispatch[] = [];
     const logs: string[] = [];
     const budget = { total: null, spent: () => 0, remaining: () => Number.POSITIVE_INFINITY };
-    const agent = async (_prompt: string, o: { label?: string } = {}): Promise<AgentResult> => {
+    const agent = async (_prompt: string, o: { label?: string; model?: string; effort?: string } = {}): Promise<AgentResult> => {
       const label = o.label ?? "";
       labels.push(label);
+      dispatches.push({ label, model: o.model, effort: o.effort });
       // The run's plumbing agents (preflight, graph, release, park) return canned green
       // state; the per-ticket build/gate/verify agents are the scenario under test.
       if (label === "preflight")
@@ -336,56 +344,88 @@ describe("ralph workflow — merge-gate CI wait (ADR-0027)", () => {
     };
 
     const result = (await fn(opts.args ?? {}, budget, agent, parallel, pipeline, phase, log, workflow)) as RalphResult;
-    return { result, labels, logs };
+    return { result, labels, dispatches, logs };
   }
 
-  test("a premature ci-timeout re-polls the gate in place — no fresh build attempt", async () => {
-    let gateChecks = 0;
-    const { result, labels } = await runRalph({
+  test("a premature ci-timeout is waited out by a cheap watcher; the gate returns once — no fresh build attempt", async () => {
+    const { result, labels, dispatches } = await runRalph({
       args: { only: [1], width: 1, target: "", gateWaits: 3 },
       onAgent: (label) => {
         if (label.startsWith("build:#1")) return { status: "pr-open", pr: 100, summary: "built" };
-        if (label.startsWith("gate:#1")) {
-          gateChecks += 1;
-          // First look: CI still running. Re-poll: finished green, merged.
-          return gateChecks === 1
-            ? { status: "ci-timeout", summary: "CI still in progress" }
-            : { status: "merged", mergeCommit: "m100", issueClosed: true, summary: "merged" };
-        }
+        if (label.startsWith("gate:#1:ci-wait")) return { ci: "green", note: "all checks passed" };
+        if (label === "gate:#1") return { status: "ci-timeout", summary: "CI still in progress" };
+        if (label.startsWith("gate:#1:ci-done"))
+          return { status: "merged", mergeCommit: "m100", issueClosed: true, summary: "merged" };
         if (label.startsWith("verify:#1"))
           return { merged: true, issueClosed: true, mergeCommit: "m100", evidence: "merge commit on master" };
         return null;
       },
     });
-    // The premature timeout was absorbed by a cheap in-place re-poll ...
+    // The premature timeout was absorbed by a cheap read-only watch turn, and the real
+    // gate came back exactly once, after the watcher saw CI finish ...
     expect(labels).toContain("gate:#1");
     expect(labels).toContain("gate:#1:ci-wait1");
+    expect(labels).toContain("gate:#1:ci-done1");
     // ... and never triggered the expensive fresh implementer (the old build:#n:retry waste).
     expect(labels.filter((l) => l.startsWith("build:#1"))).toEqual(["build:#1"]);
     expect(labels).not.toContain("build:#1:retry");
+    // The wait rode on the small model; the acting gate dispatches inherit the session model.
+    expect(dispatches.find((d) => d.label === "gate:#1:ci-wait1")).toMatchObject({ model: "haiku", effort: "low" });
+    expect(dispatches.find((d) => d.label === "gate:#1")?.model).toBeUndefined();
+    expect(dispatches.find((d) => d.label === "gate:#1:ci-done1")?.model).toBeUndefined();
     // The ticket merged on its first and only attempt.
     expect(result.merged).toEqual([{ ticket: 1, title: "T1", pr: 100, mergeCommit: "m100" }]);
     expect(result.parked).toEqual([]);
   });
 
-  test("re-polls are bounded: a CI that never lands falls back to a fresh attempt, then parks", async () => {
-    const { result, labels } = await runRalph({
+  test("watch turns are bounded: a CI that never lands falls back to a fresh attempt, then parks", async () => {
+    const { result, labels, dispatches } = await runRalph({
       args: { only: [1], width: 1, target: "", gateWaits: 2, attempts: 2 },
       onAgent: (label) => {
         if (label.startsWith("build:#1")) return { status: "pr-open", pr: 100, summary: "built" };
+        if (label.startsWith("gate:#1:ci-wait")) return { ci: "running", note: "still in progress" };
         if (label.startsWith("gate:#1")) return { status: "ci-timeout", summary: "CI never finishes" };
         if (label.startsWith("verify:#1")) return { merged: false, issueClosed: false, evidence: "not merged" };
         return null;
       },
     });
-    // The re-poll loop is capped at gateWaits — it never spins unboundedly.
+    // The watch loop is capped at gateWaits — it never spins unboundedly.
     expect(labels).toContain("gate:#1:ci-wait1");
     expect(labels).toContain("gate:#1:ci-wait2");
     expect(labels).not.toContain("gate:#1:ci-wait3");
+    // A CI that never resolves never recalls the full gate — the whole wait stayed on
+    // the small model; only the initial gate of each attempt inherits the session model.
+    expect(labels.filter((l) => l.startsWith("gate:#1:ci-done"))).toEqual([]);
+    expect(dispatches.filter((d) => d.label.startsWith("gate:#1") && d.model !== "haiku").map((d) => d.label)).toEqual([
+      "gate:#1",
+      "gate:#1",
+    ]);
     // A genuinely stuck CI still degrades to the old safety net — a fresh implementer attempt ...
     expect(labels).toContain("build:#1:retry");
     // ... and after its attempts are spent the ticket parks rather than looping forever.
     expect(result.parked.map((p) => p.ticket)).toEqual([1]);
     expect(result.merged).toEqual([]);
+  });
+
+  test("a watcher seeing CI fail recalls the gate for the real verdict — no further watch turns", async () => {
+    const { result, labels } = await runRalph({
+      args: { only: [1], width: 1, target: "", gateWaits: 3, attempts: 1 },
+      onAgent: (label) => {
+        if (label.startsWith("build:#1")) return { status: "pr-open", pr: 100, summary: "built" };
+        if (label.startsWith("gate:#1:ci-wait")) return { ci: "red", note: "unit-tests failed" };
+        if (label === "gate:#1") return { status: "ci-timeout", summary: "CI still in progress" };
+        if (label.startsWith("gate:#1:ci-done"))
+          return { status: "ci-failed", summary: "unit-tests failed on PR #100" };
+        if (label.startsWith("verify:#1")) return { merged: false, issueClosed: false, evidence: "not merged" };
+        return null;
+      },
+    });
+    // Red is a real verdict: one watch turn, then the gate returns and reports ci-failed.
+    expect(labels).toContain("gate:#1:ci-wait1");
+    expect(labels).not.toContain("gate:#1:ci-wait2");
+    expect(labels).toContain("gate:#1:ci-done1");
+    // The failure enters the ordinary attempt/park path with the gate's summary.
+    expect(result.parked.map((p) => p.ticket)).toEqual([1]);
+    expect(result.parked[0].failures.join(" ")).toContain("ci-failed");
   });
 });

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "launchrailVersion": "1.12.0",
+  "launchrailVersion": "1.13.0",
   "files": {
     ".claude/hooks/ralph-permission-guard.py": {
       "class": "managed",
@@ -52,7 +52,7 @@
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
-      "checksum": "0801050c7bf127ae537071321a9999003d9452e619775bdb7b45b308532b7ca4"
+      "checksum": "e1cd0791127da087ae4650637ccd047c920a45ee8af2b3a2447bd9d8f580b238"
     },
     ".claude/skills/launch-research/SKILL.md": {
       "class": "managed",
@@ -92,7 +92,7 @@
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
-      "checksum": "85aeebf2e53f2670ce2afadc1be098d9901ec5f6f9eb213e7547310ec148a1f4"
+      "checksum": "849f272407f75da44800fb3b7140004d9264262e1758a67fc450a05b6b574d65"
     },
     ".launchrail.yml": {
       "class": "seeded",
@@ -100,7 +100,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "e768d2426f0005ce0d68f438649afd24d9be82b9dffa3d1b6a7bbcb48d59fffb"
+      "checksum": "e1b18905dbe443c98394487fa423103b53336f4208ccd664f1132ae253e7461b"
     },
     "AGENTS.md": {
       "class": "seeded",
