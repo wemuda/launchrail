@@ -1,6 +1,6 @@
 ---
 name: launch-ralph
-description: The Ralph implementation loop's contract — policies, dispatch steps, the loop-owned merge gate, and the supervisor's duties when the loop runs as the ralph workflow (the default engine for any multi-ticket run). Skill-mode orchestration of fresh-context implementers lives here too, as the declared exception. Behind /launch-implement (the user-typed front door) — never invoke it on your own initiative; reach it through that door or an explicit user request to run the loop.
+description: The Ralph implementation loop's contract — policies, dispatch steps, the loop-owned merge gate, and the supervisor's duties, whether the loop runs as the ralph workflow (the default engine) or as skill-mode orchestration (the declared exception). Behind /launch-implement — reach it through that door or an explicit user request, never on your own initiative.
 ---
 
 # Ralph — the autonomous implementation loop
@@ -24,7 +24,7 @@ This skill is the loop's contract and its supervisor. The loop itself runs as th
 - **Deferrals are not attempts.** An implementer that stops at its dependency gate (a declared blocker had not actually landed) hands the attempt back and is retried after the blocker lands — capped at 2 deferrals, then it counts as a real failure.
 - **Max rounds: 25** — a backstop, not a target; deferral rounds spend from it too. Stop and report if the frontier hasn't drained.
 - **Checkpoints: none** by default — run to completion, report once. The user may ask for a pause after each round instead.
-- **Review gate:** the implementer's own self-review via `/launch-code-review`, inside `launch-ralph-implement`.
+- **Review gate:** the implementer's own self-review via the `launch-code-review` skill, inside `launch-ralph-implement`.
 - **Verification gate:** `npx @wemuda/launchrail verify` — per ticket before the PR, and once more on the final base before the loop may report success.
 - **Merge ownership: the loop, not the implementer.** Implementers build, open the PR, and hand off at PR-open; the merge gate — CI wait, mergeability re-check, squash-merge, explicit issue close, `ralph:building` removal — belongs to the loop (you in skill mode, a per-ticket gate agent in the workflow). An implementer subagent must never sit in a CI wait: it cannot foreground-sleep, and a background sleep surfaces to its parent without resuming it — tokens burn, nothing advances. Merge ordering stays optimistic and remote-arbitrated (re-check mergeability immediately before merging, up to 3 retries if the base moves; no merge locks), and the single gate owner serializes where it matters — critical-path first, schema-touching tickets one at a time.
 - **Labels:** tickets enter as `ready-for-agent`, are marked `ralph:building` while owned, and leave as closed or `needs-info` (parked).
@@ -54,8 +54,8 @@ Each implementer prompt is self-contained — assume it knows nothing about this
 2. Read the ticket and everything it links (spec sections, ADRs, journeys), plus `AGENTS.md`/`CLAUDE.md`. If the tracker tool truncates the body (long code spans are a known trigger), fetch the full text by another route — the tracker's search API, the spec file in the repo — and never implement from a truncated ticket. If the ticket is already closed, report "already-done" and stop.
 3. Label the ticket `ralph:building` so a lost session leaves a trace.
 4. Branch from a fresh sync of the base: `ralph/<n>-<short-slug>`.
-5. Implement by invoking the **`launch-ralph-implement`** skill — it owns TDD, the verification gate, browser smoke for user-facing changes, self-review via `/launch-code-review`, and commit conventions. Name the skill; do not paraphrase it.
-6. Pre-PR sync: merge the latest base into the branch; resolve conflicts with the **`launch-resolving-merge-conflicts`** skill; if the base gained DB migrations since branching, regenerate yours to follow them with the project's migration tool — never hand-edit the journal; re-run the verification gate if anything changed.
+5. Implement by calling the Skill tool with **`launch-ralph-implement`** — it owns TDD, the verification gate, browser smoke for user-facing changes, self-review via `launch-code-review`, and commit conventions. Name the skill; do not paraphrase it.
+6. Pre-PR sync: merge the latest base into the branch; resolve conflicts by calling the Skill tool with **`launch-resolving-merge-conflicts`**; if the base gained DB migrations since branching, regenerate yours to follow them with the project's migration tool — never hand-edit the journal; re-run the verification gate if anything changed.
 7. Open a PR against the base, titled from the ticket, with `Closes #<n>` in the body. Never open a second PR for a ticket — adopt an existing one. Opening against an up-to-date base means CI tests the state that will actually land. Then **report PR-open and stop**: the CI wait, the merge, and the issue close belong to the loop's merge gate, not to you. Never push to the base directly.
 
 ## The merge gate — owned by the loop
