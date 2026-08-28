@@ -4,6 +4,7 @@
 
 - This project follows the Launchrail rail — six phases: Intent → Exploration → Decisions → Blueprint → Build → Ship. Report position with the rail banner at every transition; the stage detail and the interaction contract live in `.claude/skills/launch/workflow.md`.
 - Product knowledge (vision, specs, ADRs, designs, tickets, code) is project-owned; Launchrail never overwrites it.
+- Architecture decisions: read `docs/adr/README.md` — the registry index — first, and open only the ADRs touching your area. An ADR records a decision, not the current system; never take one as evidence that a component exists or still works as described — the code is the source of truth.
 - `.launchrail.yml` is project configuration; `.launchrail-lock.json` is machine-managed — do not hand-edit it.
 - The issue-tracker workflow (labels included) and the domain-doc consumer rules live in `docs/agents/` — seeded from `.launchrail.yml`, yours to edit.
 - Before claiming completion, run the project's deterministic checks. Completion requires evidence, not assertion.

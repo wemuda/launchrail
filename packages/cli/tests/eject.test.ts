@@ -59,6 +59,7 @@ describe("launchrail eject", () => {
         "AGENTS.md",
         "CLAUDE.md",
         "docs/adr/0000-template.md",
+        "docs/adr/README.md",
         "docs/agents/domain.md",
       ].sort(),
     );

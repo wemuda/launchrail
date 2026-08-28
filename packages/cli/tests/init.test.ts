@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { runInit } from "../src/commands/init.js";
@@ -10,6 +10,7 @@ const EXPECTED_FILES = [
   "AGENTS.md",
   "CLAUDE.md",
   "docs/adr/0000-template.md",
+  "docs/adr/README.md",
   ".launchrail/CLAUDE.generated.md",
   // The implementation loop's materials install with init (ADR-0018/0020): the
   // workflow, its unattended-launch guard hook, and the guard's registration in
@@ -70,6 +71,32 @@ describe("launchrail init", () => {
     expect(second.code).toBe(0);
     expect(second.actions.every((a) => a.kind === "skip-unchanged")).toBe(true);
     expect(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8")).toBe(lockBefore);
+  });
+
+  test("seeds an empty ADR registry on a fresh repo", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
+    expect(registry).toContain("# ADR registry");
+    expect(registry).toContain("No decisions recorded yet");
+    expect(registry).not.toContain("Unclassified");
+    const lock = JSON.parse(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8"));
+    expect(lock.files["docs/adr/README.md"]).toMatchObject({ class: "seeded" });
+  });
+
+  test("prefills the ADR registry from existing decision records when adopting (ADR-0031)", async () => {
+    // A repo adopted mid-life already carries ADRs; the seeded index lists them
+    // as Unclassified — only the project knows which decisions still stand.
+    mkdirSync(join(tmp.root, "docs/adr"), { recursive: true });
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# ADR-0001: Use Postgres\n\nBecause.\n");
+    writeFileSync(join(tmp.root, "docs/adr/0002-event-bus.md"), "# One event bus\n\nBecause.\n");
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
+    expect(registry).toContain("| [0001](0001-use-postgres.md) | Use Postgres | Unclassified |");
+    expect(registry).toContain("| [0002](0002-event-bus.md) | One event bus | Unclassified |");
+    expect(registry).not.toContain("0000-template.md) |");
+    // Re-running stays idempotent: same records, same content.
+    const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    expect(second.actions.find((a) => a.spec.relPath === "docs/adr/README.md")?.kind).toBe("skip-unchanged");
   });
 
   test("preserves an existing AGENTS.md", async () => {

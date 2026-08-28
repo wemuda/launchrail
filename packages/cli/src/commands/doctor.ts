@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { ADR_REGISTRY_PATH, duplicateAdrNumbers, scanAdrs, unindexedAdrs } from "../lib/adr.js";
 import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
 import { missingImports } from "../lib/claudeImports.js";
@@ -108,6 +109,40 @@ export function runDoctor(cwd: string): DoctorOutcome {
         ? "Launchrail's workflow instructions never reach Claude"
         : "Claude will not see the shared agent contract";
       add("warn", "CLAUDE.md", `does not import ${missing.join(", ")} — ${consequence}; re-run \`launchrail init\` to wire it in`);
+    }
+  }
+
+  // The ADR corpus (ADR-0031): filename-level invariants only — record contents
+  // use the project's own format and are none of doctor's business. Both checks
+  // are project-doc hygiene, so they warn rather than fail.
+  const adrs = scanAdrs(cwd);
+  if (adrs.length > 0) {
+    const dupes = duplicateAdrNumbers(adrs);
+    if (dupes.length === 0) {
+      add("pass", "adr numbering", `${adrs.length} decision record(s), numbers unique`);
+    } else {
+      add(
+        "warn",
+        "adr numbering",
+        `number(s) ${dupes.join(", ")} claimed by more than one file — references by number are ambiguous; renumber one of each pair and update its links`,
+      );
+    }
+    if (!existsSync(join(cwd, ADR_REGISTRY_PATH))) {
+      add("warn", "adr registry", `${ADR_REGISTRY_PATH} missing — run \`launchrail sync\` to seed the index`);
+    } else {
+      const unindexed = unindexedAdrs(readFileSync(join(cwd, ADR_REGISTRY_PATH), "utf8"), adrs);
+      if (unindexed.length === 0) {
+        add("pass", "adr registry", "every record indexed");
+      } else {
+        add(
+          "warn",
+          "adr registry",
+          `${unindexed.length} record(s) missing from the index (${unindexed
+            .slice(0, 3)
+            .map((e) => e.file)
+            .join(", ")}${unindexed.length > 3 ? ", …" : ""}) — add their rows to ${ADR_REGISTRY_PATH}`,
+        );
+      }
     }
   }
 

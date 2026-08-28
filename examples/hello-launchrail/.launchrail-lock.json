@@ -20,7 +20,7 @@
     },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
-      "checksum": "fc8b1b8c09dab54772922cb2c83f210af8e201c322be12660fa4413b3b34cb10"
+      "checksum": "6960fefbc9a0a11ce6e558ee1e3137ab152626c164f039c0b786ca438173d22c"
     },
     ".claude/skills/launch-discovery/SKILL.md": {
       "class": "managed",
@@ -32,7 +32,7 @@
     },
     ".claude/skills/launch-grill/domain-modeling.md": {
       "class": "managed",
-      "checksum": "466ee47be8e37a7ec4535b416eada495fbcda45c5fa2ae427f2ad48efcfec2c2"
+      "checksum": "38769e87e5a8dbb8840fe9c1ab78accd5994a9a0ab6748bac12c87db3597b5a0"
     },
     ".claude/skills/launch-grill/SKILL.md": {
       "class": "managed",
@@ -64,11 +64,11 @@
     },
     ".claude/skills/launch-spec/SKILL.md": {
       "class": "managed",
-      "checksum": "9941af41f802caa2765e5876da5ff2610bad27f5c7f043a1ed7090befcde1b3e"
+      "checksum": "c2f1d0229d2edbbc94b5929b05f1314e42bdff2a00f66d8f027e48a292b3cadc"
     },
     ".claude/skills/launch-tickets/SKILL.md": {
       "class": "managed",
-      "checksum": "5a86a3689a044bb511b260c19da07145f7ff9e4709d8eb8e18bd74fa6e6b25a3"
+      "checksum": "bc0f0a05d212978a0f5b8b9e02d3e9003ed025cabf1ff2649b39f2ca875288bd"
     },
     ".claude/skills/launch-vision-creation/SKILL.md": {
       "class": "managed",
@@ -92,7 +92,7 @@
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
-      "checksum": "849f272407f75da44800fb3b7140004d9264262e1758a67fc450a05b6b574d65"
+      "checksum": "bf8dd954ca6c0ebb37e0fd7dad6ed94d4582c0a4559d7cb6db8564c2a41ee13b"
     },
     ".launchrail.yml": {
       "class": "seeded",
@@ -100,7 +100,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "e1b18905dbe443c98394487fa423103b53336f4208ccd664f1132ae253e7461b"
+      "checksum": "1453bb22897a52855f8f147c6e8dbe82a0f24debc332dbcc5855493a361fadcb"
     },
     "AGENTS.md": {
       "class": "seeded",
@@ -113,6 +113,10 @@
     "docs/adr/0000-template.md": {
       "class": "seeded",
       "checksum": "f28c0b63aefcba78b2e5db5d50b4b950031cba904eab6ebe4f51d633d09f2f1f"
+    },
+    "docs/adr/README.md": {
+      "class": "seeded",
+      "checksum": "633b4d5e39c9a0bc965487777dd62e73e9affcdb0f3ea3079d6b135b7b0086e1"
     },
     "docs/agents/domain.md": {
       "class": "seeded",

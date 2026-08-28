@@ -129,3 +129,50 @@ describe("launchrail doctor", () => {
     expect(outcome.checks.filter((c) => c.status === "fail")).toEqual([]);
   });
 });
+
+// Filename-level invariants only (ADR-0031): record contents use the project's
+// own format, so doctor never inspects them — and both checks warn, never fail.
+describe("launchrail doctor — ADR checks", () => {
+  function check(name: string) {
+    return runDoctor(tmp.root).checks.find((c) => c.name === name);
+  }
+
+  test("a repo without decision records gets no ADR checks", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    // The seeded template and registry are not records.
+    expect(check("adr numbering")).toBeUndefined();
+    expect(check("adr registry")).toBeUndefined();
+  });
+
+  test("unique numbers and a covering index pass", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# ADR-0001: Use Postgres\n");
+    writeFileSync(
+      join(tmp.root, "docs/adr/README.md"),
+      "# ADR registry\n\n| [0001](0001-use-postgres.md) | Use Postgres | Accepted |\n",
+    );
+    expect(check("adr numbering")?.status).toBe("pass");
+    expect(check("adr registry")?.status).toBe("pass");
+  });
+
+  test("warns when two records claim one number", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# Use Postgres\n");
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-mysql.md"), "# Use MySQL\n");
+    const numbering = check("adr numbering");
+    expect(numbering?.status).toBe("warn");
+    expect(numbering?.message).toContain("0001");
+  });
+
+  test("warns on records missing from the index, and on a missing registry", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# Use Postgres\n");
+    const unindexed = check("adr registry");
+    expect(unindexed?.status).toBe("warn");
+    expect(unindexed?.message).toContain("0001-use-postgres.md");
+    rmSync(join(tmp.root, "docs/adr/README.md"));
+    const missing = check("adr registry");
+    expect(missing?.status).toBe("warn");
+    expect(missing?.message).toContain("launchrail sync");
+  });
+});

@@ -254,7 +254,8 @@ const RELEASE_SCHEMA = {
 // ---------------------------------------------------------------------------
 function preamble(pre) {
   return `You are working in a Launchrail project${pre.repo ? ` (${pre.repo})` : ''}; base branch: ${pre.base}.
-Binding docs: AGENTS.md and CLAUDE.md, plus the vision, specs, and ADRs under docs/. Read them before touching code.
+Binding docs: AGENTS.md and CLAUDE.md, plus the vision and specs under docs/. Read them before touching code.
+Architecture decisions: read the registry index (docs/adr/README.md) and open only the ADRs touching your ticket's area — an ADR records a decision, not the current system; the code is the evidence for what exists.
 Tracker access from this environment: ${pre.trackerAccess}
 Blocking edges live on tickets as "Blocked by: #n" lines.
 Verbatim local commands: ${[...pre.localCommands, pre.verifyCommand].join(' ; ')}
