@@ -1,6 +1,6 @@
 ---
 name: launch-design-handoff
-description: The design→code on-ramp — take a Claude Design prototype dropped into the session (a .zip export, an extracted folder, artboard/HTML files, or a published canvas link) and turn it into a committed handoff package under docs/design/, read against the current codebase and design system, then route it into the delivery loop — normally a short feature grill, a spec that references the designs, and tickets. Use when the user drops design files or a zip from Claude Design and wants them documented or implemented — "here is the prototype of feature X" — or asks to hand designs back from Claude Design into code.
+description: The design→code on-ramp — turn a Claude Design prototype dropped into the session (a .zip export, an extracted folder, artboard/HTML files, or a published canvas link) into a committed handoff package under docs/design/, then route it into the delivery loop. Use when the user drops design files from Claude Design and wants them documented or implemented — "here is the prototype of feature X" — or asks to bring designs back from Claude Design into code.
 ---
 
 # Design handoff — from Claude Design back into the loop

@@ -1,6 +1,6 @@
 ---
 name: launch-implement
-description: Start building — the single entry point for implementation (stage 10). Drives ready tickets to verified merges through the Ralph loop. `/launch-implement` works the whole ready frontier; `/launch-implement 15` builds one ticket end to end in this session; several numbers scope the loop to just those tickets; a count ("the next 5") caps the run; a spec or slice reference ("spec #2's tickets") resolves to its tickets. It repairs its own setup (missing loop materials install via `launchrail sync`) instead of stopping. Only ever started explicitly by the user.
+description: Start building — drive ready tickets to verified merges through the Ralph loop. Bare, it works the whole ready frontier; `/launch-implement 15` builds one ticket end to end; several numbers scope the loop; a count ("the next 5") caps it; a spec reference ("spec #2's tickets") resolves to its tickets. Repairs its own setup instead of stopping.
 disable-model-invocation: true
 ---
 
@@ -35,8 +35,8 @@ If the loop's materials are missing — `modules.ralph` off in the manifest, or 
 1. **Dependency gate:** every ticket on the `Blocked by:` line is closed with its work merged. An open blocker stops you before any code — name it and offer to build it first.
 2. Read the ticket and everything it links (spec sections, ADRs, journeys), plus `AGENTS.md`/`CLAUDE.md`.
 3. Label the ticket `ralph:building`; branch `ralph/<n>-<short-slug>` from a fresh sync of the base resolved above.
-4. Implement by the **`launch-ralph-implement`** contract — TDD, the `verify` gate, browser smoke for user-facing changes, self-review, commit conventions. Name the skill; don't paraphrase it.
-5. Pre-PR sync: merge the latest base; resolve conflicts with `launch-resolving-merge-conflicts`; re-run the gate if anything changed.
+4. Implement by calling the Skill tool with **`launch-ralph-implement`** — it owns TDD, the `verify` gate, browser smoke for user-facing changes, self-review, and commit conventions. Never paraphrase it inline.
+5. Pre-PR sync: merge the latest base; resolve conflicts by calling the Skill tool with `launch-resolving-merge-conflicts`; re-run the gate if anything changed.
 6. Open a PR titled from the ticket with `Closes #<n>`; adopt an existing `ralph/<n>-*` branch or PR rather than opening a second.
 7. Wait for CI (Monitor or a background sleep, never a foreground busy-wait); fix what the branch broke; merge; confirm on the remote that the PR merged and the issue closed — close it explicitly if squash-merge didn't. Remove `ralph:building`.
 8. **Integrity:** no placeholders, no stubs, never delete or weaken a test to get green, never claim verification you didn't run.

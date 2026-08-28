@@ -16,6 +16,10 @@ into `docs/agents/`. Each derived file carries its own derivation note. If
 Launchrail is useful to you, the inspiration credit belongs upstream — see the
 Launchrail README's Credits section.
 
+Upstream is monitored as inspiration, never re-vendored (ADR-0020). The
+derived skills were last reviewed against upstream commit `6654f6b`
+(2026-08-24).
+
 ---
 
 MIT License
