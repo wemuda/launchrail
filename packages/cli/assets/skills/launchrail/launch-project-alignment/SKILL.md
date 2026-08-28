@@ -1,6 +1,6 @@
 ---
 name: launch-project-alignment
-description: The on-ramp for adopting an existing, mid-development codebase into the Launchrail loop. Instead of starting from a blank vision, it inventories what the project already has, infers a draft vision from the code, interviews only about the gaps, and detects an existing design system — then routes the real gaps back into the normal workflow. Use when initializing Launchrail on a project that already has code (`origin: existing` in `.launchrail.yml`), when the user asks to adopt, align, or onboard an existing project, or when `launch` sends an existing project to stage 1.
+description: "The on-ramp for adopting an existing, mid-development codebase: inventory what the project already has, infer a draft vision from the code, interview only the gaps, detect the existing design system — then route back into the normal workflow. Use when initializing Launchrail on a project that already has code (origin: existing in .launchrail.yml), when the user asks to adopt, align, or onboard an existing project, or when launch sends one to stage 1."
 ---
 
 # Project alignment — adopting an existing project
