@@ -1,0 +1,35 @@
+# ADR-0031: Consuming repos get a seeded ADR registry and a scoped reading contract
+
+## Status
+Accepted
+
+## Context
+Launchrail's own ADR corpus stays navigable at 30+ records because this directory's [README.md](README.md) carries the load: an index with live statuses, a maintained "live picture" of how the decisions compose, and a short newcomer path. None of that was ever exported. `init` seeds consuming repos only the naked `0000-template.md`, and the toolchain's texts pointed agents at the raw directory: the seeded `AGENTS.md` listed `docs/adr/` as canonical context with no scoping rule, and Ralph's implementer preamble told every ticket's implementer to read "the ADRs under docs/" before touching code — a cost that grows with every record, on the workflow's hottest path.
+
+A field repository a year into the rail showed what the exported convention produces without the registry. Thirteen records, no index, and the early ones — precisely the records most likely to describe an outgrown world — carried no `## Status` section at all, so the corpus could not even express supersession for its oldest members. Two records claimed the same number (minted by parallel sessions following "scan for the highest number and increment"), making every reference by number ambiguous — code comments cited one, a planning session's artifacts the other. And a record written in plan tense read exactly like as-built documentation: a planning session had to spend a codebase-mapping detour to learn whether the component a record described had actually been built, because nothing in the corpus distinguishes *decided* from *built*.
+
+The creation side had the mirror-image gap: the three-part bar for offering an ADR (hard to reverse, surprising without context, a real trade-off) lived only in the grill's domain-modeling discipline, while the seeded `AGENTS.md` — read in every session, not just grills — said only "meaningful decisions become lightweight ADRs". Product-shaped decisions took decision-record permanence that belonged in specs.
+
+Count was never the lever. ADRs are append-only history that answers *why*; they begin aging the moment they are written, and that is fine when the current-state summary lives somewhere maintained and agents are told the code, not the record, is the evidence for what exists. The fix is a reading contract and a registry, not fewer or shorter records.
+
+## Decision
+- **Every consuming repo carries its own registry.** `docs/adr/README.md` seeds next to the template — seeded class: created once, project-owned forever after. It holds the index table, the doctrine paragraph (an ADR records a decision, not the current system), a "live picture" section the project maintains, and the registry rules. When init or sync runs beside existing records (adoption), the index prefills one row per record with status **Unclassified** — only the project can know which decisions still stand — plus the instruction to classify each lazily, on next touching its area. No migration ships: the seeded surface is already the vehicle (`sync` creates absent files and never touches an existing registry), and any migration's end state would have to be produced by the current `init` anyway.
+- **The reading contract is index-first, area-scoped, code-over-record.** Every place the toolchain tells agents about ADRs now says the same thing: read the registry index first, open only the ADRs touching your area, and never take a record as evidence that a component exists or still works as described — the code is the source of truth. It rides the seeded `AGENTS.md` (canonical-context entry), the managed `CLAUDE.generated.md` (the propagation point for repos initialized before this ADR), Ralph's implementer preamble, the seeded `docs/agents/domain.md`, and the spec/ticket skills.
+- **The creation bar ships where creation happens.** The seeded `AGENTS.md` now carries the grill's three-part bar verbatim, plus two rules the bar implies: prefer amending the ADR that owns an area over minting a sibling, and product decisions belong in the spec. Minting adds the record's registry row **in the same commit** — which also turns two parallel sessions claiming the same number into a visible merge conflict on the shared index instead of a silent collision.
+- **Doctor checks the filename-level invariants.** `launchrail doctor` warns on duplicate ADR numbers, a missing registry beside existing records, and records absent from the index. Warn, never fail — these are project-doc hygiene — and filename-level only: record *contents* use the project's own format and are none of doctor's business.
+
+## Alternatives considered
+- **A migration that generates the registry.** Adds machinery without behavior: sync's seeded surface already creates the absent file, and the adoption prefill lives in the seed's content (computed from the repo at write time) rather than in one-shot migration code.
+- **Inferring real statuses at prefill.** Parsing existing `## Status` lines would be honest only for records that carry one — the field repo's early records didn't — and a generated "Accepted" asserts what only the project knows. Unclassified is the truthful default, and the classification debt is visible instead of laundered.
+- **A gardening/distillation skill that sweeps aging records.** Ceremony ahead of need: the registry, statuses, and doctor cover legibility today. Revisit if corpora rot anyway.
+- **Capping or pruning the corpus.** Deleting or capping records attacks the count, which was never the problem, and destroys the history that is the corpus's entire value. The registry rule stays: never delete, never renumber a referenced record.
+
+## Consequences
+- Easier: ADR awareness costs one index page plus the area-relevant records instead of the whole directory; plan-tense records stop masquerading as documentation (agents are told to verify existence in code); number collisions surface as merge conflicts and doctor warnings instead of ambiguous references.
+- Harder: minting or re-statusing an ADR now touches two files (record and registry) in the same commit; adopted repos start with an Unclassified backlog that is real work, done lazily.
+- Constrained: the registry is seeded — Launchrail writes it once and never again, so registry-format improvements reach existing repos only by their own hand. Already-initialized repos receive the registry file via plain `sync`, but the *text* rules arrive only through managed surfaces (`CLAUDE.generated.md`, skills, the Ralph workflow); their project-owned `AGENTS.md` keeps its old wording, whose `docs/adr/` pointer still resolves — the registry now sits at the front of that directory.
+
+## Revisit when
+- Field repos accumulate Unclassified rows that never classify — the lazy path failing would argue for a one-time classification pass, or a doctor signal with teeth.
+- Live pictures go stale in practice — evidence that legibility needs the distillation stage this ADR declined to build.
+- Multi-context repos (`src/<context>/docs/adr/`) grow corpora worth their own per-context registries.

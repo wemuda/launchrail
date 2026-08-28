@@ -44,6 +44,33 @@ describe("launchrail sync", () => {
     expect(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8")).toBe(lockBefore);
   });
 
+  test("seeds the ADR registry into a repo initialized before it existed, prefilled from its records (ADR-0031)", () => {
+    // Simulate a pre-0031 repo: the registry was never seeded and the lockfile
+    // never tracked it — but the project has accumulated decision records.
+    rmSync(join(tmp.root, "docs/adr/README.md"));
+    editLockfile(tmp.root, (lock) => {
+      delete lock.files["docs/adr/README.md"];
+    });
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# ADR-0001: Use Postgres\n");
+    const outcome = runSync({ cwd: tmp.root, dryRun: false });
+    expect(outcome.code).toBe(0);
+    expect(outcome.actions.find((a) => a.spec.relPath === "docs/adr/README.md")?.kind).toBe("create");
+    const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
+    expect(registry).toContain("| [0001](0001-use-postgres.md) | Use Postgres | Unclassified |");
+  });
+
+  test("never overwrites a registry the project maintains — including a hand-made one", () => {
+    // The index is project-owned once it exists (seeded, or the project's own
+    // format): sync keeps it verbatim even though the records changed under it.
+    const own = "# Our decisions\n\nOur own index format.\n";
+    writeFileSync(join(tmp.root, "docs/adr/README.md"), own);
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# ADR-0001: Use Postgres\n");
+    const outcome = runSync({ cwd: tmp.root, dryRun: false });
+    expect(outcome.code).toBe(0);
+    expect(outcome.actions.find((a) => a.spec.relPath === "docs/adr/README.md")?.kind).toBe("skip-seeded-exists");
+    expect(readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8")).toBe(own);
+  });
+
   test("updates an outdated managed file that has no local modifications", () => {
     simulateOlderToolchain();
     const outcome = runSync({ cwd: tmp.root, dryRun: false });

@@ -206,7 +206,7 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
 
   const specs: FileSpec[] = [
     { relPath: MANIFEST_FILENAME, content: serializeManifest(manifest), ownership: "seeded" },
-    ...seedFiles({ projectName: detection.projectName, manifest, launchrailVersion: VERSION }),
+    ...seedFiles({ projectName: detection.projectName, manifest, launchrailVersion: VERSION, cwd: opts.cwd }),
     // Workflow configuration under docs/agents/ seeds straight from the
     // manifest's answers (ADR-0020) — there is no interactive setup stage.
     ...agentsDocsFiles(manifest),

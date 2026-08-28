@@ -15,6 +15,8 @@ export interface ProjectState {
   manifest: Manifest;
   lockfile: Lockfile;
   detection: RepoDetection;
+  /** Project root the state was loaded from — seeds that read the repo need it. */
+  cwd: string;
 }
 
 export interface ProjectLoadResult {
@@ -37,7 +39,7 @@ export function loadProject(cwd: string): ProjectLoadResult {
   if (!lockfile) {
     return { state: null, errors: [`${LOCKFILE_FILENAME} not found — run \`launchrail init\` first.`] };
   }
-  return { state: { manifest: parsed.manifest, lockfile, detection }, errors: [] };
+  return { state: { manifest: parsed.manifest, lockfile, detection, cwd }, errors: [] };
 }
 
 /** The files each enabled module contributes at the current version, rendered for this project. */
@@ -46,6 +48,7 @@ export function moduleSpecs(state: ProjectState): Record<string, FileSpec[]> {
     projectName: state.detection.projectName,
     manifest: state.manifest,
     launchrailVersion: VERSION,
+    cwd: state.cwd,
   };
   // Skills ship as managed files on every project (ADR-0019/0020) — not
   // module-gated, so they ship regardless of which modules are enabled. The

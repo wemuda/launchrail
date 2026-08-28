@@ -12,11 +12,11 @@ Synthesis preserves the grill's labels ([ADR-0029](https://github.com/wemuda/lau
 
 ## Process
 
-1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary (`CONTEXT.md`) throughout the spec, and respect any ADRs in the area you're touching.
+1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary (`CONTEXT.md`) throughout the spec, and respect any ADRs in the area you're touching — find them through the registry index (`docs/adr/README.md`) rather than reading the whole directory, and remember an ADR records a decision, not what exists; the codebase is the evidence for current state.
 
 2. Sketch out the seams at which you're going to test the feature. Existing seams should be preferred to new ones. Use the highest seam possible. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better — the ideal number is one.
 
-   Check with the user that these seams match their expectations.
+   Check the seams with the user through the structured question tool (`AskUserQuestion`) rather than a freetext ask — one question, recommended answer first ([ADR-0029](https://github.com/wemuda/launchrail/blob/master/docs/adr/0029-planning-interaction-contract.md)): the seams as sketched, ready to write and publish. The other options are the real alternative placements you considered (a different existing seam, fewer seams, a higher one). Selecting the recommended answer flows straight into step 3 — write and publish with no further confirmation; an alternative answer re-sketches the seams and asks again. In an environment without a structured question tool, fall back to a numbered question with a ➡️ recommended answer.
 
 3. Write the spec using the template below and publish it to **its tracker-appropriate home** — the spec's home follows the configured tracker, exactly as tickets do ([ADR-0025](https://github.com/wemuda/launchrail/blob/master/docs/adr/0025-spec-home-follows-tracker.md)). Read `docs/agents/issue-tracker.md` to know which applies:
 

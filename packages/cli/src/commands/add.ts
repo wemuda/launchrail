@@ -217,7 +217,7 @@ export async function runAdd(opts: AddOptions): Promise<AddOutcome> {
 
   const specs: FileSpec[] = [
     ...plan.specs,
-    claudeGeneratedFile({ projectName: detection.projectName, manifest: plan.manifest, launchrailVersion: VERSION }),
+    claudeGeneratedFile({ projectName: detection.projectName, manifest: plan.manifest, launchrailVersion: VERSION, cwd: opts.cwd }),
   ];
   const actions = planWrites(opts.cwd, specs, lockfile);
   // Ralph's guard hook file rides `actions`; its registration in the shared,

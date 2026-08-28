@@ -42,4 +42,6 @@ Only offer to create an ADR when all three are true:
 2. **Surprising without context** — a future reader will wonder "why did they do it this way?"
 3. **The result of a real trade-off** — there were genuine alternatives and you picked one for specific reasons
 
-If any of the three is missing, skip the ADR. ADRs use the **project's own format**: copy `docs/adr/0000-template.md` (seeded by `launchrail init`), scan `docs/adr/` for the highest existing number, and increment by one — `NNNN-short-slug.md`. One format per project; do not introduce a second.
+If any of the three is missing, skip the ADR — an implementation choice that fails the bar lives in the spec or the ticket, not `docs/adr/`. And when the decision refines one an existing ADR already owns, amend that ADR (update its `## Status` line and its registry row) instead of minting a sibling; a corpus of revisions reads worse than a decision with a history.
+
+ADRs use the **project's own format**: copy `docs/adr/0000-template.md` (seeded by `launchrail init`), take the next free number — check both the files in `docs/adr/` and the registry index (`docs/adr/README.md`) — and add the new record's row to the registry index **in the same commit**. One format per project; do not introduce a second.
