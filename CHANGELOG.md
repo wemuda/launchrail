@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/wemuda/launchrail/compare/v1.14.0...v1.15.0) (2026-09-03)
+
+
+### Features
+
+* **cli:** loop readiness — doctor readiness lines and the launch-loop-readiness skill (ADR-0033) ([7df4f25](https://github.com/wemuda/launchrail/commit/7df4f2575d90c3fb68d2708c8ef5c25baec2a382))
+
 ## [1.14.0](https://github.com/wemuda/launchrail/compare/v1.13.0...v1.14.0) (2026-09-03)
 
 
