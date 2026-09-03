@@ -1,7 +1,7 @@
 # ADR-0022: Ralph campaign revision — one engine, explicit integration target, loop-owned merge gate
 
 ## Status
-Accepted (amends ADR-0005 and ADR-0010) — amended by [ADR-0026](0026-ralph-default-consolidation.md) (consolidation becomes the default integration target; trunk is now an explicit opt-in) and [ADR-0027](0027-ralph-gate-ci-wait-repoll.md) (the merge gate re-polls a still-running CI in place instead of rebuilding — the "gate-agent retry loop too expensive" revisit trigger)
+Accepted (amends ADR-0005 and ADR-0010) — amended by [ADR-0026](0026-ralph-default-consolidation.md) (consolidation becomes the default integration target; trunk is now an explicit opt-in), [ADR-0027](0027-ralph-gate-ci-wait-repoll.md) (the merge gate re-polls a still-running CI in place instead of rebuilding — the "gate-agent retry loop too expensive" revisit trigger), and [ADR-0032](0032-ralph-lean-local-gate-loop.md) (the loop-owned merge gate becomes a local landing under the fast gate — no per-ticket PR, no CI wait; the one engine, the declared target, and the recap contract stand)
 
 ## Context
 The first full-backlog Ralph campaign ran on a consuming project: twelve tickets across three dependency tracks, every one merged, verification green. Success — but the transcript shows the run's shape was improvised wherever the contract was silent:

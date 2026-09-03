@@ -1,6 +1,6 @@
 ---
 name: launch-spec
-description: Turn the current conversation into a spec published to the project's tracker (a spec-labeled issue), or committed under docs/specs/ in local mode — no interview, just synthesis of what has already been discussed and decided. Owns stage 7's synthesis half (launch-wayfinder owns the breakdown of work too big for one session).
+description: Synthesize what the conversation already decided into a spec — published as a spec-labeled issue on the tracker, or committed under docs/specs/ in local mode. No interview.
 disable-model-invocation: true
 ---
 

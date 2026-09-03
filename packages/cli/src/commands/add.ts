@@ -168,6 +168,7 @@ function planRalph(parsed: Manifest): ModulePlan {
       "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (launch-tickets, stage 9 of the workflow).",
       "Start building: /launch-implement in Claude Code drives the ready tickets to verified merges (add a ticket number to build just one).",
       "For an unattended run, launch in a non-prompting permission mode (bypass/autonomous) — a guard hook warns if you start Ralph in an interactive mode, since one benign prompt can stall a walk-away run.",
+      "Name a fast gate as testing.checkCommand in .launchrail.yml (lint + typecheck + quick unit tests) — the loop runs `verify --fast` before every land and the full `verify` at its checkpoints; without it the fast gate is the unit command.",
       "Start with width 1 until a few tickets have landed cleanly, then widen.",
     ],
   };

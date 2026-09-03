@@ -19,12 +19,22 @@ export interface VerifyOutcome {
   results: VerifyResult[];
 }
 
+export interface VerifyOptions {
+  /**
+   * The fast tier: only `testing.checkCommand` (or `unitCommand` when no check
+   * command is configured) — never the e2e step. The Ralph loop runs this before
+   * every land and saves the full contract for its checkpoints and the release.
+   */
+  fast?: boolean;
+}
+
 /**
  * Run the project's deterministic verification contract: every configured
  * check, in order, with a pass/fail summary. Agentic smoke testing is separate
- * (`launchrail smoke`) — verify is the stable release gate.
+ * (`launchrail smoke`) — verify is the stable release gate. `--fast` runs the
+ * cheap tier only (see VerifyOptions).
  */
-export function runVerify(cwd: string): VerifyOutcome {
+export function runVerify(cwd: string, options: VerifyOptions = {}): VerifyOutcome {
   const manifestPath = join(cwd, MANIFEST_FILENAME);
   if (!existsSync(manifestPath)) {
     console.error(`launchrail: ${MANIFEST_FILENAME} not found — run \`launchrail init\` first.`);
@@ -39,9 +49,14 @@ export function runVerify(cwd: string): VerifyOutcome {
 
   const { testing, modules } = parsed.manifest;
   const steps: VerifyStep[] = [];
-  if (testing.unitCommand) steps.push({ name: "unit", command: testing.unitCommand });
-  if (modules[BROWSER_TESTING_MODULE] && testing.e2eCommand) {
-    steps.push({ name: "e2e", command: testing.e2eCommand });
+  if (options.fast) {
+    const command = testing.checkCommand ?? testing.unitCommand;
+    if (command) steps.push({ name: "check", command });
+  } else {
+    if (testing.unitCommand) steps.push({ name: "unit", command: testing.unitCommand });
+    if (modules[BROWSER_TESTING_MODULE] && testing.e2eCommand) {
+      steps.push({ name: "e2e", command: testing.e2eCommand });
+    }
   }
 
   if (steps.length === 0) {
@@ -50,6 +65,14 @@ export function runVerify(cwd: string): VerifyOutcome {
         `${MANIFEST_FILENAME}. An empty verification contract cannot pass.`,
     );
     return { code: 1, results: [] };
+  }
+  if (options.fast) {
+    console.log(
+      testing.checkCommand
+        ? "Fast gate (testing.checkCommand) — the full contract runs with plain `verify`."
+        : "Fast gate — no testing.checkCommand configured, running testing.unitCommand; set checkCommand in " +
+            `${MANIFEST_FILENAME} to name a quicker lint/typecheck/unit gate.`,
+    );
   }
 
   const results: VerifyResult[] = [];
@@ -64,6 +87,7 @@ export function runVerify(cwd: string): VerifyOutcome {
     console.log(`  ${status === 0 ? "✓" : "✗"} ${step.name} (${step.command})`);
   }
   const failed = results.filter((r) => r.status !== 0).length;
-  console.log(failed === 0 ? "\nVerification passed." : `\nVerification failed: ${failed} of ${results.length} step(s).`);
+  const tier = options.fast ? "Fast gate" : "Verification";
+  console.log(failed === 0 ? `\n${tier} passed.` : `\n${tier} failed: ${failed} of ${results.length} step(s).`);
   return { code: failed === 0 ? 0 : 1, results };
 }

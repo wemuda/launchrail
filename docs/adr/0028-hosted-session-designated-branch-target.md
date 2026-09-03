@@ -1,7 +1,7 @@
 # ADR-0028: Hosted-session Ralph runs target the session's designated branch
 
 ## Status
-Accepted (amends [ADR-0026](0026-ralph-default-consolidation.md))
+Accepted (amends [ADR-0026](0026-ralph-default-consolidation.md)) — amended by [ADR-0032](0032-ralph-lean-local-gate-loop.md): the invariants that survive an engine swap are now fresh context per ticket and per-ticket pushed branches landed by the loop's local gate onto the target (per-ticket PRs are gone), and the "local consolidation" variant this ADR declined is adopted in that modified form for the reason it lacked at the time — field data showing the per-ticket CI round-trip as the loop's dominant cost. The target rule itself is unchanged
 
 ## Context
 Hosted sessions (claude.ai/code and similar) pin every session to a designated working branch at start and instruct the agent: develop on this one branch, never push others, never open a PR unprompted. Those rules live in the session's system prompt, which outranks any skill text.

@@ -1,6 +1,6 @@
 ---
 name: launch-design-validation
-description: Validate an approved spec visually before implementation — at a confirmed fidelity level (recorded skip, flow-diagram artifact, screen-mockup artifact, or Claude Design), feed the findings back into a revised spec, and produce a handoff note for ticket creation. Use when a spec is drafted (a spec-labeled issue on the tracker, or a docs/specs/ file in local mode) and the user wants design validation, a visual review, or pre-implementation sign-off.
+description: Validate a drafted spec visually before tickets are cut — at a confirmed fidelity level (recorded skip, flow diagrams, screen mockups, or Claude Design) — and feed the findings back into a revised spec. Use when a spec is drafted and the user wants design validation, a visual review, or pre-implementation sign-off.
 ---
 
 # Design validation

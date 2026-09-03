@@ -8,6 +8,7 @@ const manifest: Manifest = {
   conventions: { conventionalCommits: true },
   testing: {
     unitCommand: "pnpm test",
+    checkCommand: "pnpm lint && pnpm typecheck",
     devCommand: "pnpm dev",
     e2eCommand: "npx playwright test",
     smokeCommand: "node scripts/smoke.mjs",
@@ -55,6 +56,7 @@ describe("manifest", () => {
       conventions: { conventionalCommits: true },
       testing: {
         unitCommand: null,
+        checkCommand: null,
         devCommand: null,
         e2eCommand: null,
         smokeCommand: null,
@@ -76,6 +78,15 @@ describe("manifest", () => {
     expect(parsed.errors).toEqual([]);
     expect(parsed.manifest).not.toBeNull();
     expect("mode" in (parsed.manifest ?? {})).toBe(false);
+  });
+
+  test("checkCommand (the fast gate) is optional and defaults to null", () => {
+    const without = parseManifest("schemaVersion: 1\ntesting:\n  unitCommand: pnpm test\n");
+    expect(without.errors).toEqual([]);
+    expect(without.manifest?.testing.checkCommand).toBeNull();
+    const withCheck = parseManifest("schemaVersion: 1\ntesting:\n  unitCommand: pnpm test\n  checkCommand: pnpm lint\n");
+    expect(withCheck.manifest?.testing.checkCommand).toBe("pnpm lint");
+    expect(parseManifest("schemaVersion: 1\ntesting:\n  checkCommand: 3\n").errors.join(" ")).toContain("checkCommand");
   });
 
   test("accepts a manifest written before the testing fields existed", () => {

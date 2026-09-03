@@ -1,6 +1,6 @@
 ---
 name: launch-discovery
-description: The divergent option-space scan that runs before the complexity grill. Given the vision and the intended stack, it maps the real landscape of libraries, frameworks, vendors, hosted services, and patterns available for the hard parts of the product — enumerating the alternatives with their trade-offs rather than locking onto the first choice — and commits a landscape/options map that becomes the grill's input. Use after the vision (and visual exploration) and before the grill, or when the user asks to explore the tech landscape, survey vendors/libraries, or do discovery research. It composes `launch-research` for depth on any single thread; it does not pick winners — the grill does that.
+description: The divergent option-space scan before the complexity grill — map the real landscape of libraries, frameworks, vendors, and patterns for the hard parts of the product (alternatives with trade-offs, no winners) and commit the landscape map the grill narrows. Use after the vision (and visual exploration) and before the grill, or when the user asks to explore the tech landscape, survey vendors or libraries, or do discovery research. Composes `launch-research` for depth on any single thread.
 ---
 
 # Discovery research — map the option space before you narrow it
@@ -13,7 +13,7 @@ Diverge here; converge in the grill; de-risk in technical research. This stage o
 
 - **Diverge, don't decide.** Your job is to widen, not to pick. For each area, present the real contenders and their trade-offs; do **not** crown a winner or collapse to one option — that is the grill's job (stage 4), fed by what you surface here. A discovery doc that recommends exactly one tool per area has skipped its own stage.
 - **Bounded by the vision and the intended stack.** This is not open-ended reading. The vision says what's being built; the intended stack (and any existing design system) says what it must fit. Explore the landscape *for this product on this stack* — options that can't plug into the stack are noted and set aside, not explored in depth. This boundary is what keeps discovery from wandering into research nobody asked for.
-- **Compose, never duplicate.** Discovery is divergent framing over `launch-research`. Do the framing yourself — carve the product into areas, enumerate contenders — and invoke `launch-research` to go deep on any single thread that needs primary sources (real capabilities, maintenance health, license, integration cost). Don't reimplement research; drive it.
+- **Compose, never duplicate.** Discovery is divergent framing over `launch-research`. Do the framing yourself — carve the product into areas, enumerate contenders — and call the Skill tool with `launch-research` to go deep on any single thread that needs primary sources (real capabilities, maintenance health, license, integration cost). Don't reimplement research; drive it.
 - **Everything here is project-owned.** The landscape map is committed to the project under `docs/research/`; Launchrail tooling never overwrites it.
 - **Evidence over vibes.** A contender listed from memory is a lead, not a finding. Where a choice is load-bearing, confirm the fact — does it actually do X, is it maintained, what's the license — through `launch-research` rather than asserting it.
 

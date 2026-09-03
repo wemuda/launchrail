@@ -34,6 +34,9 @@ init / add options:
   --dry-run        Show what would be written without writing
   -y, --yes        Accept defaults; no interactive questions
 
+verify options:
+  --fast           Run only the fast gate (testing.checkCommand, else unitCommand; never e2e)
+
 smoke options:
   --url <url>      Test a specific URL (e.g. a preview environment)
   --dry-run        Show what would be scaffolded without writing
@@ -92,7 +95,7 @@ if (command === "add") {
 }
 
 if (command === "verify") {
-  process.exit(runVerify(process.cwd()).code);
+  process.exit(runVerify(process.cwd(), { fast: flags.has("--fast") }).code);
 }
 
 if (command === "status") {
