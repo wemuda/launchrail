@@ -55,6 +55,7 @@ function suggestedTestCommand(detection: RepoDetection): string | null {
 function defaultTesting(detection: RepoDetection): Manifest["testing"] {
   return {
     unitCommand: suggestedTestCommand(detection),
+    checkCommand: null,
     devCommand: detection.devScript ? `${detection.packageManager ?? "npm"} run dev` : null,
     e2eCommand: null,
     smokeCommand: null,

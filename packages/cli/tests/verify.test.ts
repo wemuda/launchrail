@@ -54,3 +54,37 @@ describe("launchrail verify", () => {
     expect(runVerify(tmp.root).code).toBe(1);
   });
 });
+
+describe("launchrail verify --fast", () => {
+  test("runs the check command alone — never the unit or e2e steps", () => {
+    const unit = join(tmp.root, "unit-ran");
+    const e2e = join(tmp.root, "e2e-ran");
+    const touch = (name: string) => `node -e "require('node:fs').writeFileSync('${name}', '')"`;
+    writeManifest(
+      `testing:\n  unitCommand: ${JSON.stringify(touch("unit-ran"))}\n  checkCommand: node -e "process.exit(0)"\n  e2eCommand: ${JSON.stringify(touch("e2e-ran"))}\nmodules:\n  core: true\n  browser-testing: true\n`,
+    );
+    const outcome = runVerify(tmp.root, { fast: true });
+    expect(outcome.code).toBe(0);
+    expect(outcome.results.map((r) => r.step.name)).toEqual(["check"]);
+    expect(existsSync(unit)).toBe(false);
+    expect(existsSync(e2e)).toBe(false);
+  });
+
+  test("falls back to the unit command when no check command is configured, still skipping e2e", () => {
+    const e2e = join(tmp.root, "e2e-ran");
+    writeManifest(
+      `testing:\n  unitCommand: node -e "process.exit(0)"\n  e2eCommand: ${JSON.stringify(`node -e "require('node:fs').writeFileSync('e2e-ran', '')"`)}\nmodules:\n  core: true\n  browser-testing: true\n`,
+    );
+    const outcome = runVerify(tmp.root, { fast: true });
+    expect(outcome.code).toBe(0);
+    expect(outcome.results.map((r) => r.step.command)).toEqual(['node -e "process.exit(0)"']);
+    expect(existsSync(e2e)).toBe(false);
+  });
+
+  test("a failing fast gate fails, and an empty contract cannot pass", () => {
+    writeManifest('testing:\n  checkCommand: node -e "process.exit(2)"\n');
+    expect(runVerify(tmp.root, { fast: true }).code).toBe(1);
+    writeManifest("");
+    expect(runVerify(tmp.root, { fast: true }).code).toBe(1);
+  });
+});

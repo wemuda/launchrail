@@ -29,7 +29,7 @@ The Launchrail workflow's label vocabulary — the skills quote these exact stri
 - **`ready-for-agent`** — an implementable ticket the implementation loop may pick up. Only tickets wear it; the loop's frontier is computed from this label alone and cannot tell prose from work.
 - **`needs-info`** — a parked ticket, carrying its failure history; a human unblocks it.
 - **`spec`** — a spec or research note published to the tracker. Never `ready-for-agent`.
-- **`ralph:building`** — claimed by an implementer; removed when its PR merges.
+- **`ralph:building`** — claimed by an implementer; removed when the loop lands it.
 - **`wayfinder:map`** / **`wayfinder:<type>`** — a wayfinder map and its decision tickets (see below).
 
 ## When a skill says "publish to the issue tracker"

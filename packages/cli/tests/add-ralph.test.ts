@@ -100,16 +100,17 @@ describe("launchrail add ralph", () => {
     expect(content).toContain("export const meta");
     expect(content).toContain("name: 'ralph'");
     expect(content).toContain("npx @wemuda/launchrail verify");
+    expect(content).toContain("npx @wemuda/launchrail verify --fast");
     expect(content).toContain("launch-ralph-implement");
     expect(content).toContain("launch-resolving-merge-conflicts");
   });
 
-  test("the workflow carries the max-merges cap", () => {
+  test("the workflow carries the max-lands cap", () => {
     const content = ralphWorkflowContent();
-    // Cap policy: 0 = uncapped; batches never exceed the remainder, so a run
+    // Cap policy: 0 = uncapped; dispatch never exceeds the remainder, so a run
     // cannot overshoot; hitting the cap is reported, not silent.
     expect(content).toContain("max: A.max ?? 0");
-    expect(content).toContain("Math.min(width, capLeft)");
+    expect(content).toContain("landedCount + inFlight.size >= POLICY.max");
     expect(content).toContain("maxReached");
   });
 
@@ -119,30 +120,29 @@ describe("launchrail add ralph", () => {
     // scope-native target arg, ADR-0026), trunk ('') the explicit opt-in.
     expect(content).toContain("target: A.target ?? ''");
     expect(content).toContain("'consolidation' : 'trunk'");
-    // Implementers hand off at PR-open; a per-ticket gate agent owns CI, merge, close.
-    expect(content).toContain("'pr-open'");
-    expect(content).toContain("phase: 'Gate'");
-    // Canary holds width at 1 until the first verified merge.
+    // Canary holds width at 1 until the first verified land.
     expect(content).toContain("canary: A.canary ?? false");
     // The recap is structured output: where the work lives and the one next step.
     expect(content).toContain("nextStep");
   });
 
-  test("the merge gate waits out CI with cheap watchers instead of rebuilding (ADR-0027, ADR-0030)", () => {
+  test("the workflow is the lean local-gate loop (ADR-0032): no per-ticket PR, no CI wait", () => {
     const content = ralphWorkflowContent();
-    // A gate agent cannot idle-wait, so a still-running CI comes back "ci-timeout" — not
-    // a failure. The loop absorbs it with up to POLICY.gateWaits watch turns before a
-    // ticket ever spends a fresh implementer attempt, so a slow CI cannot cost a rebuild.
-    expect(content).toContain("gateWaits: A.gateWaits ?? 6");
-    expect(content).toContain("waited >= POLICY.gateWaits");
-    expect(content).toContain(":ci-wait");
-    // "ci-timeout" is the one status that keeps the gate loop going; every real verdict
-    // (merged, ci-failed, not-mergeable) leaves it.
-    expect(content).toContain("gate.status !== 'ci-timeout'");
-    // The wait itself is read-only and rides on a small model — never on a full
-    // merge-gate dispatch (ADR-0030); the real gate is recalled once CI resolves.
-    expect(content).toContain("CI_WATCH_SCHEMA");
-    expect(content).toContain(":ci-done");
+    // Builders hand off a pushed branch; the loop lands it with a local squash-merge under
+    // the fast gate, one land at a time, and the full gate runs at checkpoints.
+    expect(content).toContain("'ready'");
+    expect(content).toContain("phase: 'Land'");
+    expect(content).toContain("git merge --squash");
+    expect(content).toContain("withLandLock");
+    expect(content).toContain("checkpointEvery: A.checkpointEvery ?? 5");
+    expect(content).toContain("resyncs: A.resyncs ?? 2");
+    expect(content).toContain("knownGreen: A.knownGreen ?? ''");
+    expect(content).toContain("pushedBranches");
+    // The old cloud-CI merge gate and its watcher loop are gone.
+    expect(content).not.toContain("gateWaits");
+    expect(content).not.toContain("ci-timeout");
+    expect(content).not.toContain("CI_WATCH_SCHEMA");
+    expect(content).not.toContain("'pr-open'");
   });
 
   test("the workflow carries the ADR-0010 field-revision mechanics", () => {
@@ -285,25 +285,45 @@ describe("doctor with the ralph module", () => {
   });
 });
 
-describe("ralph workflow — merge-gate CI wait (ADR-0027, ADR-0030)", () => {
+describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
   type AgentResult = Record<string, unknown> | null;
-  type Dispatch = { label: string; model?: string; effort?: string };
+  type Dispatch = { label: string; prompt: string; model?: string; effort?: string; isolation?: string };
+  type Handler = (label: string, prompt: string) => AgentResult | Promise<AgentResult> | undefined;
   type RalphResult = {
-    merged: { ticket: number; title: string; pr?: number; mergeCommit?: string }[];
-    parked: { ticket: number; title: string; failures: string[] }[];
+    verified: boolean;
+    stopReason: string;
+    maxReached: boolean;
+    baseRed: string | null;
+    checkpoints: { k: number; headSha: string; green: boolean; suspects: number[]; repair?: string }[];
+    landed: { ticket: number; title: string; mergeCommit: string; branch: string }[];
+    held: { ticket: number; title: string; branch: string }[];
+    parked: { ticket: number; title: string; branch: string; failures: string[] }[];
+    stuck: { ticket: number; blockedBy: number[] }[];
+    nextStep: string;
   };
+  type Ticket = { number: number; title?: string; blockedByLine?: string; migration?: boolean };
 
-  // Execute the seeded workflow script against mock hooks so the test can assert on the
-  // *sequence of agent dispatches* — the strongest evidence that a premature CI timeout
-  // is absorbed by cheap read-only watch turns and never by a fresh implementer build
-  // (ADR-0027) nor by full-model gate re-dispatches (ADR-0030).
+  // A promise the test resolves by hand — to hold one mock builder open while the pool
+  // keeps dispatching and landing the others.
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => (resolve = r));
+    return { promise, resolve };
+  }
+
+  // Execute the seeded workflow script against mock hooks so the tests can assert on the
+  // *sequence of agent dispatches* and their prompts — the strongest evidence that the loop
+  // lands locally under the fast gate, waits on no cloud CI, hands integration failures back
+  // without spending attempts, checkpoints on cadence, and repairs a red base once.
   // The script body runs in an async-function context with these hooks in scope, exactly
   // as the Workflow tool runs it (mirrors the parse test above, but executes it).
   async function runRalph(opts: {
-    args?: Record<string, unknown>;
-    tickets?: { number: number; title: string; blockedByLine?: string }[];
-    onAgent: (label: string) => AgentResult;
-  }): Promise<{ result: RalphResult; labels: string[]; dispatches: Dispatch[]; logs: string[] }> {
+    args?: Record<string, unknown> | string;
+    tickets?: Ticket[];
+    pushedBranches?: { branch: string; sha: string }[];
+    preflight?: Record<string, unknown>;
+    onAgent?: Handler;
+  }): Promise<{ result: RalphResult; labels: string[]; dispatches: Dispatch[]; logs: string[]; active: Map<string, string[]> }> {
     const tickets = opts.tickets ?? [{ number: 1, title: "T1", blockedByLine: "" }];
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
       ...args: string[]
@@ -314,24 +334,54 @@ describe("ralph workflow — merge-gate CI wait (ADR-0027, ADR-0030)", () => {
     const labels: string[] = [];
     const dispatches: Dispatch[] = [];
     const logs: string[] = [];
+    // Which build labels were still running when each dispatch started — the pool's
+    // concurrency, observed from the agents' side.
+    const running = new Set<string>();
+    const active = new Map<string, string[]>();
     const budget = { total: null, spent: () => 0, remaining: () => Number.POSITIVE_INFINITY };
-    const agent = async (_prompt: string, o: { label?: string; model?: string; effort?: string } = {}): Promise<AgentResult> => {
-      const label = o.label ?? "";
-      labels.push(label);
-      dispatches.push({ label, model: o.model, effort: o.effort });
-      // The run's plumbing agents (preflight, graph, release, park) return canned green
-      // state; the per-ticket build/gate/verify agents are the scenario under test.
+    const target = typeof opts.args === "object" && opts.args !== null ? String(opts.args.target ?? "") : "";
+    const defaults = (label: string): AgentResult => {
+      const n = Number(/#(\d+)/.exec(label)?.[1] ?? 0);
       if (label === "preflight")
         return {
-          green: true, headSha: "base0", repo: "wemuda/x", base: "master", defaultBranch: "master",
-          issueTracker: "github", trackerAccess: "GitHub MCP tools",
-          verifyCommand: "npx @wemuda/launchrail verify", localCommands: ["pnpm install"], failures: [],
+          green: true, headSha: "base0", skippedGate: false, repo: "wemuda/x", base: target || "master", defaultBranch: "master",
+          issueTracker: "github", trackerAccess: "GitHub MCP tools", installCommand: "pnpm install",
+          verifyCommand: "npx @wemuda/launchrail verify", fastGateCommand: "npx @wemuda/launchrail verify --fast",
+          localCommands: [], browserTesting: false, pushedBranches: opts.pushedBranches ?? [], failures: [],
+          ...(opts.preflight ?? {}),
         };
       if (label.startsWith("read-graph"))
-        return { tickets: tickets.map((t) => ({ number: t.number, title: t.title, blockedByLine: t.blockedByLine ?? "" })) };
-      if (label === "release-verification") return { verified: true, headSha: "final0", summary: "green", failures: [] };
+        return {
+          tickets: tickets.map((t) => ({
+            number: t.number, title: t.title ?? `T${t.number}`, blockedByLine: t.blockedByLine ?? "", migration: t.migration ?? false,
+          })),
+        };
+      if (label === "release-verification") return { verified: true, headSha: "final0", summary: "green", failures: [], prunedBranches: [] };
       if (label === "park") return { done: true };
-      return opts.onAgent(label);
+      if (label.startsWith("build:")) return { status: "ready", branch: `ralph/${n}-t${n}`, headSha: `h${n}`, commitTitle: `feat: t${n}`, summary: "built" };
+      if (label.startsWith("land:")) return { status: "landed", mergeCommit: `m${n}`, baseMoved: false, issueClosed: true, summary: "landed" };
+      if (label.startsWith("verify:")) return { landed: true, issueClosed: true, mergeCommit: `m${n}`, evidence: "commit on master" };
+      if (label.startsWith("checkpoint:")) return { green: true, headSha: `cp${label.split(":")[1]}`, summary: "green", failures: [] };
+      if (label.startsWith("repair:")) return { status: "ready", branch: `ralph/repair-${label.split(":")[1]}-fix`, headSha: "hr", commitTitle: "fix: repair", summary: "fixed" };
+      return null;
+    };
+    const agent = async (
+      prompt: string,
+      o: { label?: string; model?: string; effort?: string; isolation?: string } = {},
+    ): Promise<AgentResult> => {
+      const label = o.label ?? "";
+      labels.push(label);
+      dispatches.push({ label, prompt, model: o.model, effort: o.effort, isolation: o.isolation });
+      active.set(label, [...running]);
+      if (label.startsWith("build:")) running.add(label);
+      try {
+        const custom = opts.onAgent?.(label, prompt);
+        // Always yield: a mock that resolves synchronously would leave `running` empty
+        // before the pool could dispatch the next ticket.
+        return await (custom === undefined ? defaults(label) : custom);
+      } finally {
+        running.delete(label);
+      }
     };
     const parallel = (thunks: Array<() => Promise<unknown>>) => Promise.all(thunks.map((t) => t()));
     const pipeline = async () => {
@@ -344,88 +394,309 @@ describe("ralph workflow — merge-gate CI wait (ADR-0027, ADR-0030)", () => {
     };
 
     const result = (await fn(opts.args ?? {}, budget, agent, parallel, pipeline, phase, log, workflow)) as RalphResult;
-    return { result, labels, dispatches, logs };
+    return { result, labels, dispatches, logs, active };
   }
 
-  test("a premature ci-timeout is waited out by a cheap watcher; the gate returns once — no fresh build attempt", async () => {
+  test("a ticket lands locally under the fast gate: build → land → verify, no PR and no CI wait", async () => {
+    const { result, labels, dispatches } = await runRalph({ args: { only: [1], width: 1, target: "spec/1-x" } });
+    expect(labels).toEqual(["preflight", "read-graph", "build:#1", "land:#1", "verify:#1", "release-verification"]);
+    const build = dispatches.find((d) => d.label === "build:#1")!;
+    // Builders run isolated, push from the first commit on, and never open a PR.
+    expect(build.isolation).toBe("worktree");
+    expect(build.prompt).toContain("git push -u origin HEAD");
+    expect(build.prompt).toContain("commit and push after every green step");
+    expect(build.prompt).toContain("never open a PR");
+    expect(build.prompt).toContain("npx @wemuda/launchrail verify --fast");
+    // The lander squash-merges in the main checkout (no worktree) under the fast gate, on
+    // the session model at low effort; the remote verifier rides the small model.
+    const land = dispatches.find((d) => d.label === "land:#1")!;
+    expect(land.isolation).toBeUndefined();
+    expect(land.effort).toBe("low");
+    expect(land.model).toBeUndefined();
+    expect(land.prompt).toContain("git merge --squash origin/ralph/1-t1");
+    expect(land.prompt).toContain("the FAST gate: npx @wemuda/launchrail verify --fast");
+    expect(land.prompt).toContain("git push origin spec/1-x");
+    expect(land.prompt).toContain("close issue #1 explicitly");
+    expect(dispatches.find((d) => d.label === "verify:#1")).toMatchObject({ model: "haiku", effort: "low" });
+    // No gate agent, no watcher, nothing polls a remote CI.
+    expect(labels.some((l) => l.startsWith("gate:"))).toBe(false);
+    expect(result.landed).toEqual([{ ticket: 1, title: "T1", mergeCommit: "m1", branch: "ralph/1-t1" }]);
+    expect(result.parked).toEqual([]);
+    expect(result.verified).toBe(true);
+    expect(result.stopReason).toBe("frontier drained");
+    expect(result.nextStep).toContain("spec/1-x -> master");
+    // The release prunes exactly the landed branches.
+    expect(dispatches.find((d) => d.label === "release-verification")!.prompt).toContain("ralph/1-t1");
+  });
+
+  test("a land hand-back (the base moved: conflict) re-syncs the pushed branch without spending an attempt", async () => {
+    let lands = 0;
     const { result, labels, dispatches } = await runRalph({
-      args: { only: [1], width: 1, target: "", gateWaits: 3 },
+      args: { only: [1], width: 1, target: "", attempts: 1 },
       onAgent: (label) => {
-        if (label.startsWith("build:#1")) return { status: "pr-open", pr: 100, summary: "built" };
-        if (label.startsWith("gate:#1:ci-wait")) return { ci: "green", note: "all checks passed" };
-        if (label === "gate:#1") return { status: "ci-timeout", summary: "CI still in progress" };
-        if (label.startsWith("gate:#1:ci-done"))
-          return { status: "merged", mergeCommit: "m100", issueClosed: true, summary: "merged" };
-        if (label.startsWith("verify:#1"))
-          return { merged: true, issueClosed: true, mergeCommit: "m100", evidence: "merge commit on master" };
-        return null;
+        if (label === "land:#1") {
+          lands += 1;
+          return { status: "conflict", baseMoved: true, summary: "CONFLICT in src/app.ts" };
+        }
+        return undefined;
       },
     });
-    // The premature timeout was absorbed by a cheap read-only watch turn, and the real
-    // gate came back exactly once, after the watcher saw CI finish ...
-    expect(labels).toContain("gate:#1");
-    expect(labels).toContain("gate:#1:ci-wait1");
-    expect(labels).toContain("gate:#1:ci-done1");
-    // ... and never triggered the expensive fresh implementer (the old build:#n:retry waste).
-    expect(labels.filter((l) => l.startsWith("build:#1"))).toEqual(["build:#1"]);
-    expect(labels).not.toContain("build:#1:retry");
-    // The wait rode on the small model; the acting gate dispatches inherit the session model.
-    expect(dispatches.find((d) => d.label === "gate:#1:ci-wait1")).toMatchObject({ model: "haiku", effort: "low" });
-    expect(dispatches.find((d) => d.label === "gate:#1")?.model).toBeUndefined();
-    expect(dispatches.find((d) => d.label === "gate:#1:ci-done1")?.model).toBeUndefined();
-    // The ticket merged on its first and only attempt.
-    expect(result.merged).toEqual([{ ticket: 1, title: "T1", pr: 100, mergeCommit: "m100" }]);
+    // The first land conflicted; a fresh implementer re-synced the same branch (no retry,
+    // no attempt spent — attempts: 1 would otherwise have parked it) and the re-land landed.
+    expect(labels).toEqual([
+      "preflight", "read-graph", "build:#1", "land:#1", "build:#1:resync1", "land:#1:resync1", "verify:#1", "release-verification",
+    ]);
+    expect(lands).toBe(1);
+    const resync = dispatches.find((d) => d.label === "build:#1:resync1")!;
+    expect(resync.prompt).toContain("RE-SYNC, not a failure");
+    expect(resync.prompt).toContain("CONFLICT in src/app.ts");
+    expect(resync.prompt).toContain("adopt");
+    expect(result.landed.map((l) => l.ticket)).toEqual([1]);
     expect(result.parked).toEqual([]);
   });
 
-  test("watch turns are bounded: a CI that never lands falls back to a fresh attempt, then parks", async () => {
+  test("a gate that fails on an up-to-date branch is the builder's failure: a fresh retry adopts the branch", async () => {
+    let lands = 0;
     const { result, labels, dispatches } = await runRalph({
-      args: { only: [1], width: 1, target: "", gateWaits: 2, attempts: 2 },
+      args: { only: [1], width: 1, target: "" },
       onAgent: (label) => {
-        if (label.startsWith("build:#1")) return { status: "pr-open", pr: 100, summary: "built" };
-        if (label.startsWith("gate:#1:ci-wait")) return { ci: "running", note: "still in progress" };
-        if (label.startsWith("gate:#1")) return { status: "ci-timeout", summary: "CI never finishes" };
-        if (label.startsWith("verify:#1")) return { merged: false, issueClosed: false, evidence: "not merged" };
-        return null;
+        if (label.startsWith("land:#1")) {
+          lands += 1;
+          if (lands === 1) return { status: "gate-failed", baseMoved: false, summary: "unit: 2 tests failed in src/app.test.ts" };
+        }
+        return undefined;
       },
     });
-    // The watch loop is capped at gateWaits — it never spins unboundedly.
-    expect(labels).toContain("gate:#1:ci-wait1");
-    expect(labels).toContain("gate:#1:ci-wait2");
-    expect(labels).not.toContain("gate:#1:ci-wait3");
-    // A CI that never resolves never recalls the full gate — the whole wait stayed on
-    // the small model; only the initial gate of each attempt inherits the session model.
-    expect(labels.filter((l) => l.startsWith("gate:#1:ci-done"))).toEqual([]);
-    expect(dispatches.filter((d) => d.label.startsWith("gate:#1") && d.model !== "haiku").map((d) => d.label)).toEqual([
-      "gate:#1",
-      "gate:#1",
+    expect(labels).toEqual([
+      "preflight", "read-graph", "build:#1", "land:#1", "build:#1:retry", "land:#1", "verify:#1", "release-verification",
     ]);
-    // A genuinely stuck CI still degrades to the old safety net — a fresh implementer attempt ...
-    expect(labels).toContain("build:#1:retry");
-    // ... and after its attempts are spent the ticket parks rather than looping forever.
-    expect(result.parked.map((p) => p.ticket)).toEqual([1]);
-    expect(result.merged).toEqual([]);
+    const retry = dispatches.find((d) => d.label === "build:#1:retry")!;
+    expect(retry.prompt).toContain("RETRY with a fresh context");
+    expect(retry.prompt).toContain("2 tests failed");
+    expect(retry.prompt).toContain("adopt it and fix forward");
+    expect(result.landed.map((l) => l.ticket)).toEqual([1]);
+    expect(result.parked).toEqual([]);
   });
 
-  test("a watcher seeing CI fail recalls the gate for the real verdict — no further watch turns", async () => {
+  test("re-syncs are bounded: a branch that keeps conflicting becomes a real failure and parks", async () => {
     const { result, labels } = await runRalph({
-      args: { only: [1], width: 1, target: "", gateWaits: 3, attempts: 1 },
+      args: { only: [1], width: 1, target: "", attempts: 1, resyncs: 2 },
+      onAgent: (label) => (label.startsWith("land:#1") ? { status: "conflict", baseMoved: true, summary: "CONFLICT" } : undefined),
+    });
+    expect(labels.filter((l) => l.startsWith("build:#1"))).toEqual(["build:#1", "build:#1:resync1", "build:#1:resync2"]);
+    expect(result.parked.map((p) => p.ticket)).toEqual([1]);
+    expect(result.parked[0].failures.join(" ")).toContain("land conflict");
+    expect(labels).toContain("park");
+  });
+
+  test("a claimed land the remote disagrees with is a failed attempt; the retry settles it", async () => {
+    let verifies = 0;
+    const { result, labels } = await runRalph({
+      args: { only: [1], width: 1, target: "" },
       onAgent: (label) => {
-        if (label.startsWith("build:#1")) return { status: "pr-open", pr: 100, summary: "built" };
-        if (label.startsWith("gate:#1:ci-wait")) return { ci: "red", note: "unit-tests failed" };
-        if (label === "gate:#1") return { status: "ci-timeout", summary: "CI still in progress" };
-        if (label.startsWith("gate:#1:ci-done"))
-          return { status: "ci-failed", summary: "unit-tests failed on PR #100" };
-        if (label.startsWith("verify:#1")) return { merged: false, issueClosed: false, evidence: "not merged" };
-        return null;
+        if (label === "verify:#1") {
+          verifies += 1;
+          if (verifies === 1) return { landed: true, issueClosed: false, evidence: "issue #1 still open" };
+        }
+        return undefined;
       },
     });
-    // Red is a real verdict: one watch turn, then the gate returns and reports ci-failed.
-    expect(labels).toContain("gate:#1:ci-wait1");
-    expect(labels).not.toContain("gate:#1:ci-wait2");
-    expect(labels).toContain("gate:#1:ci-done1");
-    // The failure enters the ordinary attempt/park path with the gate's summary.
-    expect(result.parked.map((p) => p.ticket)).toEqual([1]);
-    expect(result.parked[0].failures.join(" ")).toContain("ci-failed");
+    expect(labels.filter((l) => l.startsWith("build:#1"))).toEqual(["build:#1", "build:#1:retry"]);
+    expect(result.landed.map((l) => l.ticket)).toEqual([1]);
+  });
+
+  test("the full gate runs as a checkpoint every N lands; the release skips it when the tip is already proven", async () => {
+    const three = [1, 2, 3].map((n) => ({ number: n }));
+    const a = await runRalph({ args: { width: 1, target: "", checkpointEvery: 2 }, tickets: three });
+    // Lands 1 and 2 → checkpoint 1; land 3 → no checkpoint yet, so the release runs the gate.
+    expect(a.labels.filter((l) => l.startsWith("checkpoint:"))).toEqual(["checkpoint:1"]);
+    expect(a.labels.indexOf("checkpoint:1")).toBeGreaterThan(a.labels.indexOf("land:#2"));
+    expect(a.labels.indexOf("checkpoint:1")).toBeLessThan(a.labels.indexOf("build:#3"));
+    const cp = a.dispatches.find((d) => d.label === "checkpoint:1")!;
+    expect(cp.prompt).toContain("FULL verification gate: npx @wemuda/launchrail verify");
+    expect(cp.prompt).toContain("#1 (T1), #2 (T2)");
+    expect(cp.effort).toBe("low");
+    expect(a.result.checkpoints).toEqual([{ k: 1, headSha: "cp1", green: true, suspects: [1, 2] }]);
+    expect(a.dispatches.find((d) => d.label === "release-verification")!.prompt).toContain("then the FULL verification gate");
+
+    const b = await runRalph({
+      args: { width: 1, target: "", checkpointEvery: 2 },
+      tickets: three.slice(0, 2),
+      // A real checkpoint reports the tip it gated — the last landing commit.
+      onAgent: (label) => (label === "checkpoint:1" ? { green: true, headSha: "m2", summary: "green", failures: [] } : undefined),
+    });
+    // Two lands, one green checkpoint at the final tip: the release does not pay the gate again.
+    expect(b.dispatches.find((d) => d.label === "release-verification")!.prompt).toContain("already passed at exactly this tip (m2)");
+    expect(b.result.verified).toBe(true);
+  });
+
+  test("a red checkpoint gets one repair landed under the full gate, then landing continues", async () => {
+    const { result, labels, dispatches } = await runRalph({
+      args: { width: 1, target: "", checkpointEvery: 1 },
+      tickets: [{ number: 1 }, { number: 2 }],
+      onAgent: (label) => {
+        if (label === "checkpoint:1") return { green: false, headSha: "red1", summary: "e2e failed", failures: ["journey checkout: timeout"] };
+        return undefined;
+      },
+    });
+    expect(labels).toEqual([
+      "preflight", "read-graph",
+      "build:#1", "land:#1", "checkpoint:1", "repair:1", "land:repair:1", "verify:#1",
+      "build:#2", "land:#2", "checkpoint:2", "verify:#2",
+      "release-verification",
+    ]);
+    const repair = dispatches.find((d) => d.label === "repair:1")!;
+    expect(repair.isolation).toBe("worktree");
+    expect(repair.prompt).toContain("journey checkout: timeout");
+    expect(repair.prompt).toContain("#1 (T1, landed as m1)");
+    expect(repair.prompt).toContain("ralph/repair-1-");
+    // The repair lands under the FULL gate — that landing is the new green checkpoint.
+    const repairLand = dispatches.find((d) => d.label === "land:repair:1")!;
+    expect(repairLand.prompt).toContain("the FULL gate: npx @wemuda/launchrail verify");
+    expect(repairLand.prompt).not.toContain("close issue");
+    expect(result.checkpoints.map((c) => [c.k, c.green, c.repair ?? null])).toEqual([
+      [1, false, null], [1, true, "ralph/repair-1-fix"], [2, true, null],
+    ]);
+    expect(result.landed.map((l) => l.ticket)).toEqual([1, 2]);
+    expect(result.baseRed).toBeNull();
+    expect(result.verified).toBe(true);
+  });
+
+  test("when the repair does not land the base is red: nothing else lands, finished tickets are held, the run is unverified", async () => {
+    const { result, labels } = await runRalph({
+      args: { width: 3, target: "", checkpointEvery: 1 },
+      tickets: [{ number: 1 }, { number: 2 }, { number: 3 }],
+      onAgent: (label) => {
+        if (label === "checkpoint:1") return { green: false, headSha: "red1", summary: "unit failed", failures: ["app.test.ts"] };
+        if (label === "land:repair:1") return { status: "gate-failed", baseMoved: false, summary: "still failing" };
+        return undefined;
+      },
+    });
+    expect(labels).toContain("repair:1");
+    // Exactly one ticket landed (its checkpoint went red); the others were built (their
+    // branches are pushed) but never landed — no lander was even dispatched for them.
+    expect(result.landed.map((l) => l.ticket)).toEqual([1]);
+    expect(labels.filter((l) => l.startsWith("land:#")).sort()).toEqual(["land:#1"]);
+    expect(result.held.map((h) => h.ticket).sort()).toEqual([2, 3]);
+    expect(result.held.every((h) => h.branch.startsWith("ralph/"))).toBe(true);
+    expect(result.parked).toEqual([]);
+    expect(result.stuck).toEqual([]);
+    expect(result.baseRed).toContain("repair branch");
+    expect(result.verified).toBe(false);
+    expect(result.stopReason).toBe("base red");
+    expect(result.nextStep).toContain("knownGreen");
+  });
+
+  test("the pool keeps dispatching around a slow build — no round barrier", async () => {
+    const slow = deferred<AgentResult>();
+    const { labels, active } = await runRalph({
+      args: { width: 2, target: "" },
+      tickets: [{ number: 1 }, { number: 2 }, { number: 3 }],
+      onAgent: (label) => {
+        if (label === "build:#1") return slow.promise;
+        if (label === "verify:#3") {
+          // #3 is landing while #1 is still building: only now release the slow build.
+          slow.resolve({ status: "ready", branch: "ralph/1-t1", headSha: "h1", commitTitle: "feat: t1", summary: "built" });
+        }
+        return undefined;
+      },
+    });
+    // #3 was dispatched (and landed) while #1 was still in flight ...
+    expect(active.get("build:#3")).toEqual(["build:#1"]);
+    expect(labels.indexOf("land:#3")).toBeLessThan(labels.indexOf("land:#1"));
+    // ... and everything landed in the end.
+    expect(labels.filter((l) => l.startsWith("verify:")).sort()).toEqual(["verify:#1", "verify:#2", "verify:#3"]);
+  });
+
+  test("migration-adding tickets run one at a time; others fill the width", async () => {
+    const m = await runRalph({
+      args: { width: 3, target: "" },
+      tickets: [{ number: 1, migration: true }, { number: 2, migration: true }, { number: 3 }],
+    });
+    // #1 and #3 start together (one migration ticket in flight); #2 waits for #1 to finish.
+    expect(m.active.get("build:#3")).toEqual(["build:#1"]);
+    expect(m.active.get("build:#2")).not.toContain("build:#1");
+    expect(m.result.landed.map((l) => l.ticket).sort()).toEqual([1, 2, 3]);
+
+    const plain = await runRalph({ args: { width: 3, target: "" }, tickets: [{ number: 1 }, { number: 2 }, { number: 3 }] });
+    expect(plain.active.get("build:#3")).toEqual(["build:#1", "build:#2"]);
+  });
+
+  test("the frontier respects edges and dispatches the most-depended-on ticket first", async () => {
+    const { labels, result } = await runRalph({
+      args: { width: 2, target: "" },
+      tickets: [
+        { number: 1 }, { number: 2, blockedByLine: "**Blocked by:** #1" },
+        { number: 3 }, { number: 4, blockedByLine: "Blocked by: #3" }, { number: 5, blockedByLine: "Blocked by: #4" },
+      ],
+    });
+    // #3 unblocks two tickets, #1 one: #3 dispatches first; #4 only after #3 verified.
+    expect(labels.indexOf("build:#3")).toBeLessThan(labels.indexOf("build:#1"));
+    expect(labels.indexOf("build:#4")).toBeGreaterThan(labels.indexOf("verify:#3"));
+    expect(labels.indexOf("build:#5")).toBeGreaterThan(labels.indexOf("verify:#4"));
+    expect(labels.indexOf("build:#2")).toBeGreaterThan(labels.indexOf("verify:#1"));
+    expect(result.landed.map((l) => l.ticket).sort()).toEqual([1, 2, 3, 4, 5]);
+    expect(result.stuck).toEqual([]);
+  });
+
+  test("canary holds width at 1 until the first verified land", async () => {
+    const { labels, active } = await runRalph({
+      args: { width: 3, target: "", canary: true },
+      tickets: [{ number: 1 }, { number: 2 }, { number: 3 }],
+    });
+    expect(active.get("build:#1")).toEqual([]);
+    expect(labels.indexOf("build:#2")).toBeGreaterThan(labels.indexOf("verify:#1"));
+    // After the canary landed, the pool widens.
+    expect(active.get("build:#3")).toEqual(["build:#2"]);
+  });
+
+  test("a deferral hands the attempt back; the ticket is retried after a tracker refresh", async () => {
+    let builds = 0;
+    const { result, labels } = await runRalph({
+      args: { only: [1], width: 1, target: "" },
+      onAgent: (label) => {
+        if (label === "build:#1") {
+          builds += 1;
+          if (builds === 1) return { status: "blocked", failure: "#9 still open", summary: "blocked" };
+        }
+        return undefined;
+      },
+    });
+    // Same label twice (no ':retry' — a deferral is not an attempt), a graph refresh between.
+    expect(labels).toEqual(["preflight", "read-graph", "build:#1", "read-graph:l0", "build:#1", "land:#1", "verify:#1", "release-verification"]);
+    expect(result.landed.map((l) => l.ticket)).toEqual([1]);
+  });
+
+  test("the cap stops dispatch at the remainder and reports maxReached", async () => {
+    const { result, labels } = await runRalph({ args: { width: 3, target: "", max: 1 }, tickets: [{ number: 1 }, { number: 2 }] });
+    expect(labels.filter((l) => l.startsWith("build:"))).toEqual(["build:#1"]);
+    expect(result.maxReached).toBe(true);
+    expect(result.landed.map((l) => l.ticket)).toEqual([1]);
+    expect(result.stopReason).toContain("cap reached");
+  });
+
+  test("pushed ralph/* branches from a previous session are adopted, and knownGreen skips the preflight gate", async () => {
+    const { dispatches, logs } = await runRalph({
+      args: { only: [2], width: 1, target: "", knownGreen: "base0" },
+      tickets: [{ number: 2 }],
+      pushedBranches: [{ branch: "ralph/2-auth", sha: "abc123" }, { branch: "refs/heads/ralph/7-other", sha: "def" }],
+      preflight: { skippedGate: true },
+    });
+    const preflight = dispatches.find((d) => d.label === "preflight")!;
+    expect(preflight.prompt).toContain('compare headSha with "base0"');
+    expect(preflight.prompt).toContain("skip the verification gate");
+    expect(preflight.prompt).toContain("git ls-remote --heads origin 'ralph/*'");
+    expect(logs.join("\n")).toContain("known green — gate skipped");
+    expect(logs.join("\n")).toContain("Adopting pushed branches for #2, #7");
+    const build = dispatches.find((d) => d.label === "build:#2")!;
+    expect(build.prompt).toContain("A pushed branch already exists for this ticket: ralph/2-auth at abc123");
+    expect(build.prompt).toContain("never start over");
+  });
+
+  test("a red preflight refuses to start; unparseable args refuse to run", async () => {
+    const red = await runRalph({ preflight: { green: false, failures: ["verify exited 1"] } });
+    expect(red.result).toMatchObject({ refused: true, reason: "preflight not green" });
+    expect(red.labels).toEqual(["preflight"]);
+    await expect(runRalph({ args: "not json" })).rejects.toThrow("refusing to run");
   });
 });

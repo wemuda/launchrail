@@ -13,7 +13,13 @@ export type Origin = (typeof ORIGINS)[number];
 export const ISSUE_TRACKERS = ["github", "gitlab", "linear", "local", "none"] as const;
 export type IssueTracker = (typeof ISSUE_TRACKERS)[number];
 
-export const TESTING_KEYS = ["unitCommand", "devCommand", "e2eCommand", "smokeCommand", "appUrl"] as const;
+/**
+ * `checkCommand` is the optional fast gate — lint, typecheck, and the unit tests
+ * that finish in a minute or two. `verify --fast` runs it (falling back to
+ * `unitCommand`); the full `verify` still runs `unitCommand` and, with the
+ * browser-testing module, `e2eCommand`.
+ */
+export const TESTING_KEYS = ["unitCommand", "checkCommand", "devCommand", "e2eCommand", "smokeCommand", "appUrl"] as const;
 export type TestingKey = (typeof TESTING_KEYS)[number];
 
 export interface Manifest {
@@ -81,6 +87,7 @@ export function validateManifest(data: unknown): ManifestParseResult {
 
   const testing: Record<TestingKey, string | null> = {
     unitCommand: null,
+    checkCommand: null,
     devCommand: null,
     e2eCommand: null,
     smokeCommand: null,

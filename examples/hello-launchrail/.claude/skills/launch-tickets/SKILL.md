@@ -1,6 +1,6 @@
 ---
 name: launch-tickets
-description: Break a validated spec, plan, or the current conversation into tracer-bullet tickets, each declaring its blocking edges, published to the configured tracker with the ready-for-agent label — the exact input contract the implementation loop's frontier is computed from. Owns stage 9.
+description: Break a validated spec, plan, or the current conversation into tracer-bullet tickets with blocking edges, published ready-for-agent to the configured tracker — the implementation loop's input.
 disable-model-invocation: true
 ---
 

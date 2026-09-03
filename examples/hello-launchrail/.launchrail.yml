@@ -4,9 +4,10 @@ schemaVersion: 1
 origin: existing
 issueTracker: github
 conventions:
-  conventionalCommits: false
+  conventionalCommits: true
 testing:
   unitCommand: npm test
+  checkCommand: null
   devCommand: npm run dev
   e2eCommand: null
   smokeCommand: null

@@ -1,7 +1,7 @@
 # ADR-0030: Ralph merge gate — the CI wait rides on cheap read-only watchers
 
 ## Status
-Accepted (amends [ADR-0027](0027-ralph-gate-ci-wait-repoll.md))
+Superseded by [ADR-0032](0032-ralph-lean-local-gate-loop.md) — no CI watchers remain; the wait they made cheap is gone (the loop lands locally under a fast gate). The role split it argued for — reading is cheap, acting is careful — survives in the small-model remote verifier beside the session-model lander. Was: Accepted (amends [ADR-0027](0027-ralph-gate-ci-wait-repoll.md))
 
 ## Context
 ADR-0027 fixed the merge gate's worst waste: a still-running CI (`ci-timeout`) is re-polled in place instead of burning a fresh implementer rebuild. But it re-polled by **re-dispatching the full gate agent** — the agent that carries the merge steps, the tracker bookkeeping, and the whole gate prompt — with only `effort: 'low'` to soften the cost. Crucially, that dispatch sets no `model`, so every re-poll inherits the session model, the most capable (and most expensive) tier in the run.

@@ -1,6 +1,6 @@
 ---
 name: launch-grill
-description: The grill — a budgeted, round-based interview that stress-tests a plan, decision, or idea until the next slice can be built safely, maintains the domain model as terms and decisions crystallise, and always ends by committing what settled under docs/research/. Runs in two contexts, the foundation's complexity grill (stage 4) and the feature grill that opens every delivery-loop path before speccing and tickets. Use whenever the user wants to be grilled, stress-test thinking, or get aligned before building.
+description: The grill — a budgeted, round-based interview that stress-tests a plan, decision, or idea until the next slice can be built safely, keeps the domain model current as terms crystallise, and always commits what settled under docs/research/. Runs as the foundation's complexity grill (stage 4) and as the feature grill opening every delivery-loop path. Use whenever the user wants to be grilled, stress-test thinking, or get aligned before building.
 ---
 
 <!-- Contains text derived from Matt Pocock's skills (https://github.com/mattpocock/skills), MIT — see ../NOTICE.md -->
@@ -38,10 +38,16 @@ Map the discussion as a **design tree**: every decision branches into the decisi
 
 1. Recompute the frontier; label everything new on it.
 2. Work the non-user labels: dispatch `research`, pick and record `agent-default`s, park `defer`s, propose a `prototype` when one would collapse several questions at once.
-3. Ask at most **three** `decide-now` questions — the most load-bearing ones on the frontier. A genuinely consequential decision **rides alone**, with the context it deserves. Number each question and give your recommended answer:
+3. Ask at most **three** `decide-now` questions — the most load-bearing ones on the frontier. A genuinely consequential decision **rides alone**, with the context it deserves. Number each question, give your recommended answer, and separate questions with a horizontal rule — format a round like so:
 
 ```
 ❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
+
+➡️ <your recommended answer>
+
+---
+
+❓ **Q2** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
 
 ➡️ <your recommended answer>
 ```

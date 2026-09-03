@@ -1,6 +1,6 @@
 ---
 name: launch-code-review
-description: Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating ticket/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. The self-review gate inside launch-ralph-implement; also for reviewing a branch, a PR, or work-in-progress changes on request.
+description: Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards (the repo's documented coding standards) and Spec (what the originating ticket or spec asked for) — in parallel sub-agents, reported side by side. The self-review gate inside launch-ralph-implement; also on request for a branch, a PR, or work in progress.
 ---
 
 <!-- Contains text derived from Matt Pocock's skills (https://github.com/mattpocock/skills), MIT — see ../NOTICE.md -->

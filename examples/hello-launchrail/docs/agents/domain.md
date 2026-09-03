@@ -11,7 +11,7 @@ How the workflow skills should consume this repo's domain documentation when exp
 
 - **`CONTEXT.md`** at the repo root, or
 - **`CONTEXT-MAP.md`** at the repo root if it exists — it points at one `CONTEXT.md` per context. Read each one relevant to the topic.
-- **`docs/adr/`** — read ADRs that touch the area you're about to work in. In multi-context repos, also check `src/<context>/docs/adr/` for context-scoped decisions.
+- **`docs/adr/README.md`** — the decision registry. Read its index first, then open only the ADRs that touch the area you're about to work in. An ADR records a decision, not the current system — never take one as evidence that a component exists or still works as described; verify against the code. In multi-context repos, also check `src/<context>/docs/adr/` for context-scoped decisions.
 
 If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `launch-grill` skill's domain-modeling discipline creates them lazily when terms or decisions actually get resolved.
 
@@ -44,7 +44,7 @@ Multi-context repo (presence of `CONTEXT-MAP.md` at the root):
         └── docs/adr/
 ```
 
-ADRs use the project's own format — copy `docs/adr/0000-template.md` and number sequentially (`NNNN-short-slug.md`).
+ADRs use the project's own format — copy `docs/adr/0000-template.md`, take the next free number (`NNNN-short-slug.md`), and add the record's row to the registry index (`docs/adr/README.md`) in the same commit.
 
 ## Use the glossary's vocabulary
 

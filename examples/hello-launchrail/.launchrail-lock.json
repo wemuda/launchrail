@@ -12,19 +12,19 @@
     },
     ".claude/skills/launch-code-review/SKILL.md": {
       "class": "managed",
-      "checksum": "5e396abeaff70ca8efda44730ababa143c8d85c5ddab3d65e410481625a7ea9f"
+      "checksum": "85dbb62bd28bc57b6dc34cc211f1f276835317428bdc8116d06f1fd8911b7c47"
     },
     ".claude/skills/launch-design-handoff/SKILL.md": {
       "class": "managed",
-      "checksum": "0c9dfcf61db812fdde0a5edc4eacbd494f9faa18d22d3fda3041fb0f9c402a83"
+      "checksum": "890e9cc1e73de1b423613ed0610e33fc511a5043d2cab1b664072a6003f404ab"
     },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
-      "checksum": "6960fefbc9a0a11ce6e558ee1e3137ab152626c164f039c0b786ca438173d22c"
+      "checksum": "ced166215f5a2b728866b21ff5e50bf9374c4e36b603c79511754509b661177c"
     },
     ".claude/skills/launch-discovery/SKILL.md": {
       "class": "managed",
-      "checksum": "687c38989a6dedffda4f569d0ef16690296571c2410b46db4f148014d0c57503"
+      "checksum": "51db5d1e7f7f5b282fb68aaf7af53fe7558388cf3a84d590960e82eb5921fd4b"
     },
     ".claude/skills/launch-grill/CONTEXT-FORMAT.md": {
       "class": "managed",
@@ -36,23 +36,23 @@
     },
     ".claude/skills/launch-grill/SKILL.md": {
       "class": "managed",
-      "checksum": "2aa0ae82a27d455006b851dc5270bbf10260ce6531fad4c8f05193a6514fe7fc"
+      "checksum": "cbefcb3045c2152f096da0034e27018b84cc2de69e8e477250a86d3676a3eb55"
     },
     ".claude/skills/launch-implement/SKILL.md": {
       "class": "managed",
-      "checksum": "fa14b283d2fefa6c290eeab7427f553a2a75949088857a3a14c1a3f2f7c10e59"
+      "checksum": "29cd190568ef8b26872997de20a3a732e40f5d2592c2ec6df9af0a7056043fbc"
     },
     ".claude/skills/launch-project-alignment/SKILL.md": {
       "class": "managed",
-      "checksum": "714c32bd79e8c80d6b98dfdff40d78fe98ff4c13f9fdee4e153530676020329b"
+      "checksum": "d76ce84570f03eccfd886efdef70cc17b939d73195ae9a8441e57cfe00418ec3"
     },
     ".claude/skills/launch-ralph-implement/SKILL.md": {
       "class": "managed",
-      "checksum": "dd7088ed4a19fbe9d5fe5a3c49f54b2da382989b66582f2822a39d0a512c7033"
+      "checksum": "cacd97b81279364f16fa36e911bd1dd57c569c2fb892738f1443de55730c30d7"
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
-      "checksum": "e1cd0791127da087ae4650637ccd047c920a45ee8af2b3a2447bd9d8f580b238"
+      "checksum": "3fc3eeb844ace3c51c53dbf06fb2568087edfc342ebecce25c24e1d17f873ef0"
     },
     ".claude/skills/launch-research/SKILL.md": {
       "class": "managed",
@@ -60,15 +60,15 @@
     },
     ".claude/skills/launch-resolving-merge-conflicts/SKILL.md": {
       "class": "managed",
-      "checksum": "f971454930558eeb12c3976eac736bfb2f1d78cdf59e9667a58dbcde3c454477"
+      "checksum": "141944f03c00ff3b455b4ec134baab742da964d2aaeb916b18a2fc6a602f16ec"
     },
     ".claude/skills/launch-spec/SKILL.md": {
       "class": "managed",
-      "checksum": "c2f1d0229d2edbbc94b5929b05f1314e42bdff2a00f66d8f027e48a292b3cadc"
+      "checksum": "ccd95b48edaf24223abb9a2b9427d586c7fc854f3062b7f84913751c337e9446"
     },
     ".claude/skills/launch-tickets/SKILL.md": {
       "class": "managed",
-      "checksum": "bc0f0a05d212978a0f5b8b9e02d3e9003ed025cabf1ff2649b39f2ca875288bd"
+      "checksum": "fc509d4444ab72410df74090dc5a0689fcabe9633462476f001b76ac4257da3c"
     },
     ".claude/skills/launch-vision-creation/SKILL.md": {
       "class": "managed",
@@ -76,35 +76,35 @@
     },
     ".claude/skills/launch-wayfinder/SKILL.md": {
       "class": "managed",
-      "checksum": "cc0cd5049594f494a3022ae2a51a3a5178047792e42e0a5acfeeca486425abc7"
+      "checksum": "214938d6d262e06e1f9ea7b77b4480316c2a2a62f589978d52293182e69c74fb"
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "16ca3ed5507add7a64656d3557948658af2a64a45e0719dbc41dbb12da9f08af"
+      "checksum": "77ba05499d88ea6912cdde03494c93f56a366d9a3ac6b51f03229916016d1fe0"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "f0be732d32bbb9ae49f46159a10c8647a7d53f2cea71e20d26a39f8de95a0d9f"
+      "checksum": "f127bbcb01173cd38bc3f8eec11779eeac4b3a01cc02ea8676cc77bf59a57f14"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",
-      "checksum": "9df8e9a84bb30324452add60ca331c7dbe5ca68dd2c9046f0db26c8a59cb5b0d"
+      "checksum": "44caf86f7476699ccc9a75ee14c220196caf8e02bd151d06ca4e44f1de9db3b8"
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
-      "checksum": "bf8dd954ca6c0ebb37e0fd7dad6ed94d4582c0a4559d7cb6db8564c2a41ee13b"
+      "checksum": "eedbda8377517c77fb8e83f236818a2045e3753e8f7147048636dde1d4e8ab7f"
     },
     ".launchrail.yml": {
       "class": "seeded",
-      "checksum": "7ff4dc289b0162f2af1166caba1d11097ebc0991f6cdd73f9bfc6d089828072c"
+      "checksum": "e863b2d0b3cb4824ac6cb30e6a43efcbd1a08aa07d174544ab5bce5c3f311986"
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "1453bb22897a52855f8f147c6e8dbe82a0f24debc332dbcc5855493a361fadcb"
+      "checksum": "8cb0bd1b57500a87c3332c8ec4173d66c79a7e96672ef0677fd5a69080423f91"
     },
     "AGENTS.md": {
       "class": "seeded",
-      "checksum": "199cd9c69369c1bad277d5cb751ad2c908b173bee6a04723bc60147f5b2a9bdc"
+      "checksum": "5c282944cef8fe151153560a21206e7cb1864bfbfa5accb09b77e4ea5ff56375"
     },
     "CLAUDE.md": {
       "class": "seeded",
@@ -112,7 +112,7 @@
     },
     "docs/adr/0000-template.md": {
       "class": "seeded",
-      "checksum": "f28c0b63aefcba78b2e5db5d50b4b950031cba904eab6ebe4f51d633d09f2f1f"
+      "checksum": "9c4686c96c0720890cb2f9cdd4a462578bf8abedff5ffd08fa234511a005b405"
     },
     "docs/adr/README.md": {
       "class": "seeded",
@@ -120,11 +120,11 @@
     },
     "docs/agents/domain.md": {
       "class": "seeded",
-      "checksum": "2c93118d2bd715e3f1cc2f81cae3a0fbfd9618dd3b4b16bd16675722d2099723"
+      "checksum": "906ec8dc734cccd99f4fbef57182a3ccae533d61e8790ebb56740f3d2232cb3b"
     },
     "docs/agents/issue-tracker.md": {
       "class": "seeded",
-      "checksum": "c79c8e8040a141ac64c3893da3e10af3ac2685353fc59604099ca764070090fd"
+      "checksum": "10aa710b99ee3f4d40ff15a178cd21ef65fbbb5ec7e22099d304055754d7a43b"
     }
   },
   "migrations": [
@@ -139,7 +139,7 @@
   "decisions": {
     "origin": "existing",
     "issueTracker": "github",
-    "conventionalCommits": false,
+    "conventionalCommits": true,
     "unitCommand": "npm test"
   }
 }
