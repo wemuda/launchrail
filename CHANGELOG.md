@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.14.0](https://github.com/wemuda/launchrail/compare/v1.13.0...v1.14.0) (2026-09-03)
+
+
+### Features
+
+* **cli:** lean Ralph loop — local landing under a fast gate, pushed branches, checkpoints (ADR-0032) ([bd3c7ce](https://github.com/wemuda/launchrail/commit/bd3c7cee358251ec13f187976d7f9d2b95e7aaff))
+* **cli:** one-click structured checkpoints in launch-tickets and launch-spec ([284b822](https://github.com/wemuda/launchrail/commit/284b822980d13b106e7b683e29967854c61a0862))
+* **cli:** ride the merge gate's CI wait on cheap read-only watchers (ADR-0030) ([547dbf9](https://github.com/wemuda/launchrail/commit/547dbf9742110f79965ed0a6903280b952000988))
+* **cli:** seed the ADR registry and scope the ADR reading contract (ADR-0031) ([9ba6b48](https://github.com/wemuda/launchrail/commit/9ba6b48bb6e69e169f1501132c603c1f908579c7))
+* **cli:** sharpen the launch-* skills against current upstream (ADR-0020) ([484de1d](https://github.com/wemuda/launchrail/commit/484de1d8437be7f37b4df2dba761aac594fd7236))
+
+
+### Bug Fixes
+
+* **cli:** quote launch-project-alignment's description — a bare colon broke its YAML frontmatter ([beb6cb1](https://github.com/wemuda/launchrail/commit/beb6cb187091aa43783480fd002fdd5f95c89383))
+
 ## [1.13.0](https://github.com/wemuda/launchrail/compare/v1.12.0...v1.13.0) (2026-08-20)
 
 

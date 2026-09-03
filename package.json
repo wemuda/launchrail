@@ -1,7 +1,7 @@
 {
   "name": "launchrail-monorepo",
   "private": true,
-  "version": "1.13.0",
+  "version": "1.14.0",
   "license": "MIT",
   "description": "Launchrail — an updatable development system connecting vision, design, specs, tickets, bounded autonomous implementation, and verification.",
   "repository": {
