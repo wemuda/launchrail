@@ -39,7 +39,7 @@ How each Launchrail artifact shows up in an existing project, and what to do:
 | Architecture decisions (`docs/adr/`) | ADRs beyond the template; or de-facto decisions in code/docs | Note stage 6 as largely satisfied | Note as a gap; capture load-bearing existing decisions as ADRs later |
 | MVP spec (`docs/specs/`) | Spec docs, PRDs, design docs | Note stage 7 as partial/satisfied | Real gap — owned by the spec stage |
 | Tickets | The tracker in `.launchrail.yml` (issues/backlog) | Note stage 9 as partial | Real gap — owned by `launch-tickets` |
-| Verification | Test suite, CI config, Playwright | Wire `testing` commands in `.launchrail.yml`; note stage 11 partial | Note as a gap |
+| Verification | Test suite, CI config, Playwright | Wire `testing` commands in `.launchrail.yml`; note stage 11 partial; recommend `launch-loop-readiness` before the first `/launch-implement` — it measures the gates and tunes the repo for the loop | Note as a gap |
 
 ## What this skill does not do
 

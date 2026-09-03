@@ -19,3 +19,4 @@
 - A ticket counts done only when its landing commit is on the remote base, the issue is closed, and the gates are green — agent reports are claims, not evidence.
 - `.claude/workflows/ralph.js` is managed by Launchrail: override policy per run via workflow args (e.g. `{ width: 1 }`), never by editing the file.
 - Launch unattended runs in a non-prompting permission mode (bypass/autonomous); a guard hook (`.claude/hooks/ralph-permission-guard.py`) warns if the `ralph` workflow starts in an interactive mode, since one benign prompt can stall a walk-away run and lose the container mid-ticket.
+- `launch-loop-readiness` tunes the repo for the loop — fast gate, parallel journeys, shared caches, CI triggers, labels, hosted-session setup, verbatim commands — with measurements; `doctor`'s `ralph …` readiness lines say when it is worth running.

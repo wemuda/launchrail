@@ -61,6 +61,7 @@ From there, the day-to-day driver is not the CLI — it's the **`launch` skill**
 - **`launch-browser-smoke`** — drives a real browser journey and leaves a traceable evidence bundle (with the browser-testing module)
 - **`launch-implement`** — the one door to building: `/launch-implement` drives ready tickets to verified merges through the Ralph loop (a ticket number builds just that one; "the next 5 of spec #2" scopes and caps a run)
 - **`launch-ralph`**, **`launch-ralph-implement`**, **`launch-code-review`**, **`launch-resolving-merge-conflicts`** — the verification-gated loop engine behind that door, installed by `init`
+- **`launch-loop-readiness`** — checks and tunes a repo for the loop: measures the gates, sets the fast per-land gate, parallelizes browser journeys, shares caches for parallel builders, narrows CI triggers, creates the tracker labels, adds hosted-session setup ([ADR-0033](docs/adr/0033-loop-readiness.md)); `doctor` shows the same findings as warn-only readiness lines
 
 The CLI is the maintenance surface you return to between sessions:
 

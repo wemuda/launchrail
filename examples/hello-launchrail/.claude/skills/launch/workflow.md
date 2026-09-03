@@ -51,6 +51,7 @@ A planning session (a grill, a wayfinder ticket, an interview) closes with the b
 ## Prerequisites
 
 - The repository is initialized (`npx @wemuda/launchrail init`) and healthy (`npx @wemuda/launchrail doctor`). Init writes the workflow skills, the implementation loop's materials, *and* the `docs/agents/` configuration (issue-tracker conventions and domain-doc rules, seeded from the manifest's answers) — there is no separate install or setup step on the golden path.
+- Before the first `/launch-implement` on an existing codebase, `launch-loop-readiness` (stage 0, optional) measures the verification gates and tunes the repository for the implementation loop — a fast per-land gate, parallel browser journeys, shared caches for parallel builders, CI triggers, tracker labels, hosted-session setup, verbatim commands ([ADR-0033](https://github.com/wemuda/launchrail/blob/master/docs/adr/0033-loop-readiness.md)). `doctor`'s `ralph …` readiness lines say when it is worth running; they warn, never fail.
 
 ## Stages
 

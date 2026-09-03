@@ -15,6 +15,14 @@ import { readLockfile } from "../lib/lockfile.js";
 import { pendingMigrations } from "../lib/migrations.js";
 import { MANIFEST_FILENAME, parseManifest, type Manifest } from "../lib/manifest.js";
 import { RALPH_GUARD_HOOK_PATH, RALPH_MODULE, RALPH_WORKFLOW_PATH } from "../lib/ralph.js";
+import {
+  agentsCommandsState,
+  ciTriggerReadiness,
+  fastGateReadiness,
+  journeyReadiness,
+  READINESS_SKILL,
+  sessionStartHookState,
+} from "../lib/readiness.js";
 import { skillNames } from "../lib/skills.js";
 
 export type CheckStatus = "pass" | "warn" | "fail";
@@ -251,6 +259,62 @@ export function runDoctor(cwd: string): DoctorOutcome {
         "ralph verification gate",
         `no testing commands in ${MANIFEST_FILENAME} — \`verify\` fails on an empty contract and Ralph refuses to start`,
       );
+    }
+
+    // Loop readiness (ADR-0033): the loop is only as fast as the repository's
+    // gates, caches, and CI triggers let it be. Advice, never a gate — every line
+    // here warns at most, and the launch-loop-readiness skill measures and fixes it.
+    const fast = fastGateReadiness(manifest, detection);
+    add(fast.status, "ralph fast gate", fast.message);
+    const ci = ciTriggerReadiness(cwd);
+    if (ci.workflows.length > 0) {
+      if (ci.everyPush.length === 0) {
+        add("pass", "ralph ci triggers", "workflows run on pull requests and filtered branches only");
+      } else {
+        add(
+          "warn",
+          "ralph ci triggers",
+          `${ci.everyPush.join(", ")} run(s) on every push — the loop's ralph/* and integration-branch pushes would start CI runs nobody waits on; trigger on pull_request and the default branch only`,
+        );
+      }
+    }
+    if (manifest.modules[BROWSER_TESTING_MODULE]) {
+      if (detection.playwrightConfigFile) {
+        const journeys = journeyReadiness(cwd, detection.playwrightConfigFile);
+        if (journeys.serial) {
+          add(
+            "warn",
+            "ralph journeys",
+            `${journeys.file} pins ${journeys.evidence} — every full gate runs the browser journeys one at a time; keep the latency-sensitive ones serial and run the rest in parallel (${READINESS_SKILL})`,
+          );
+        } else {
+          add("pass", "ralph journeys", `${journeys.file} does not pin a single worker`);
+        }
+      }
+      const hook = sessionStartHookState(cwd);
+      if (hook === "registered") {
+        add("pass", "ralph hosted setup", `SessionStart hook registered in ${CLAUDE_SETTINGS_PATH}`);
+      } else if (hook === "invalid-json") {
+        add("warn", "ralph hosted setup", `${CLAUDE_SETTINGS_PATH} is not valid JSON — cannot confirm a SessionStart hook`);
+      } else {
+        add(
+          "warn",
+          "ralph hosted setup",
+          `no SessionStart hook in ${CLAUDE_SETTINGS_PATH} — a hosted session starts without dependencies or the pinned browsers, and the loop's preflight refuses on the mismatch; add one that runs the install command and scripts/setup.mjs (${READINESS_SKILL})`,
+        );
+      }
+    }
+    if (detection.hasPackageJson) {
+      const commands = agentsCommandsState(cwd);
+      if (commands === "todo") {
+        add(
+          "warn",
+          "ralph commands",
+          `AGENTS.md documents no verbatim commands — builders read install, check, and test commands from there; fill its Commands section (${READINESS_SKILL})`,
+        );
+      } else if (commands === "documented") {
+        add("pass", "ralph commands", "AGENTS.md documents the commands");
+      }
     }
   }
 

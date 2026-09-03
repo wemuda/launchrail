@@ -40,11 +40,15 @@
     },
     ".claude/skills/launch-implement/SKILL.md": {
       "class": "managed",
-      "checksum": "29cd190568ef8b26872997de20a3a732e40f5d2592c2ec6df9af0a7056043fbc"
+      "checksum": "8577721cf1c2461a74320abb26ffcc10e400fc67ece7c7635241e15fb84a0fc6"
+    },
+    ".claude/skills/launch-loop-readiness/SKILL.md": {
+      "class": "managed",
+      "checksum": "0b558077bf6dbcc6fde4d1eadf6df9e71413c72752b1d7a6ca7f34f8b2f1b59a"
     },
     ".claude/skills/launch-project-alignment/SKILL.md": {
       "class": "managed",
-      "checksum": "d76ce84570f03eccfd886efdef70cc17b939d73195ae9a8441e57cfe00418ec3"
+      "checksum": "91a09b8046a49cc1bc91e05e7fbd34f60530ed4694f48b89d06cfe7a39f4c485"
     },
     ".claude/skills/launch-ralph-implement/SKILL.md": {
       "class": "managed",
@@ -80,11 +84,11 @@
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "77ba05499d88ea6912cdde03494c93f56a366d9a3ac6b51f03229916016d1fe0"
+      "checksum": "acf0d7334c74d5b1fb9f844a397cedb7acb6a0da9d205bfb785482f031668fc2"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "f127bbcb01173cd38bc3f8eec11779eeac4b3a01cc02ea8676cc77bf59a57f14"
+      "checksum": "9539196f6f476436d91d1e23f8e10e65d73a93b9bcdf84b5857a2be14e783665"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",
@@ -100,7 +104,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "8cb0bd1b57500a87c3332c8ec4173d66c79a7e96672ef0677fd5a69080423f91"
+      "checksum": "cddd38e9d2ef5daf0136b65015b5a31959afb1f8e70b6ff930fce92b3fcce8bc"
     },
     "AGENTS.md": {
       "class": "seeded",
