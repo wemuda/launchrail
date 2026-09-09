@@ -10,7 +10,6 @@ testing:
   checkCommand: null
   devCommand: npm run dev
   e2eCommand: null
-  smokeCommand: null
   appUrl: null
 modules:
   core: true

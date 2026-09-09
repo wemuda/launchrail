@@ -1,49 +1,45 @@
 ---
 name: launch-browser-smoke
-description: Drive the running app through its defined smoke journeys in a real browser and produce a Launchrail evidence bundle. Use when user-facing work needs verification beyond deterministic tests, when the user asks to smoke-test the app, or before declaring user-facing work done in a project with the browser-testing module enabled (.launchrail.yml modules.browser-testing).
+description: Drive the running app in a real browser to see a just-built change working — a one-off, agent-driven check of the feature, not a test suite and not an evidence bundle. Use before declaring user-facing work done when .launchrail.yml has modules.browser-testing enabled, or when the user asks to smoke-test or click through the app.
 ---
 
-# Browser smoke testing
+# Browser smoke — see the change working
 
-Drive the real application through its user journeys in a browser and record evidence. Agentic smoke testing supplements deterministic tests — it never replaces them, and it never substitutes assertion for evidence.
+A browser smoke is you driving the real stack in a real browser to check that what you just built looks right and works. It is **one-off**: it lives for this change and ends in a verdict, not in a test file, a journeys catalogue, or a committed report ([ADR-0034](https://github.com/wemuda/launchrail/blob/master/docs/adr/0034-browser-smoke-one-off-driving.md)). Deterministic coverage is the other lane — `npx @wemuda/launchrail verify` with the unit command and the thin Playwright e2e specs — and a smoke never grows it by accident.
 
 ## Preconditions
 
 1. `.launchrail.yml` has `modules.browser-testing: true`. If not, stop and suggest `npx @wemuda/launchrail add browser-testing`.
-2. Deterministic checks pass first: run `node scripts/verify.mjs`. If verify fails, fix that before smoke testing — smoke runs on top of a green build.
-3. The app is running. Start it with `node scripts/dev.mjs` (use `--background` in cloud or CI sessions; logs land in `.launchrail/state/dev.log`). In a fresh clone, run `node scripts/setup.mjs` first.
+2. The fast gate is green: `npx @wemuda/launchrail verify --fast`. A smoke runs on top of a green build; a red one is fixed first.
+3. The app runs from **this** worktree: `node scripts/dev.mjs --background` (in a fresh clone, `node scripts/setup.mjs` first). Other builders may share the machine — pass `--port <n>` with a port nobody else uses. The script writes the URL to `.launchrail/state/dev.url` and the pid to `.launchrail/state/dev.pid`; read the URL from there rather than assuming `testing.appUrl`.
+4. The driver is `agent-browser`, installed by `scripts/setup.mjs`: `npx agent-browser --version` must answer. If it does not, run setup; if it still cannot install, use the fallback below.
 
-## Run contract
+## The run
 
-1. **Collect the journeys.** Read `docs/testing/smoke-journeys.md` (sections headed `## Journey:`) plus any journeys defined in the ticket or spec under verification. Each journey has a start point, steps, and verify checks.
-2. **Scaffold the evidence bundle.** Run `npx @wemuda/launchrail smoke` (add `--url <url>` for a preview environment). It confirms the app responds and creates `artifacts/verification/<run-id>/` containing `meta.json`, a `summary.md` skeleton, and `screenshots/` + `traces/` directories. If it reports the app unreachable, start the app — do not skip the journey.
-3. **Drive each journey in a real browser** — Playwright MCP, browser tools, or a Playwright script, whichever is available. The browser-testing module seeds a Playwright MCP server (`.mcp.json`); approve it once in Claude Code to drive the browser interactively, or fall back to a Playwright script in headless CI. Follow the steps as a user would: click, type, navigate. Try realistic variations and obvious edge cases, and watch the console and network panel as you go.
-4. **Capture evidence while testing, not afterwards:**
-   - Screenshots of each key state → `screenshots/`
-   - Console errors and warnings → `console.log`
-   - Failed or unexpected requests → `network-errors.json`
-   - Playwright traces where available → `traces/`
-5. **Apply the standard checks to every journey:**
-   - No uncaught console errors
-   - No failed API requests
-   - The success state is visible
-   - Data remains after refresh
+1. **Decide what to check.** From the ticket's acceptance criteria and your diff, write three to six steps for *this change*: where to start, what to click or type, what must be visible at the end. They live in your head and your handoff — never in a repository file.
+2. **Drive them, one session per ticket.** `export AGENT_BROWSER_SESSION=<branch-or-ticket>` keeps your browser apart from other builders'. Then, from the shell:
+   - `npx agent-browser open <url>` — start on the page the change lives on.
+   - `npx agent-browser snapshot -i` — the interactive elements with refs (`@e1`, `@e2`, …).
+   - `npx agent-browser click @e3`, `fill @e5 "text"`, `type`, `press Enter` — act as a user would.
+   - `npx agent-browser wait --load networkidle`, `wait --text "Saved"`, `wait <selector>` — **after every action that triggers a request or opens a modal, wait before the next snapshot**; a snapshot taken too early is the usual false failure.
+   - `npx agent-browser screenshot <path>` — and look at the image yourself (open it with the Read tool). Layout, copy, empty states, and wrong-but-rendering are what a script cannot judge; that judgment is the point of this lane.
+   - `npx agent-browser errors`, `console`, `network requests` — after each step, not only at the end.
+3. **Click around beyond the happy path.** The obvious wrong input, the empty state, a reload, the back button. You are looking for what the ticket did not spell out.
+4. **The standard checks, every time:** no uncaught exceptions, no failed requests, the success state visible in a screenshot you looked at, the data still there after a reload.
+5. **Design:** compare the screen to a design only when the ticket or spec names one (a `docs/design/` handoff, a mockup). Never invent a comparison.
 
-## When you find a real bug
+## When something is wrong
 
-1. Record the precise reproduction in the evidence bundle.
-2. Add or update a deterministic test that fails on the bug.
-3. Fix the bug.
-4. Prove the deterministic test passes.
-5. Re-run the affected journey.
-6. Keep the trace or screenshot that shows the failure.
+1. Fix it.
+2. Add the regression test at the **cheapest seam that would have caught it** — a unit or integration test first. A new Playwright spec under `tests/e2e/` only when the ticket asks for one or the behavior exists only in a real browser; the e2e lane stays thin, and a smoke never becomes a spec by default.
+3. Re-drive the steps that failed.
 
-This turns exploratory findings into permanent regression coverage instead of forgotten discoveries.
+## Done
 
-## Completing the run
+- `npx agent-browser close`, and stop the app you started: `kill $(cat .launchrail/state/dev.pid)`.
+- Your handoff states, in a few lines, what you drove and what you saw — that is the record. Nothing is committed for the smoke: no journeys file, no `artifacts/` bundle, no screenshots in the repo.
+- A smoke you could not drive is a failure, not a pass. Never report one you did not run.
 
-- Fill in `summary.md` completely: journey outcomes, standard checks, evidence references, deviations, newly added tests, remaining blockers. Check only boxes you actually verified.
-- Record any deviation from the spec or design in `deviations.md` next to the summary.
-- A journey you could not complete is a failure or a blocker, never a pass.
-- Never mark a journey passed while it has unexplained console or network errors.
-- The committed record is `summary.md`, `deviations.md`, and `meta.json`; bulky evidence stays local or becomes a CI artifact.
+## Fallback — no driver
+
+If `agent-browser` cannot be installed here, write a throwaway `playwright-core` script under `.launchrail/state/` (gitignored) that drives the same steps and prints what it saw, and run it with the project's Playwright. It stays there — it never moves under `tests/`, and it is no substitute for looking at the screenshots.

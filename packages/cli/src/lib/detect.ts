@@ -19,6 +19,8 @@ export interface RepoDetection {
   hasPlaywrightDep: boolean;
   /** First `playwright.config.*` found at the repo root, if any. */
   playwrightConfigFile: string | null;
+  /** `agent-browser`, the browser smoke's driver (ADR-0034), declared in dependencies/devDependencies. */
+  hasBrowserDriverDep: boolean;
   projectName: string;
   hasAgentsMd: boolean;
   hasClaudeMd: boolean;
@@ -59,6 +61,7 @@ export function detectRepo(root: string): RepoDetection {
   let testScript: string | null = null;
   let devScript: string | null = null;
   let hasPlaywrightDep = false;
+  let hasBrowserDriverDep = false;
   let packageManagerField: string | null = null;
   if (hasPackageJson) {
     try {
@@ -75,6 +78,7 @@ export function detectRepo(root: string): RepoDetection {
       if (typeof pkg.packageManager === "string") packageManagerField = pkg.packageManager;
       const deps = { ...pkg.dependencies, ...pkg.devDependencies };
       hasPlaywrightDep = "@playwright/test" in deps || "playwright" in deps;
+      hasBrowserDriverDep = "agent-browser" in deps;
     } catch {
       // Malformed package.json is doctor's problem, not detection's.
     }
@@ -106,6 +110,7 @@ export function detectRepo(root: string): RepoDetection {
     devScript,
     hasPlaywrightDep,
     playwrightConfigFile,
+    hasBrowserDriverDep,
     projectName: packageName ?? basename(root),
     hasAgentsMd: existsSync(join(root, "AGENTS.md")),
     hasClaudeMd: existsSync(join(root, "CLAUDE.md")),

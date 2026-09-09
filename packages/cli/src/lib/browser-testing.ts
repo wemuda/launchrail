@@ -3,8 +3,28 @@ import type { Manifest } from "./manifest.js";
 import type { FileSpec } from "./writer.js";
 
 export const BROWSER_TESTING_MODULE = "browser-testing";
-export const SMOKE_JOURNEYS_PATH = "docs/testing/smoke-journeys.md";
-export const SEMANTIC_SCRIPTS = ["setup", "dev", "verify", "smoke", "doctor"] as const;
+export const SEMANTIC_SCRIPTS = ["setup", "dev", "verify", "doctor"] as const;
+
+/**
+ * The browser smoke's driver (ADR-0034): a shell-driven browser built for
+ * agents. Bash is the one surface every session has — hosted, unattended,
+ * inside a subagent — and `--session` keeps parallel builders apart.
+ */
+export const BROWSER_DRIVER_PACKAGE = "agent-browser";
+
+/** Where `scripts/dev.mjs` records the URL and pid of the app it started. */
+export const DEV_STATE_DIR = ".launchrail/state";
+
+/**
+ * Paths the module seeded before ADR-0034 — the journey catalogue, the
+ * `smoke` entry point and the Playwright MCP config. The retirement migration
+ * removes each copy that is unmodified since Launchrail wrote it.
+ */
+export const RETIRED_BROWSER_TESTING_SEEDS = [
+  "docs/testing/smoke-journeys.md",
+  "scripts/smoke.mjs",
+  ".mcp.json",
+] as const;
 
 const DEFAULT_APP_URL = "http://localhost:3000";
 
@@ -36,11 +56,13 @@ ${webServer}});
 `;
 }
 
-function smokeSpec(): string {
+function baselineSpec(): string {
   return `import { expect, test } from "@playwright/test";
 
-// Seeded by Launchrail — the E2E baseline: the app starts, responds, and renders
-// without console errors. Extend or replace with real journeys as they stabilize.
+// Seeded by Launchrail — the deterministic e2e baseline: the app starts, responds,
+// and renders without console errors. The e2e lane stays thin (ADR-0034): add a
+// spec here for a standing golden path or a behavior only a real browser can
+// exercise — a feature's one-off check is the browser smoke, never a spec.
 test("app starts and renders without console errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(String(error)));
@@ -56,79 +78,15 @@ test("app starts and renders without console errors", async ({ page }) => {
 `;
 }
 
-function smokeJourneysDoc(): string {
-  return `# Smoke journeys
-
-Seeded by Launchrail — this file is yours. It is the smoke-journey contract: the
-concrete user journeys an agent drives through the real app in a browser before
-user-facing work counts as done.
-
-- Every ticket that changes user-facing behavior adds or updates a journey here
-  (or defines one in the ticket itself).
-- Each journey heading starts with \`## Journey:\` so tools can list them —
-  \`npx @wemuda/launchrail smoke\` scaffolds an evidence bundle from this file.
-- Agentic smoke testing supplements deterministic tests; it never replaces them.
-  When a smoke run finds a real bug: record the reproduction, add a failing
-  deterministic test, fix the bug, prove the test passes, re-run the journey.
-
-Every journey is verified against the standard checks plus its own list:
-
-- No uncaught console errors
-- No failed API requests
-- The success state is visible
-- Data remains after refresh
-
-## Journey: App loads
-
-- startAt: /
-- actor: anonymous
-
-Steps:
-
-1. Open the app root.
-2. Confirm the main content renders.
-
-Verify:
-
-- The page shows meaningful content, not an error screen.
-`;
-}
-
-/**
- * A project-scoped Playwright MCP server so the `browser-smoke` skill can drive
- * the app agentically (click/type/navigate, watch console + network) instead of
- * only running fixed specs — the skill already looks for "Playwright MCP ...
- * whichever is available". Deliberately app-agnostic: the agent supplies URLs at
- * run time, so no hardcoded origins. `--isolated` keeps it profile-less, which is
- * what a fresh clone / CI / cloud session wants. It is a convenience, never a hard
- * dependency — where no MCP is available the seeded Playwright scripts still run
- * headless (ADR-0004).
- */
-function mcpConfig(): string {
-  return (
-    JSON.stringify(
-      {
-        mcpServers: {
-          playwright: {
-            command: "npx",
-            args: ["-y", "@playwright/mcp@latest", "--isolated"],
-          },
-        },
-      },
-      null,
-      2,
-    ) + "\n"
-  );
-}
-
-const ADD_PLAYWRIGHT_DEP: Record<PackageManager, string> = {
-  pnpm: "pnpm add -D @playwright/test",
-  yarn: "yarn add -D @playwright/test",
-  bun: "bun add -d @playwright/test",
-  npm: "npm install -D @playwright/test",
+const ADD_DEV_DEP: Record<PackageManager, (pkg: string) => string> = {
+  pnpm: (pkg) => `pnpm add -D ${pkg}`,
+  yarn: (pkg) => `yarn add -D ${pkg}`,
+  bun: (pkg) => `bun add -d ${pkg}`,
+  npm: (pkg) => `npm install -D ${pkg}`,
 };
 
 function setupScript(pm: PackageManager): string {
+  const addDev = ADD_DEV_DEP[pm];
   return `#!/usr/bin/env node
 // Seeded by Launchrail — yours to adapt. Prepares a fresh clone for local, CI, or cloud work.
 import { spawnSync } from "node:child_process";
@@ -144,35 +102,63 @@ function run(command) {
 
 run("${pm} install");
 if (!existsSync("node_modules/@playwright/test")) {
-  run("${ADD_PLAYWRIGHT_DEP[pm]}");
+  run("${addDev("@playwright/test")}");
 }
 // Cloud and CI machines need browser OS dependencies; local machines usually have them.
 run(cloud ? "npx playwright install --with-deps chromium" : "npx playwright install chromium");
+// The browser smoke's driver: a shell-driven browser for agents, with its own Chromium.
+if (!existsSync("node_modules/${BROWSER_DRIVER_PACKAGE}")) {
+  run("${addDev(BROWSER_DRIVER_PACKAGE)}");
+}
+run("npx ${BROWSER_DRIVER_PACKAGE} install");
 console.log("\\nSetup complete. Next: node scripts/doctor.mjs");
 `;
 }
 
-function devScript(devCommand: string | null): string {
+function devScript(devCommand: string | null, appUrl: string | null): string {
   return `#!/usr/bin/env node
 // Seeded by Launchrail — yours to adapt. Starts the app for development and testing.
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, openSync } from "node:fs";
+import { existsSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 
 const DEV_COMMAND = ${JSON.stringify(devCommand ?? "")};
+const APP_URL = ${JSON.stringify(appUrl ?? DEFAULT_APP_URL)};
+const STATE_DIR = ${JSON.stringify(DEV_STATE_DIR)};
+
 if (DEV_COMMAND === "") {
   console.error("No dev command configured. Edit scripts/dev.mjs and set DEV_COMMAND to whatever starts this app.");
   process.exit(1);
 }
 
-if (process.argv.includes("--background")) {
+// Parallel builders each start their own app: \`--port <n>\` picks a port nobody
+// else uses. The dev command sees it as PORT — adapt this file if your app reads
+// another name or flag.
+const args = process.argv.slice(2);
+const portFlag = args.indexOf("--port");
+const port = portFlag !== -1 ? args[portFlag + 1] : process.env.PORT;
+const url = new URL(APP_URL);
+if (port) url.port = String(port);
+const appUrl = url.href.replace(/\\/$/, "");
+const env = port ? { ...process.env, PORT: String(port) } : process.env;
+
+// Agents read the URL (and the pid, in background mode) from here; the state
+// directory ignores itself so nothing in it reaches git.
+mkdirSync(STATE_DIR, { recursive: true });
+if (!existsSync(STATE_DIR + "/.gitignore")) writeFileSync(STATE_DIR + "/.gitignore", "*\\n");
+writeFileSync(STATE_DIR + "/dev.url", appUrl + "\\n");
+
+if (args.includes("--background")) {
   // Cloud and CI sessions need the app running without holding the terminal.
-  mkdirSync(".launchrail/state", { recursive: true });
-  const log = openSync(".launchrail/state/dev.log", "a");
-  const child = spawn(DEV_COMMAND, { shell: true, detached: true, stdio: ["ignore", log, log] });
+  const log = openSync(STATE_DIR + "/dev.log", "a");
+  const child = spawn(DEV_COMMAND, { shell: true, detached: true, stdio: ["ignore", log, log], env });
   child.unref();
-  console.log("Started \`" + DEV_COMMAND + "\` in the background (pid " + child.pid + "). Logs: .launchrail/state/dev.log");
+  writeFileSync(STATE_DIR + "/dev.pid", String(child.pid) + "\\n");
+  console.log(
+    "Started \`" + DEV_COMMAND + "\` in the background (pid " + child.pid + ") for " + appUrl +
+      ". Logs: " + STATE_DIR + "/dev.log — stop it with \`kill $(cat " + STATE_DIR + "/dev.pid)\`.",
+  );
 } else {
-  const result = spawnSync(DEV_COMMAND, { shell: true, stdio: "inherit" });
+  const result = spawnSync(DEV_COMMAND, { shell: true, stdio: "inherit", env });
   process.exit(result.status ?? 0);
 }
 `;
@@ -201,7 +187,11 @@ export interface BrowserTestingContext {
 /**
  * Everything `launchrail add browser-testing` seeds. All files are seeded-class:
  * created once, then project-owned. An existing Playwright config means the
- * project already has an E2E layer — keep it, seed neither config nor baseline.
+ * project already has an e2e layer — keep it, seed neither config nor baseline.
+ *
+ * Two lanes (ADR-0034): the deterministic e2e baseline runs inside `verify`;
+ * the browser smoke is one-off driving by the agent and seeds no file of its
+ * own — its driver installs through `scripts/setup.mjs`.
  */
 export function browserTestingFiles(ctx: BrowserTestingContext): FileSpec[] {
   const pm = ctx.detection.packageManager ?? "npm";
@@ -210,17 +200,19 @@ export function browserTestingFiles(ctx: BrowserTestingContext): FileSpec[] {
   if (!ctx.detection.playwrightConfigFile) {
     specs.push(
       { relPath: "playwright.config.ts", content: playwrightConfig(ctx.manifest), ownership: "seeded" },
-      { relPath: "tests/e2e/smoke.spec.ts", content: smokeSpec(), ownership: "seeded" },
+      { relPath: "tests/e2e/baseline.spec.ts", content: baselineSpec(), ownership: "seeded" },
     );
   }
 
   specs.push(
-    { relPath: ".mcp.json", content: mcpConfig(), ownership: "seeded" },
-    { relPath: SMOKE_JOURNEYS_PATH, content: smokeJourneysDoc(), ownership: "seeded" },
     { relPath: "scripts/setup.mjs", content: setupScript(pm), ownership: "seeded", executable: true },
-    { relPath: "scripts/dev.mjs", content: devScript(ctx.manifest.testing.devCommand), ownership: "seeded", executable: true },
+    {
+      relPath: "scripts/dev.mjs",
+      content: devScript(ctx.manifest.testing.devCommand, ctx.manifest.testing.appUrl),
+      ownership: "seeded",
+      executable: true,
+    },
     { relPath: "scripts/verify.mjs", content: delegatingScript("verify"), ownership: "seeded", executable: true },
-    { relPath: "scripts/smoke.mjs", content: delegatingScript("smoke"), ownership: "seeded", executable: true },
     { relPath: "scripts/doctor.mjs", content: delegatingScript("doctor"), ownership: "seeded", executable: true },
   );
 

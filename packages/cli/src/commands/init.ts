@@ -58,7 +58,6 @@ function defaultTesting(detection: RepoDetection): Manifest["testing"] {
     checkCommand: null,
     devCommand: detection.devScript ? `${detection.packageManager ?? "npm"} run dev` : null,
     e2eCommand: null,
-    smokeCommand: null,
     appUrl: null,
   };
 }

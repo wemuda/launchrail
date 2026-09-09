@@ -1,7 +1,7 @@
 # ADR-0004: Browser-testing module — Playwright baseline, semantic commands, agentic smoke with evidence bundles
 
 ## Status
-Accepted — the `browser-smoke` skill named here ships as the managed `launch-browser-smoke` skill since [ADR-0019](0019-vendor-skills-retire-plugin.md)/[ADR-0020](0020-independent-skill-set.md); the module's decisions are otherwise unchanged.
+Accepted — amended by [ADR-0034](0034-browser-smoke-one-off-driving.md): the Markdown journey contract, the evidence bundle (`launchrail smoke`, `artifacts/verification/`), the seeded Playwright MCP and `testing.smokeCommand` are retired; the browser smoke is a one-off, agent-driven check of the change under build, driven from the shell with `agent-browser`. The Playwright baseline, `verify` as the deterministic gate, and the semantic scripts stand. The `browser-smoke` skill named here ships as the managed `launch-browser-smoke` skill since [ADR-0019](0019-vendor-skills-retire-plugin.md)/[ADR-0020](0020-independent-skill-set.md).
 
 ## Context
 Phase 3 of the roadmap: an agent must be able to start an app in a fresh environment (local, CI, or cloud clone), complete a defined user journey in a real browser, and produce a traceable evidence bundle. The handoff (§9) requires two complementary systems — deterministic browser tests as release gates and agentic smoke testing as exploratory acceptance — plus stable semantic commands regardless of the project's internal stack. Everything written into consuming repos must respect the ownership model and the safe-writer contract.

@@ -58,7 +58,7 @@ Sync → compute frontier → keep *width* builders busy → land each finished 
 Each implementer prompt is self-contained — assume it knows nothing about this session or the other implementers. It carries: the ticket number and title, the verbatim commands (install, fast gate, full gate), how to reach the tracker from this environment, which branch is the base (the integration target), any pushed branch to adopt, and these seven steps:
 
 1. **Dependency gate:** before anything else, confirm every ticket on the `Blocked by` line is closed with its work landed on the base. If any blocker is still open, do not build on a missing dependency — report "blocked" naming the open blocker, and stop. A deferral, not a failure; the loop retries after the blocker lands.
-2. Read the ticket and everything it links (spec sections, ADRs, journeys), plus `AGENTS.md`/`CLAUDE.md`. If the tracker tool truncates the body (long code spans are a known trigger), fetch the full text by another route — the tracker's search API, the spec file in the repo — and never implement from a truncated ticket. If the ticket is already closed, report "already-done" and stop.
+2. Read the ticket and everything it links (spec sections, ADRs, designs), plus `AGENTS.md`/`CLAUDE.md`. If the tracker tool truncates the body (long code spans are a known trigger), fetch the full text by another route — the tracker's search API, the spec file in the repo — and never implement from a truncated ticket. If the ticket is already closed, report "already-done" and stop.
 3. Label the ticket `ralph:building` so a lost session leaves a trace.
 4. **Branch and push immediately.** Adopt a pushed `ralph/<n>-*` branch when one exists (fetch it, continue from its last commit — never start over); otherwise branch from a fresh fetch of the base — `git checkout -b ralph/<n>-<short-slug> origin/<base>`, never a checkout of the base itself in the worktree — and push at once. From then on **commit and push after every green step**: the pushed branch is the checkpoint a lost session resumes from and the loop's liveness signal.
 5. Implement by calling the Skill tool with **`launch-ralph-implement`** — it owns TDD, the commit-and-push cadence, the fast gate, browser smoke for user-facing changes, self-review via `launch-code-review`, and commit conventions. Name the skill; do not paraphrase it.
@@ -81,7 +81,7 @@ A conflict, a gate that only fails on the merged tree, or a stale remote hands t
 
 ## Checkpoints and the repair
 
-After every `checkpointEvery` lands (default 5) — and always at release — run the **full gate** on the synced base, in the same checkout, with no land interleaved. Green → the base tip is proven; note the sha. Red → dispatch exactly one **repair** implementer with the failures and the tickets landed since the last green base; it branches `ralph/repair-*` from the base, fixes the root cause (an integration break between two tickets, a migration-number collision, a journey a landing invalidated), makes the fast *and* full gates green, pushes, and hands off; land it under the full gate. Landed → green again, carry on. Not landed → the base is red: stop landing, hold finished tickets on their branches, and end the run unverified naming the failure. A failure that reproduces on the base at preflight is systemic — stop the run before it starts.
+After every `checkpointEvery` lands (default 5) — and always at release — run the **full gate** on the synced base, in the same checkout, with no land interleaved. Green → the base tip is proven; note the sha. Red → dispatch exactly one **repair** implementer with the failures and the tickets landed since the last green base; it branches `ralph/repair-*` from the base, fixes the root cause (an integration break between two tickets, a migration-number collision, an e2e spec a landing invalidated), makes the fast *and* full gates green, pushes, and hands off; land it under the full gate. Landed → green again, carry on. Not landed → the base is red: stop landing, hold finished tickets on their branches, and end the run unverified naming the failure. A failure that reproduces on the base at preflight is systemic — stop the run before it starts.
 
 Every dispatch — retries, re-syncs, repairs included — also carries these two clauses verbatim:
 
@@ -117,9 +117,8 @@ When the Ralph loop runs as the `ralph` workflow instead of through this skill, 
 When the frontier drains (or the cap, the build backstop, a red base, or a stop condition hits):
 
 1. Sync a fresh base and run `npx @wemuda/launchrail verify` — unless the last green checkpoint already proved this exact tip. **The loop may not report success while this fails** — report "unverified" with the failures instead; a red base is unverified by definition.
-2. If `.launchrail.yml` has `modules.browser-testing: true` and any landed ticket changed user-facing behavior, dispatch one smoke run per the `launch-browser-smoke` skill and reference its evidence bundle (`artifacts/verification/<run-id>/`).
-3. Prune the remote `ralph/*` branches of the verified-landed tickets — only those; held and parked branches stay.
-4. Report the campaign recap — it must let the user act without scrolling back:
+2. Prune the remote `ralph/*` branches of the verified-landed tickets — only those; held and parked branches stay.
+3. Report the campaign recap — it must let the user act without scrolling back:
    - **Where the work lives:** the integration target and its head SHA; in consolidation mode, say explicitly that the default branch is untouched.
    - The ticket → landing-commit table; held tickets with their branches; parked tickets with their failure histories; stuck tickets and what blocks them; the checkpoint verdicts.
    - Follow-ups and operator steps implementers punted, gathered into one list.
@@ -131,7 +130,7 @@ When the frontier drains (or the cap, the build backstop, a red base, or a stop 
 - Fresh context per dispatch, per retry, per re-sync. No exceptions.
 - One integration target and one engine per run, declared in the pre-launch echo and restated once in the close-out recap — never in between.
 - Never implement, review, or repair code in the orchestrator session — dispatch instead. Landing is bookkeeping, not repair; a red gate is handed back, never fixed by the lander.
-- Name the skills (`launch-ralph-implement`, `launch-resolving-merge-conflicts`, `launch-browser-smoke`); never paraphrase their contents into a prompt.
+- Name the skills (`launch-ralph-implement`, `launch-resolving-merge-conflicts`); never paraphrase their contents into a prompt. The browser smoke is each implementer's, inside `launch-ralph-implement` — the loop dispatches no smoke run of its own.
 - Blocking edges are parsed from the verbatim `Blocked by` line, by you — never resolved by a model in between.
 - Nothing counts as landed until the remote says so; nothing counts as done until the full gate is green on the final base.
 - A deferral is not a failure; a re-sync is not an attempt; a failure is never silently retried without its summary.

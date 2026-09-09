@@ -19,7 +19,7 @@ export type IssueTracker = (typeof ISSUE_TRACKERS)[number];
  * `unitCommand`); the full `verify` still runs `unitCommand` and, with the
  * browser-testing module, `e2eCommand`.
  */
-export const TESTING_KEYS = ["unitCommand", "checkCommand", "devCommand", "e2eCommand", "smokeCommand", "appUrl"] as const;
+export const TESTING_KEYS = ["unitCommand", "checkCommand", "devCommand", "e2eCommand", "appUrl"] as const;
 export type TestingKey = (typeof TESTING_KEYS)[number];
 
 export interface Manifest {
@@ -90,7 +90,6 @@ export function validateManifest(data: unknown): ManifestParseResult {
     checkCommand: null,
     devCommand: null,
     e2eCommand: null,
-    smokeCommand: null,
     appUrl: null,
   };
   if (data.testing !== undefined) {
@@ -116,9 +115,10 @@ export function validateManifest(data: unknown): ManifestParseResult {
   }
 
   // `implementationLoop` (ADR-0017) was removed by ADR-0020 — Ralph is the
-  // loop — and `mode` (spike / standard-mvp / high-rigor) was removed by
-  // ADR-0023. Manifests that still carry either key stay valid: unknown keys
-  // are ignored here, and the corresponding migrations delete them.
+  // loop — `mode` (spike / standard-mvp / high-rigor) was removed by ADR-0023,
+  // and `testing.smokeCommand` by ADR-0034. Manifests that still carry any of
+  // them stay valid: unknown keys are ignored here, and the corresponding
+  // migrations delete them.
 
   if (errors.length > 0) return { manifest: null, errors };
   return {
@@ -174,6 +174,18 @@ export function removeManifestKey(source: string, key: string): KeyRemovalResult
   if (!doc.has(key)) return { source, changed: false, previous: undefined };
   const previous = doc.get(key);
   doc.delete(key);
+  return { source: doc.toString(), changed: true, previous };
+}
+
+/**
+ * Remove a retired `testing.<key>` from an existing manifest source — the same
+ * comment-preserving round-trip as `removeManifestKey`, one level down.
+ */
+export function removeTestingKey(source: string, key: string): KeyRemovalResult {
+  const doc = parseDocument(source);
+  if (!doc.hasIn(["testing", key])) return { source, changed: false, previous: undefined };
+  const previous = doc.getIn(["testing", key]);
+  doc.deleteIn(["testing", key]);
   return { source: doc.toString(), changed: true, previous };
 }
 

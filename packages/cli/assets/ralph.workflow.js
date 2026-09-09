@@ -30,7 +30,7 @@ export const meta = {
     { title: 'Verify', detail: 'remote ground truth for every claimed land' },
     { title: 'Checkpoint', detail: 'the full gate on the base every N lands, with one bounded repair when red' },
     { title: 'Park', detail: 'comment failure history, label needs-info' },
-    { title: 'Release', detail: 'final full gate and smoke, prune landed branches, the where-it-lives recap' },
+    { title: 'Release', detail: 'final full gate, prune landed branches, the where-it-lives recap' },
   ],
 }
 
@@ -93,8 +93,8 @@ const POLICY = {
   // counts as a real failure.
   resyncs: A.resyncs ?? 2,
   // Run the FULL verification gate on the base after this many lands (0 = only at release).
-  // Every land already passed the fast gate on the merged tree; the full suite (browser
-  // journeys included) is paid once per checkpoint instead of once per ticket, and a red
+  // Every land already passed the fast gate on the merged tree; the full suite (e2e
+  // specs included) is paid once per checkpoint instead of once per ticket, and a red
   // checkpoint has at most this many suspects.
   checkpointEvery: A.checkpointEvery ?? 5,
   // A sha the caller vouches for: a previous run verified the base green at exactly this
@@ -153,7 +153,6 @@ const PREFLIGHT_SCHEMA = {
       items: { type: 'string' },
       description: 'other verbatim local commands (typecheck, lint, unit tests) implementers should use',
     },
-    browserTesting: { type: 'boolean', description: '.launchrail.yml modules.browser-testing' },
     pushedBranches: {
       type: 'array',
       items: {
@@ -299,7 +298,6 @@ const RELEASE_SCHEMA = {
   properties: {
     verified: { type: 'boolean', description: 'the full verification gate is green on the final base (run now, or already proven at this exact tip)' },
     headSha: { type: 'string' },
-    smokeBundle: { type: 'string', description: 'path of the smoke evidence bundle, when one was produced' },
     prunedBranches: { type: 'array', items: { type: 'string' }, description: 'the landed ralph/* branches deleted from the remote' },
     summary: { type: 'string' },
     failures: { type: 'array', items: { type: 'string' } },
@@ -316,7 +314,7 @@ Architecture decisions: read the registry index (docs/adr/README.md) and open on
 Tracker access from this environment: ${pre.trackerAccess}
 Blocking edges live on tickets as "Blocked by: #n" lines.
 Verbatim local commands: install: ${pre.installCommand}${pre.localCommands.length > 0 ? ` ; ${pre.localCommands.join(' ; ')}` : ''}
-Two gates. The FAST gate is ${pre.fastGateCommand} — run it before every hand-off; it must exit 0. The FULL gate (${pre.verifyCommand}) belongs to the loop, which runs it on the base at its checkpoints — do not spend your turn on the whole suite; run only the slow test files your change touches (a browser journey you edited).
+Two gates. The FAST gate is ${pre.fastGateCommand} — run it before every hand-off; it must exit 0. The FULL gate (${pre.verifyCommand}) belongs to the loop, which runs it on the base at its checkpoints — do not spend your turn on the whole suite; run only the slow test files your change touches (an e2e spec you edited).
 Several implementers share this machine — run single test files while iterating and save full runs for the gate.`
 }
 
@@ -339,7 +337,7 @@ Implement ticket #${ticket.number} ("${ticket.title}") through to a pushed, fast
 ${retry}${resyncNote}
 Steps, in order:
 1. Dependency gate: before anything else, confirm every ticket on this ticket's "Blocked by" line is CLOSED with its work landed on ${pre.base}. If any blocker is still open, do NOT build on a missing dependency — report status "blocked", name the open blocker in "failure", and stop. That is a deferral, not a failure; the loop retries you after the blocker lands.
-2. Read the ticket and everything it links (spec sections, ADRs, journeys). If the tracker tool truncates the body (long code spans are a known trigger), fetch the full text by another route — the tracker's search API, the spec file in the repo — and never implement from a truncated ticket. Report status "already-done" if the ticket is already closed.
+2. Read the ticket and everything it links (spec sections, ADRs, designs). If the tracker tool truncates the body (long code spans are a known trigger), fetch the full text by another route — the tracker's search API, the spec file in the repo — and never implement from a truncated ticket. Report status "already-done" if the ticket is already closed.
 3. Label the ticket ralph:building so a lost session leaves a trace.
 4. Branch and push immediately. ${adopt} From here on the pushed branch is your checkpoint: commit and push after every green step (a passing test slice, a finished subtask) — a session that dies keeps everything up to its last push, and its successor resumes from there instead of rebuilding. The pushes are also the loop's liveness signal.
 5. Implement by invoking the launch-ralph-implement skill — it owns the per-ticket contract: TDD, commit-and-push cadence, the fast gate, browser smoke for user-facing changes, self-review via launch-code-review, commit conventions.
@@ -404,7 +402,7 @@ Failures: ${(cp.failures ?? []).join(' | ') || cp.summary}
 
 Repair the base through to a pushed, green branch:
 1. Branch from a fresh fetch and push at once: \`git fetch origin ${pre.base} && git checkout -b ralph/repair-${k}-<short-slug> origin/${pre.base} && git push -u origin HEAD\`. Never check out ${pre.base} itself in this worktree.
-2. Reproduce the failure — the failing test files first, the full gate if needed — and find the root cause among the listed landings (\`git log ${cp.greenSha || ''}..${cp.headSha}\`): an integration break between two tickets, a migration-number collision, a journey a landing invalidated. Fix it properly; regenerate colliding migrations with the project's migration tool.
+2. Reproduce the failure — the failing test files first, the full gate if needed — and find the root cause among the listed landings (\`git log ${cp.greenSha || ''}..${cp.headSha}\`): an integration break between two tickets, a migration-number collision, an e2e spec a landing invalidated. Fix it properly; regenerate colliding migrations with the project's migration tool.
 3. Make the fast gate green, then the FULL gate (${pre.verifyCommand}) green — this repair lands under the full gate. Self-review via the launch-code-review skill, commit conventionally, push after every green step.
 4. Hand off: report status "ready" with branch, headSha, and a commitTitle like "fix(<scope>): <what>". Then STOP — the loop lands it. Never push to ${pre.base} yourself.
 Report "failed" with the one fact a human must know if the base cannot be repaired without losing behavior.
@@ -418,20 +416,15 @@ function releasePrompt(pre, opts) {
     : opts.needsGate
       ? `2. Run the install command (${pre.installCommand}), then the FULL verification gate: ${pre.verifyCommand}. Report the actual exit code.`
       : `2. The full gate already passed at exactly this tip (${opts.greenSha}) during the run — report verified: true without re-running it, unless the tip you synced differs, in which case run ${pre.verifyCommand}.`
-  const smokeStep =
-    !opts.baseRed && opts.smoke
-      ? `
-3. The browser-testing module is enabled and tickets landed: start the app (node scripts/dev.mjs --background), scaffold an evidence bundle (npx @wemuda/launchrail smoke), and drive the smoke journeys from docs/testing/smoke-journeys.md per the launch-browser-smoke skill. Report the bundle path. A journey you could not complete is a failure, never a pass.`
-      : ''
   const pruneStep =
     opts.prune.length > 0
       ? `
-4. Prune the remote branches of the verified-landed tickets, and ONLY these: ${opts.prune.join(', ')} (\`git push origin --delete <branch>\` each; a branch already gone is fine). Never delete any other branch. Report prunedBranches.`
+3. Prune the remote branches of the verified-landed tickets, and ONLY these: ${opts.prune.join(', ')} (\`git push origin --delete <branch>\` each; a branch already gone is fine). Never delete any other branch. Report prunedBranches.`
       : ''
   return `Release verification for a finished Ralph loop run, in THIS checkout. Fix nothing.
 1. Sync a fresh ${pre.base} (\`git fetch origin ${pre.base}\`, \`git checkout ${pre.base}\`, \`git merge --ff-only origin/${pre.base}\`) and record its head sha.
-${gateStep}${smokeStep}${pruneStep}
-verified means: the full verification gate is green on the final base${!opts.baseRed && opts.smoke ? ' AND no smoke journey failed' : ''}.`
+${gateStep}${pruneStep}
+verified means: the full verification gate is green on the final base.`
 }
 
 const graphPrompt = (pre) => `List the open, ready tickets for a Ralph loop run. Change nothing on the tracker.
@@ -943,7 +936,6 @@ const release = await agent(
     baseRedReason,
     needsGate: baseTip !== lastGreenSha,
     greenSha: lastGreenSha,
-    smoke: Boolean(pre.browserTesting) && landed.length > 0,
     prune: landed.map((s) => s.branch).filter(Boolean),
   }),
   { label: 'release-verification', phase: 'Release', schema: RELEASE_SCHEMA },

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
-import { BROWSER_TESTING_MODULE, browserTestingFiles } from "../lib/browser-testing.js";
+import { BROWSER_DRIVER_PACKAGE, BROWSER_TESTING_MODULE, browserTestingFiles } from "../lib/browser-testing.js";
 import {
   applyRalphGuardHook,
   CLAUDE_SETTINGS_PATH,
@@ -42,7 +42,6 @@ interface BrowserTestingAnswers {
   appUrl: string;
   devCommand: string | null;
   e2eCommand: string;
-  smokeCommand: string;
 }
 
 function defaultAnswers(manifest: Manifest, detection: RepoDetection): BrowserTestingAnswers {
@@ -51,7 +50,6 @@ function defaultAnswers(manifest: Manifest, detection: RepoDetection): BrowserTe
     appUrl: manifest.testing.appUrl ?? "http://localhost:3000",
     devCommand: manifest.testing.devCommand ?? (detection.devScript ? `${pm} run dev` : null),
     e2eCommand: manifest.testing.e2eCommand ?? "npx playwright test",
-    smokeCommand: manifest.testing.smokeCommand ?? "node scripts/smoke.mjs",
   };
 }
 
@@ -75,11 +73,6 @@ async function interview(defaults: BrowserTestingAnswers): Promise<BrowserTestin
           message: "Deterministic browser-test command",
           initialValue: defaults.e2eCommand,
         }),
-      smokeCommand: () =>
-        p.text({
-          message: "Smoke entry command",
-          initialValue: defaults.smokeCommand,
-        }),
     },
     {
       onCancel: () => {
@@ -92,7 +85,6 @@ async function interview(defaults: BrowserTestingAnswers): Promise<BrowserTestin
     appUrl: answers.appUrl.trim() || defaults.appUrl,
     devCommand: answers.devCommand.trim() === "" ? null : answers.devCommand.trim(),
     e2eCommand: answers.e2eCommand.trim() || defaults.e2eCommand,
-    smokeCommand: answers.smokeCommand.trim() || defaults.smokeCommand,
   };
 }
 
@@ -122,14 +114,16 @@ function planBrowserTesting(
   if (detection.playwrightConfigFile) {
     notes.push(`Existing ${detection.playwrightConfigFile} detected — keeping it; no config or baseline spec seeded.`);
   }
-  const nextSteps = ["Run `node scripts/setup.mjs` — installs @playwright/test and browser binaries."];
+  const nextSteps = [
+    `Run \`node scripts/setup.mjs\` — installs @playwright/test, ${BROWSER_DRIVER_PACKAGE} (the browser smoke's driver) and their browsers.`,
+  ];
   if (!answers.devCommand) {
     nextSteps.push("Set the dev command: edit scripts/dev.mjs (DEV_COMMAND) and testing.devCommand in .launchrail.yml.");
   }
   nextSteps.push(
-    "Review the seeded files — they are yours: playwright config, tests/e2e/, docs/testing/smoke-journeys.md, .mcp.json.",
-    "In Claude Code, approve the seeded Playwright MCP (.mcp.json) for agent-driven browser journeys; where no MCP is available (e.g. headless CI), the seeded Playwright scripts still run.",
-    "Verify: `node scripts/verify.mjs`, then `npx @wemuda/launchrail smoke` with the app running.",
+    "Review the seeded files — they are yours: playwright config, tests/e2e/baseline.spec.ts, scripts/.",
+    "Verify: `node scripts/verify.mjs` runs the deterministic gate (unit + the e2e baseline).",
+    "Browser smoke: after building user-facing behavior, the launch-browser-smoke skill drives the running app with agent-browser — a one-off check of the change, not a test suite (ADR-0034).",
   );
   return {
     manifest,
@@ -168,7 +162,7 @@ function planRalph(parsed: Manifest): ModulePlan {
       "Produce tickets with explicit `Blocked by: #n` edges and the ready-for-agent label (launch-tickets, stage 9 of the workflow).",
       "Start building: /launch-implement in Claude Code drives the ready tickets to verified merges (add a ticket number to build just one).",
       "For an unattended run, launch in a non-prompting permission mode (bypass/autonomous) — a guard hook warns if you start Ralph in an interactive mode, since one benign prompt can stall a walk-away run.",
-      "Tune the repo for the loop: run /launch-loop-readiness in Claude Code — it measures the gates, sets testing.checkCommand (the fast per-land gate; without it the fast gate is the unit command), parallelizes browser journeys, narrows CI triggers, creates the tracker labels, and adds hosted-session setup. `doctor` shows the same readiness lines.",
+      "Tune the repo for the loop: run /launch-loop-readiness in Claude Code — it measures the gates, sets testing.checkCommand (the fast per-land gate; without it the fast gate is the unit command), parallelizes the e2e specs, narrows CI triggers, creates the tracker labels, and adds hosted-session setup. `doctor` shows the same readiness lines.",
       "Start with width 1 until a few tickets have landed cleanly, then widen.",
     ],
   };

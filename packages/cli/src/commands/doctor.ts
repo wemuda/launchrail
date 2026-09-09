@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ADR_REGISTRY_PATH, duplicateAdrNumbers, scanAdrs, unindexedAdrs } from "../lib/adr.js";
-import { BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS, SMOKE_JOURNEYS_PATH } from "../lib/browser-testing.js";
+import { BROWSER_DRIVER_PACKAGE, BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
 import { missingImports } from "../lib/claudeImports.js";
 import {
@@ -19,7 +19,7 @@ import {
   agentsCommandsState,
   ciTriggerReadiness,
   fastGateReadiness,
-  journeyReadiness,
+  e2eReadiness,
   READINESS_SKILL,
   sessionStartHookState,
 } from "../lib/readiness.js";
@@ -203,21 +203,27 @@ export function runDoctor(cwd: string): DoctorOutcome {
     } else {
       add("fail", "playwright config", "no playwright.config.* found — re-run `launchrail add browser-testing`");
     }
-    if (existsSync(join(cwd, SMOKE_JOURNEYS_PATH))) {
-      add("pass", "smoke journeys", SMOKE_JOURNEYS_PATH);
+    // The browser smoke's driver (ADR-0034) installs through scripts/setup.mjs;
+    // a missing one is a warning because the skill carries a script fallback.
+    if (detection.hasBrowserDriverDep) {
+      add("pass", "browser driver", `${BROWSER_DRIVER_PACKAGE} declared`);
     } else {
-      add("warn", "smoke journeys", `${SMOKE_JOURNEYS_PATH} missing — smoke runs will have no defined journeys`);
+      add(
+        "warn",
+        "browser driver",
+        `${BROWSER_DRIVER_PACKAGE} not declared — run \`node scripts/setup.mjs\` so the browser smoke has its driver`,
+      );
     }
     const missingScripts = SEMANTIC_SCRIPTS.filter((name) => !existsSync(join(cwd, "scripts", `${name}.mjs`)));
     if (missingScripts.length === 0) {
-      add("pass", "semantic scripts", "scripts/{setup,dev,verify,smoke,doctor}.mjs");
+      add("pass", "semantic scripts", "scripts/{setup,dev,verify,doctor}.mjs");
     } else {
       add("warn", "semantic scripts", `missing: ${missingScripts.map((name) => `scripts/${name}.mjs`).join(", ")}`);
     }
-    if (manifest.testing.e2eCommand && manifest.testing.smokeCommand) {
-      add("pass", "testing commands", "e2e and smoke commands configured");
+    if (manifest.testing.e2eCommand) {
+      add("pass", "testing commands", "e2e command configured");
     } else {
-      add("warn", "testing commands", `set testing.e2eCommand and testing.smokeCommand in ${MANIFEST_FILENAME}`);
+      add("warn", "testing commands", `set testing.e2eCommand in ${MANIFEST_FILENAME}`);
     }
   }
 
@@ -280,15 +286,15 @@ export function runDoctor(cwd: string): DoctorOutcome {
     }
     if (manifest.modules[BROWSER_TESTING_MODULE]) {
       if (detection.playwrightConfigFile) {
-        const journeys = journeyReadiness(cwd, detection.playwrightConfigFile);
-        if (journeys.serial) {
+        const e2e = e2eReadiness(cwd, detection.playwrightConfigFile);
+        if (e2e.serial) {
           add(
             "warn",
-            "ralph journeys",
-            `${journeys.file} pins ${journeys.evidence} — every full gate runs the browser journeys one at a time; keep the latency-sensitive ones serial and run the rest in parallel (${READINESS_SKILL})`,
+            "ralph e2e specs",
+            `${e2e.file} pins ${e2e.evidence} — every full gate runs the e2e specs one at a time; keep the latency-sensitive ones serial and run the rest in parallel (${READINESS_SKILL})`,
           );
         } else {
-          add("pass", "ralph journeys", `${journeys.file} does not pin a single worker`);
+          add("pass", "ralph e2e specs", `${e2e.file} does not pin a single worker`);
         }
       }
       const hook = sessionStartHookState(cwd);

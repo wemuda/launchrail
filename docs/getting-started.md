@@ -65,18 +65,18 @@ From here the workflow lives in Claude Code, not the CLI:
 1. **Open Claude Code (or another agent) in the project.** The skills are already in `.claude/skills/` — nothing to install. (A Claude Code session that was open during `init` may need `/reload-plugins` or a restart to pick up the new files.)
 2. **Run `/launch`.** The planning conductor detects the project's stage and drives the workflow from there. On a fresh project that starts with vision creation — which also replaces the seeded `AGENTS.md` project-purpose TODO. There is no setup conversation first: the issue-tracker conventions (labels included) and domain-doc rules were already seeded into `docs/agents/` by `init`, straight from your manifest answers. You don't fill the seeded files in by hand; the stages that own the knowledge write it.
 3. **When tickets exist, run `/launch-implement`.** The one door to building: it drives every ready ticket to a verified merge through the Ralph loop — or just one (`/launch-implement 15`), or a bounded slice of the backlog ("the next 5 of spec #2" — it resolves the scope against the tracker, tells you what it resolved, and stops after five verified merges). That's the whole surface to remember: `launch` plans, `launch-implement` builds.
-4. **Adopting an existing codebase?** Run `/launch-loop-readiness` once before the first `/launch-implement`. It measures your verification gates and tunes the repo for the loop — a fast per-land gate, parallel browser journeys, shared caches, CI triggers, tracker labels, hosted-session setup — and `doctor` shows the same findings as warn-only `ralph …` lines.
+4. **Adopting an existing codebase?** Run `/launch-loop-readiness` once before the first `/launch-implement`. It measures your verification gates and tunes the repo for the loop — a fast per-land gate, parallel e2e specs, shared caches, CI triggers, tracker labels, hosted-session setup — and `doctor` shows the same findings as warn-only `ralph …` lines.
 
 Teammates don't need the CLI at all: the skills are committed files, so a `git pull` gives everyone the same workflow — no install, no per-machine plugin state.
 
 ## Adding modules
 
 ```bash
-npx @wemuda/launchrail add browser-testing   # Playwright baseline + smoke-journey contract (ADR-0004)
+npx @wemuda/launchrail add browser-testing   # Playwright e2e baseline + the browser smoke's driver (ADR-0004, ADR-0034)
 npx @wemuda/launchrail add ralph             # re-install the Ralph loop's materials (installed by init; ADR-0005/0018)
 ```
 
-Both update the manifest (preserving your comments), seed or manage their files, and extend the generated Claude instructions. `verify` runs the deterministic gate; `smoke` scaffolds an evidence bundle for an agentic browser-smoke run. The Ralph loop itself needs no `add` on the golden path — `init` installs it, and `sync` brings older projects current.
+Both update the manifest (preserving your comments), seed or manage their files, and extend the generated Claude instructions. `verify` runs the deterministic gate; the browser smoke is the `launch-browser-smoke` skill driving the running app — one-off, nothing scaffolded. The Ralph loop itself needs no `add` on the golden path — `init` installs it, and `sync` brings older projects current.
 
 ## Updating to a new release
 

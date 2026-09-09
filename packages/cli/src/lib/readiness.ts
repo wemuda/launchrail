@@ -24,7 +24,7 @@ export interface FastGateReadiness {
 
 /**
  * `verify --fast` runs `testing.checkCommand` and falls back to the unit command.
- * On a project with browser journeys that fallback makes every land pay the full
+ * On a project with e2e specs that fallback makes every land pay the full
  * suite — a warning; on a light project it is fine, and only worth a hint.
  */
 export function fastGateReadiness(manifest: Manifest, detection: RepoDetection): FastGateReadiness {
@@ -39,7 +39,7 @@ export function fastGateReadiness(manifest: Manifest, detection: RepoDetection):
   if (heavy) {
     return {
       status: "warn",
-      message: `testing.checkCommand unset — the loop's per-land gate is the full unit command, browser journeys included; name a lint + typecheck + quick-unit command (${READINESS_SKILL} measures and sets it)`,
+      message: `testing.checkCommand unset — the loop's per-land gate is the full unit command, e2e specs included; name a lint + typecheck + quick-unit command (${READINESS_SKILL} measures and sets it)`,
     };
   }
   return {
@@ -99,19 +99,19 @@ export function ciTriggerReadiness(cwd: string): CiTriggerReadiness {
   return { workflows, everyPush };
 }
 
-export interface JourneyReadiness {
+export interface E2eReadiness {
   file: string;
-  /** The config pins Playwright to a single worker, so every journey runs serially. */
+  /** The config pins Playwright to a single worker, so every e2e spec runs serially. */
   serial: boolean;
   evidence: string | null;
 }
 
 /**
- * A `workers: 1` pin makes the whole journey suite serial — the full gate's
+ * A `workers: 1` pin makes the whole e2e suite serial — the full gate's
  * dominant cost in the field. A textual heuristic (the config is code): it flags
  * only the global single-worker pin, never per-project parallelism choices.
  */
-export function journeyReadiness(cwd: string, configFile: string): JourneyReadiness {
+export function e2eReadiness(cwd: string, configFile: string): E2eReadiness {
   const source = readFileSync(join(cwd, configFile), "utf8");
   const match = /\bworkers\s*:\s*1\b(?!\s*:)/.exec(source);
   return { file: configFile, serial: match !== null, evidence: match?.[0] ?? null };

@@ -30,8 +30,9 @@ export interface VerifyOptions {
 
 /**
  * Run the project's deterministic verification contract: every configured
- * check, in order, with a pass/fail summary. Agentic smoke testing is separate
- * (`launchrail smoke`) — verify is the stable release gate. `--fast` runs the
+ * check, in order, with a pass/fail summary. The browser smoke is separate — a
+ * one-off, agent-driven check of a change (ADR-0034) — verify is the stable
+ * release gate. `--fast` runs the
  * cheap tier only (see VerifyOptions).
  */
 export function runVerify(cwd: string, options: VerifyOptions = {}): VerifyOutcome {

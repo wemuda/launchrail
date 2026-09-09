@@ -11,8 +11,9 @@ import {
   planRemovePluginDeclaration,
   RETIRED_SUPERPOWERS_DECLARATION,
 } from "./claudeSettings.js";
+import { RETIRED_BROWSER_TESTING_SEEDS } from "./browser-testing.js";
 import type { Lockfile } from "./lockfile.js";
-import { MANIFEST_FILENAME, parseManifest, removeManifestKey, setModuleEnabled } from "./manifest.js";
+import { MANIFEST_FILENAME, parseManifest, removeManifestKey, removeTestingKey, setModuleEnabled } from "./manifest.js";
 import { RALPH_MODULE, RALPH_WORKFLOW_PATH, ralphFiles } from "./ralph.js";
 import { SKILLS_DEST_PREFIX, skillFiles } from "./skills.js";
 import { applyPlan, planWrites } from "./writer.js";
@@ -279,6 +280,74 @@ export const MIGRATIONS: Migration[] = [
           }
           if (settingsRemoval !== null) applyRemovePluginDeclaration(ctx.cwd, settingsRemoval);
           if (ralphActions.length > 0) applyPlan(ctx.cwd, ralphActions, ctx.lockfile);
+        },
+      };
+    },
+  },
+  {
+    id: "2026-09-browser-smoke-one-off",
+    description:
+      "retire the smoke-journey catalogue, the evidence bundle, the smoke entry point and the seeded Playwright MCP — the browser smoke is one-off driving of the running stack, the e2e lane stays thin (ADR-0034)",
+    plan(ctx) {
+      const none = { changes: [], apply: () => {} };
+      const manifestPath = join(ctx.cwd, MANIFEST_FILENAME);
+      if (!existsSync(manifestPath)) return none;
+      const source = readFileSync(manifestPath, "utf8");
+      // An invalid manifest is sync's own precondition failure, not this
+      // migration's.
+      if (!parseManifest(source).manifest) return none;
+      const changes: string[] = [];
+
+      // 1. The retired seeds. Delete each tracked copy that is unmodified since
+      // Launchrail wrote it; a locally modified copy stays on disk — its content
+      // is the project's (a journeys file becomes ticket text at the project's
+      // own pace) — and only stops being tracked. A path Launchrail never wrote
+      // is not touched at all.
+      const removable: string[] = [];
+      const keptModified: string[] = [];
+      for (const relPath of RETIRED_BROWSER_TESTING_SEEDS) {
+        const entry = ctx.lockfile.files[relPath];
+        if (!entry || entry.class === "ejected") continue;
+        const abs = join(ctx.cwd, relPath);
+        if (!existsSync(abs) || sha256(readFileSync(abs, "utf8")) === entry.checksum) {
+          removable.push(relPath);
+        } else {
+          keptModified.push(relPath);
+        }
+      }
+      for (const relPath of removable) {
+        changes.push(`${relPath} — remove (retired seed, unmodified since Launchrail wrote it)`);
+      }
+      for (const relPath of keptModified) {
+        changes.push(`${relPath} — locally modified; kept on disk, no longer managed`);
+      }
+
+      // 2. The manifest's testing.smokeCommand is retired — there is no smoke
+      // entry point; the browser smoke is the skill driving the running app.
+      const keyRemoval = removeTestingKey(source, "smokeCommand");
+      if (keyRemoval.changed) changes.push(`${MANIFEST_FILENAME} — remove the retired testing.smokeCommand field`);
+
+      if (changes.length === 0) return none;
+      return {
+        changes,
+        apply: () => {
+          for (const relPath of removable) {
+            const abs = join(ctx.cwd, relPath);
+            if (existsSync(abs)) unlinkSync(abs);
+            delete ctx.lockfile.files[relPath];
+            // Clear the directory a delete emptied (docs/testing/); rmdir
+            // refuses a non-empty one, which is exactly the guard.
+            const dir = dirname(abs);
+            if (dir !== ctx.cwd) {
+              try {
+                rmdirSync(dir);
+              } catch {
+                // Not empty, or the project root — leave it.
+              }
+            }
+          }
+          for (const relPath of keptModified) delete ctx.lockfile.files[relPath];
+          if (keyRemoval.changed) writeFileSync(manifestPath, keyRemoval.source, "utf8");
         },
       };
     },

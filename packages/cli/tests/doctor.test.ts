@@ -113,7 +113,8 @@ describe("launchrail doctor", () => {
     const dep = outcome.checks.find((c) => c.name === "playwright dependency");
     expect(dep?.status).toBe("fail");
     expect(outcome.checks.find((c) => c.name === "playwright config")?.status).toBe("pass");
-    expect(outcome.checks.find((c) => c.name === "smoke journeys")?.status).toBe("pass");
+    // The browser smoke's driver is advice, never a failure — the skill has a fallback.
+    expect(outcome.checks.find((c) => c.name === "browser driver")?.status).toBe("warn");
     expect(outcome.checks.find((c) => c.name === "semantic scripts")?.status).toBe("pass");
     expect(outcome.checks.find((c) => c.name === "testing commands")?.status).toBe("pass");
   });
@@ -122,11 +123,12 @@ describe("launchrail doctor", () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     writeFileSync(
       join(tmp.root, "package.json"),
-      JSON.stringify({ name: "app", devDependencies: { "@playwright/test": "^1.0.0" } }),
+      JSON.stringify({ name: "app", devDependencies: { "@playwright/test": "^1.0.0", "agent-browser": "^0.1.0" } }),
     );
     await runAdd({ cwd: tmp.root, module: "browser-testing", dryRun: false, yes: true });
     const outcome = runDoctor(tmp.root);
     expect(outcome.checks.filter((c) => c.status === "fail")).toEqual([]);
+    expect(outcome.checks.find((c) => c.name === "browser driver")?.status).toBe("pass");
   });
 });
 

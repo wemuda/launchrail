@@ -82,11 +82,10 @@ function claudeGeneratedMd(ctx: SeedContext): string {
     ? `
 ## Browser testing
 
-- User-facing changes are verified twice: deterministic checks (\`node scripts/verify.mjs\`) and agentic smoke journeys from \`docs/testing/smoke-journeys.md\` (browser-smoke skill).
-- Start the app with \`node scripts/dev.mjs\` (\`--background\` in cloud or CI sessions); prepare an evidence bundle with \`npx @wemuda/launchrail smoke\`.
-- Drive journeys agentically via the seeded Playwright MCP (\`.mcp.json\`, approve it once in Claude Code) or a Playwright script — whichever the session has; headless CI falls back to the scripts.
-- Smoke evidence lives in \`artifacts/verification/<run-id>/\` — fill in \`summary.md\`; only summary, deviations, and meta are meant to be committed.
-- When a smoke run finds a real bug: reproduce it, add a failing deterministic test, fix, prove the test passes, re-run the journey.
+- Two lanes (ADR-0034). **e2e** is deterministic and thin: \`npx @wemuda/launchrail verify\` runs the unit command and the Playwright specs under \`tests/e2e/\`; a spec is added for a standing golden path or a behavior only a real browser can exercise, never as the by-product of a smoke. **Browser smoke** is one-off: after building user-facing behavior, drive the running app in a real browser per the \`launch-browser-smoke\` skill to see the change working, report what you saw, and move on — no journeys file, no evidence bundle, no test written from it.
+- Start the app with \`node scripts/dev.mjs\` (\`--background\` in cloud or CI sessions; \`--port <n>\` when other builders share the machine); it writes the URL to \`.launchrail/state/dev.url\` and, in background mode, the pid to \`.launchrail/state/dev.pid\`.
+- The smoke's driver is \`agent-browser\` (installed by \`node scripts/setup.mjs\`), driven from the shell — \`open\`, \`snapshot -i\`, \`click @ref\`, \`fill\`, \`wait\`, \`screenshot\`, \`errors\`, \`console\`, \`network requests\` — one \`--session\` per ticket.
+- A bug the smoke finds gets its regression test at the cheapest seam that catches it — unit or integration first; a Playwright spec only when the ticket asks for one.
 `
     : "";
 
@@ -101,7 +100,7 @@ function claudeGeneratedMd(ctx: SeedContext): string {
 - A ticket counts done only when its landing commit is on the remote base, the issue is closed, and the gates are green — agent reports are claims, not evidence.
 - \`.claude/workflows/ralph.js\` is managed by Launchrail: override policy per run via workflow args (e.g. \`{ width: 1 }\`), never by editing the file.
 - Launch unattended runs in a non-prompting permission mode (bypass/autonomous); a guard hook (\`.claude/hooks/ralph-permission-guard.py\`) warns if the \`ralph\` workflow starts in an interactive mode, since one benign prompt can stall a walk-away run and lose the container mid-ticket.
-- \`launch-loop-readiness\` tunes the repo for the loop — fast gate, parallel journeys, shared caches, CI triggers, labels, hosted-session setup, verbatim commands — with measurements; \`doctor\`'s \`ralph …\` readiness lines say when it is worth running.
+- \`launch-loop-readiness\` tunes the repo for the loop — fast gate, parallel e2e specs, shared caches, CI triggers, labels, hosted-session setup, verbatim commands — with measurements; \`doctor\`'s \`ralph …\` readiness lines say when it is worth running.
 `
     : "";
 

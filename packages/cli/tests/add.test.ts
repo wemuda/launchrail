@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runAdd } from "../src/commands/add.js";
@@ -7,16 +8,16 @@ import { parseManifest } from "../src/lib/manifest.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
 
 const SEEDED_FILES = [
-  ".mcp.json",
   "playwright.config.ts",
-  "tests/e2e/smoke.spec.ts",
-  "docs/testing/smoke-journeys.md",
+  "tests/e2e/baseline.spec.ts",
   "scripts/setup.mjs",
   "scripts/dev.mjs",
   "scripts/verify.mjs",
-  "scripts/smoke.mjs",
   "scripts/doctor.mjs",
 ];
+
+/** Retired by ADR-0034 — the module must not seed any of these again. */
+const RETIRED_FILES = [".mcp.json", "docs/testing/smoke-journeys.md", "scripts/smoke.mjs", "tests/e2e/smoke.spec.ts"];
 
 let tmp: TmpRepo;
 beforeEach(async () => {
@@ -36,20 +37,49 @@ describe("launchrail add browser-testing", () => {
     for (const file of SEEDED_FILES) {
       expect(existsSync(join(tmp.root, file)), file).toBe(true);
     }
-    const mcp = JSON.parse(readFileSync(join(tmp.root, ".mcp.json"), "utf8"));
-    expect(mcp.mcpServers.playwright.args).toContain("@playwright/mcp@latest");
+    for (const file of RETIRED_FILES) {
+      expect(existsSync(join(tmp.root, file)), file).toBe(false);
+    }
     const parsed = parseManifest(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8"));
     expect(parsed.manifest?.modules["browser-testing"]).toBe(true);
     expect(parsed.manifest?.testing.appUrl).toBe("http://localhost:3000");
     expect(parsed.manifest?.testing.e2eCommand).toBe("npx playwright test");
-    expect(parsed.manifest?.testing.smokeCommand).toBe("node scripts/smoke.mjs");
+    expect(readFileSync(join(tmp.root, ".launchrail.yml"), "utf8")).not.toContain("smokeCommand");
   });
 
-  test("regenerates the managed Claude instructions with a browser-testing section", async () => {
+  test("setup installs the browser smoke's driver next to Playwright", async () => {
+    await addBrowserTesting();
+    const setup = readFileSync(join(tmp.root, "scripts/setup.mjs"), "utf8");
+    expect(setup).toContain("@playwright/test");
+    expect(setup).toContain("npx playwright install");
+    expect(setup).toContain("agent-browser");
+    expect(setup).toContain("npx agent-browser install");
+  });
+
+  test("dev.mjs honors --port, exposes it as PORT, and records the URL for agents", async () => {
+    // A dev script that prints the port it was given stands in for the app.
+    writeFileSync(
+      join(tmp.root, "package.json"),
+      JSON.stringify({ name: "app", scripts: { dev: "node -e \"console.log('PORT=' + process.env.PORT)\"" } }),
+    );
+    await addBrowserTesting();
+    const output = execFileSync(process.execPath, ["scripts/dev.mjs", "--port", "4321"], {
+      cwd: tmp.root,
+      encoding: "utf8",
+    });
+    expect(output).toContain("PORT=4321");
+    expect(readFileSync(join(tmp.root, ".launchrail/state/dev.url"), "utf8")).toBe("http://localhost:4321\n");
+    expect(readFileSync(join(tmp.root, ".launchrail/state/.gitignore"), "utf8")).toBe("*\n");
+  });
+
+  test("regenerates the managed Claude instructions with the two-lane browser-testing section", async () => {
     await addBrowserTesting();
     const generated = readFileSync(join(tmp.root, ".launchrail/CLAUDE.generated.md"), "utf8");
     expect(generated).toContain("## Browser testing");
-    expect(generated).toContain("smoke-journeys.md");
+    expect(generated).toContain("launch-browser-smoke");
+    expect(generated).toContain("agent-browser");
+    expect(generated).not.toContain("smoke-journeys.md");
+    expect(generated).not.toContain("artifacts/verification");
   });
 
   test("tracks seeded files in the lockfile and records decisions", async () => {
@@ -60,12 +90,13 @@ describe("launchrail add browser-testing", () => {
     }
     expect(lock.decisions["module:browser-testing"]).toBe(true);
     expect(lock.decisions.appUrl).toBe("http://localhost:3000");
+    expect(lock.decisions).not.toHaveProperty("smokeCommand");
   });
 
   test("marks scripts executable", async () => {
     if (process.platform === "win32") return;
     await addBrowserTesting();
-    const mode = statSync(join(tmp.root, "scripts/smoke.mjs")).mode;
+    const mode = statSync(join(tmp.root, "scripts/dev.mjs")).mode;
     expect(mode & 0o111).not.toBe(0);
   });
 
@@ -103,27 +134,17 @@ describe("launchrail add browser-testing", () => {
     expect(outcome.code).toBe(0);
     const planned = outcome.actions.map((a) => a.spec.relPath);
     expect(planned).not.toContain("playwright.config.ts");
-    expect(planned).not.toContain("tests/e2e/smoke.spec.ts");
-    expect(existsSync(join(tmp.root, "docs/testing/smoke-journeys.md"))).toBe(true);
+    expect(planned).not.toContain("tests/e2e/baseline.spec.ts");
+    expect(existsSync(join(tmp.root, "scripts/dev.mjs"))).toBe(true);
   });
 
-  test("never overwrites an existing smoke-journeys file", async () => {
-    mkdirSync(join(tmp.root, "docs/testing"), { recursive: true });
-    writeFileSync(join(tmp.root, "docs/testing/smoke-journeys.md"), "# Our journeys\n", "utf8");
+  test("never overwrites an existing seeded script", async () => {
+    await addBrowserTesting();
+    writeFileSync(join(tmp.root, "scripts/dev.mjs"), "// ours\n", "utf8");
     const outcome = await addBrowserTesting();
     expect(outcome.code).toBe(0);
-    expect(readFileSync(join(tmp.root, "docs/testing/smoke-journeys.md"), "utf8")).toBe("# Our journeys\n");
-    const action = outcome.actions.find((a) => a.spec.relPath === "docs/testing/smoke-journeys.md");
-    expect(action?.kind).toBe("skip-seeded-exists");
-  });
-
-  test("never overwrites an existing .mcp.json (keeps the project's MCP servers)", async () => {
-    const existing = '{\n  "mcpServers": {\n    "custom": { "command": "node", "args": ["mine.js"] }\n  }\n}\n';
-    writeFileSync(join(tmp.root, ".mcp.json"), existing, "utf8");
-    const outcome = await addBrowserTesting();
-    expect(outcome.code).toBe(0);
-    expect(readFileSync(join(tmp.root, ".mcp.json"), "utf8")).toBe(existing);
-    const action = outcome.actions.find((a) => a.spec.relPath === ".mcp.json");
+    expect(readFileSync(join(tmp.root, "scripts/dev.mjs"), "utf8")).toBe("// ours\n");
+    const action = outcome.actions.find((a) => a.spec.relPath === "scripts/dev.mjs");
     expect(action?.kind).toBe("skip-seeded-exists");
   });
 

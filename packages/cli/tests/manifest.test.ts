@@ -11,7 +11,6 @@ const manifest: Manifest = {
     checkCommand: "pnpm lint && pnpm typecheck",
     devCommand: "pnpm dev",
     e2eCommand: "npx playwright test",
-    smokeCommand: "node scripts/smoke.mjs",
     appUrl: "http://localhost:3000",
   },
   modules: { core: true },
@@ -59,10 +58,21 @@ describe("manifest", () => {
         checkCommand: null,
         devCommand: null,
         e2eCommand: null,
-        smokeCommand: null,
         appUrl: null,
       },
       modules: { core: true },
+    });
+  });
+
+  test("ignores the retired testing.smokeCommand key — pre-ADR-0034 manifests stay valid", () => {
+    const parsed = parseManifest("schemaVersion: 1\ntesting:\n  smokeCommand: node scripts/smoke.mjs\n  e2eCommand: npx playwright test\n");
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.manifest?.testing).toEqual({
+      unitCommand: null,
+      checkCommand: null,
+      devCommand: null,
+      e2eCommand: "npx playwright test",
+      appUrl: null,
     });
   });
 

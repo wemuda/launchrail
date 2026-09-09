@@ -207,3 +207,94 @@ describe("migration engine", () => {
     expect(planned.find((p) => p.id === "2026-08-workflow-skills-independence")?.changes).toEqual([]);
   });
 });
+
+describe("2026-09-browser-smoke-one-off (ADR-0034)", () => {
+  const ID = "2026-09-browser-smoke-one-off";
+  const MANIFEST = [
+    "# my precious comment",
+    "schemaVersion: 1",
+    "issueTracker: github",
+    "testing:",
+    "  unitCommand: npm test",
+    "  e2eCommand: npx playwright test # keep this",
+    "  smokeCommand: node scripts/smoke.mjs",
+    "  appUrl: http://localhost:3000",
+    "modules:",
+    "  core: true",
+    "  browser-testing: true",
+    "",
+  ].join("\n");
+
+  function seed(relPath: string, content: string, tracked = true): void {
+    const abs = join(tmp.root, relPath);
+    mkdirSync(join(abs, ".."), { recursive: true });
+    writeFileSync(abs, content, "utf8");
+    if (tracked) lockfile.files[relPath] = { class: "seeded", checksum: sha256(content) };
+  }
+
+  test("removes the unmodified retired seeds, keeps a modified one, and strips testing.smokeCommand", () => {
+    writeFileSync(join(tmp.root, ".launchrail.yml"), MANIFEST);
+    seed(".mcp.json", '{ "mcpServers": {} }\n');
+    seed("scripts/smoke.mjs", "#!/usr/bin/env node\n");
+    seed("docs/testing/smoke-journeys.md", "# Smoke journeys\n");
+    // The project edited its journeys: the content is theirs now.
+    writeFileSync(join(tmp.root, "docs/testing/smoke-journeys.md"), "# Smoke journeys\n\n## Journey: Checkout\n", "utf8");
+    // A file Launchrail never wrote is not touched, tracked or not.
+    seed("scripts/verify.mjs", "// still seeded\n");
+
+    const results = applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS);
+    const result = results.find((r) => r.id === ID);
+    expect(result?.status).toBe("applied");
+    expect(result?.changes).toEqual([
+      "scripts/smoke.mjs — remove (retired seed, unmodified since Launchrail wrote it)",
+      ".mcp.json — remove (retired seed, unmodified since Launchrail wrote it)",
+      "docs/testing/smoke-journeys.md — locally modified; kept on disk, no longer managed",
+      ".launchrail.yml — remove the retired testing.smokeCommand field",
+    ]);
+
+    expect(existsSync(join(tmp.root, ".mcp.json"))).toBe(false);
+    expect(existsSync(join(tmp.root, "scripts/smoke.mjs"))).toBe(false);
+    expect(readFileSync(join(tmp.root, "docs/testing/smoke-journeys.md"), "utf8")).toContain("## Journey: Checkout");
+    expect(existsSync(join(tmp.root, "scripts/verify.mjs"))).toBe(true);
+    expect(lockfile.files).not.toHaveProperty(".mcp.json");
+    expect(lockfile.files).not.toHaveProperty("scripts/smoke.mjs");
+    expect(lockfile.files).not.toHaveProperty("docs/testing/smoke-journeys.md");
+    expect(lockfile.files["scripts/verify.mjs"]).toBeDefined();
+
+    const migrated = readFileSync(join(tmp.root, ".launchrail.yml"), "utf8");
+    expect(migrated).not.toContain("smokeCommand");
+    expect(migrated).toContain("# my precious comment");
+    expect(migrated).toContain("e2eCommand: npx playwright test # keep this");
+
+    // Idempotent: nothing left to do for a fresh lockfile against the migrated tree.
+    const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
+    expect(planned.find((p) => p.id === ID)?.changes).toEqual([]);
+  });
+
+  test("clears the directory a removed journeys file leaves empty", () => {
+    writeFileSync(join(tmp.root, ".launchrail.yml"), "schemaVersion: 1\nmodules:\n  core: true\n");
+    seed("docs/testing/smoke-journeys.md", "# Smoke journeys\n");
+    applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS);
+    expect(existsSync(join(tmp.root, "docs/testing"))).toBe(false);
+    expect(existsSync(join(tmp.root, "docs"))).toBe(true);
+  });
+
+  test("leaves an ejected copy and an untracked copy alone", () => {
+    writeFileSync(join(tmp.root, ".launchrail.yml"), "schemaVersion: 1\nmodules:\n  core: true\n");
+    seed(".mcp.json", '{ "mcpServers": {} }\n');
+    lockfile.files[".mcp.json"] = { class: "ejected", checksum: lockfile.files[".mcp.json"]!.checksum };
+    seed("scripts/smoke.mjs", "#!/usr/bin/env node\n", false);
+    const results = applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS);
+    expect(results.find((r) => r.id === ID)?.status).toBe("already-satisfied");
+    expect(existsSync(join(tmp.root, ".mcp.json"))).toBe(true);
+    expect(existsSync(join(tmp.root, "scripts/smoke.mjs"))).toBe(true);
+    expect(lockfile.files[".mcp.json"]?.class).toBe("ejected");
+  });
+
+  test("is a no-op without a manifest", () => {
+    seed(".mcp.json", '{ "mcpServers": {} }\n');
+    const results = applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS);
+    expect(results.find((r) => r.id === ID)?.status).toBe("already-satisfied");
+    expect(existsSync(join(tmp.root, ".mcp.json"))).toBe(true);
+  });
+});

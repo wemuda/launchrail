@@ -12,7 +12,7 @@ import {
   agentsCommandsState,
   ciTriggerReadiness,
   fastGateReadiness,
-  journeyReadiness,
+  e2eReadiness,
   sessionStartHookState,
 } from "../src/lib/readiness.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
@@ -40,7 +40,7 @@ describe("loop readiness — the fast gate", () => {
     expect(fastGateReadiness(m, detectRepo(tmp.root))).toEqual({ status: "pass", message: "fast gate: pnpm lint && pnpm typecheck" });
   });
 
-  test("unset on a project with browser journeys warns — every land would pay the full suite", () => {
+  test("unset on a project with e2e specs warns — every land would pay the full suite", () => {
     const m = manifestFrom("testing:\n  unitCommand: pnpm test\n  e2eCommand: npx playwright test\nmodules:\n  core: true\n  browser-testing: true\n");
     const r = fastGateReadiness(m, detectRepo(tmp.root));
     expect(r.status).toBe("warn");
@@ -85,14 +85,14 @@ describe("loop readiness — CI triggers", () => {
   });
 });
 
-describe("loop readiness — journeys, hosted setup, commands", () => {
+describe("loop readiness — e2e specs, hosted setup, commands", () => {
   test("a workers: 1 pin is serial; a real worker count or a CI-conditional is not", () => {
     writeFileSync(join(tmp.root, "playwright.config.ts"), "export default { workers: 1, fullyParallel: false }\n");
-    expect(journeyReadiness(tmp.root, "playwright.config.ts")).toEqual({ file: "playwright.config.ts", serial: true, evidence: "workers: 1" });
+    expect(e2eReadiness(tmp.root, "playwright.config.ts")).toEqual({ file: "playwright.config.ts", serial: true, evidence: "workers: 1" });
     writeFileSync(join(tmp.root, "playwright.config.ts"), "export default { workers: process.env.CI ? 1 : 4 }\n");
-    expect(journeyReadiness(tmp.root, "playwright.config.ts").serial).toBe(false);
+    expect(e2eReadiness(tmp.root, "playwright.config.ts").serial).toBe(false);
     writeFileSync(join(tmp.root, "playwright.config.ts"), "export default { workers: 4 }\n");
-    expect(journeyReadiness(tmp.root, "playwright.config.ts").serial).toBe(false);
+    expect(e2eReadiness(tmp.root, "playwright.config.ts").serial).toBe(false);
   });
 
   test("a SessionStart hook counts only when a command is registered", () => {
@@ -117,7 +117,7 @@ describe("loop readiness — journeys, hosted setup, commands", () => {
 });
 
 describe("doctor reports loop readiness as advice, never as a failure", () => {
-  test("a light project after init: fast-gate hint, documented commands, no CI or journey lines", async () => {
+  test("a light project after init: fast-gate hint, documented commands, no CI or e2e lines", async () => {
     writeFileSync(join(tmp.root, "package.json"), JSON.stringify({ name: "app", scripts: { test: "node --test" } }));
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     const outcome = runDoctor(tmp.root);
@@ -125,7 +125,7 @@ describe("doctor reports loop readiness as advice, never as a failure", () => {
     expect(outcome.checks.find((c) => c.name === "ralph fast gate")).toMatchObject({ status: "pass" });
     expect(outcome.checks.find((c) => c.name === "ralph commands")).toMatchObject({ status: "pass" });
     expect(names).not.toContain("ralph ci triggers");
-    expect(names).not.toContain("ralph journeys");
+    expect(names).not.toContain("ralph e2e specs");
     expect(names).not.toContain("ralph hosted setup");
     expect(outcome.code).toBe(0);
   });
@@ -144,14 +144,14 @@ describe("doctor reports loop readiness as advice, never as a failure", () => {
     expect(outcome.code).toBe(0);
   });
 
-  test("with browser testing: the journeys pin and the missing SessionStart hook warn, and both clear", async () => {
+  test("with browser testing: the e2e workers pin and the missing SessionStart hook warn, and both clear", async () => {
     writeFileSync(join(tmp.root, "package.json"), JSON.stringify({ name: "app", scripts: { test: "vitest run" } }));
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     await runAdd({ cwd: tmp.root, module: "browser-testing", dryRun: false, yes: true });
     writeFileSync(join(tmp.root, "playwright.config.ts"), "export default { workers: 1 }\n");
     const before = runDoctor(tmp.root);
     expect(before.checks.find((c) => c.name === "ralph fast gate")).toMatchObject({ status: "warn" });
-    expect(before.checks.find((c) => c.name === "ralph journeys")).toMatchObject({ status: "warn" });
+    expect(before.checks.find((c) => c.name === "ralph e2e specs")).toMatchObject({ status: "warn" });
     expect(before.checks.find((c) => c.name === "ralph hosted setup")).toMatchObject({ status: "warn" });
 
     writeFileSync(join(tmp.root, "playwright.config.ts"), "export default { workers: 4 }\n");
@@ -163,7 +163,7 @@ describe("doctor reports loop readiness as advice, never as a failure", () => {
     writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace("checkCommand: null", "checkCommand: pnpm lint && vitest run"));
     const after = runDoctor(tmp.root);
     expect(after.checks.find((c) => c.name === "ralph fast gate")).toMatchObject({ status: "pass" });
-    expect(after.checks.find((c) => c.name === "ralph journeys")).toMatchObject({ status: "pass" });
+    expect(after.checks.find((c) => c.name === "ralph e2e specs")).toMatchObject({ status: "pass" });
     expect(after.checks.find((c) => c.name === "ralph hosted setup")).toMatchObject({ status: "pass" });
   });
 });

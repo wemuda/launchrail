@@ -58,10 +58,10 @@ From there, the day-to-day driver is not the CLI — it's the **`launch` skill**
 - **`launch-design-handoff`** — the design→code on-ramp: drop a Claude Design export (a zip, a folder, artboards) and it becomes a committed handoff package under `docs/design/` — read against the code and design system, gaps recorded as the grill's agenda — then sized into the loop ([ADR-0024](docs/adr/0024-design-handoff-onramp.md))
 - **`launch-vision-creation`**, **`launch-discovery`**, **`launch-grill`**, **`launch-research`** — vision, then the divergent landscape scan, the grill (the convergent interview that runs both as the foundation's complexity grill and per-feature before speccing, keeping the glossary and ADRs honest as it goes), and primary-source research
 - **`launch-wayfinder`**, **`launch-spec`**, **`launch-tickets`**, **`launch-design-validation`** — break big work into decision maps, synthesize the spec, validate it visually, and cut tracer-bullet tickets with blocking edges
-- **`launch-browser-smoke`** — drives a real browser journey and leaves a traceable evidence bundle (with the browser-testing module)
+- **`launch-browser-smoke`** — drives the running app in a real browser to see a just-built change working — one-off, from the shell with `agent-browser`, no test suite and no evidence bundle ([ADR-0034](docs/adr/0034-browser-smoke-one-off-driving.md); with the browser-testing module)
 - **`launch-implement`** — the one door to building: `/launch-implement` drives ready tickets to verified merges through the Ralph loop (a ticket number builds just that one; "the next 5 of spec #2" scopes and caps a run)
 - **`launch-ralph`**, **`launch-ralph-implement`**, **`launch-code-review`**, **`launch-resolving-merge-conflicts`** — the verification-gated loop engine behind that door, installed by `init`
-- **`launch-loop-readiness`** — checks and tunes a repo for the loop: measures the gates, sets the fast per-land gate, parallelizes browser journeys, shares caches for parallel builders, narrows CI triggers, creates the tracker labels, adds hosted-session setup ([ADR-0033](docs/adr/0033-loop-readiness.md)); `doctor` shows the same findings as warn-only readiness lines
+- **`launch-loop-readiness`** — checks and tunes a repo for the loop: measures the gates, sets the fast per-land gate, parallelizes the e2e specs, shares caches for parallel builders, narrows CI triggers, creates the tracker labels, adds hosted-session setup ([ADR-0033](docs/adr/0033-loop-readiness.md)); `doctor` shows the same findings as warn-only readiness lines
 
 The CLI is the maintenance surface you return to between sessions:
 
@@ -72,7 +72,6 @@ npx @wemuda/launchrail sync                  # apply managed updates + run migra
 npx @wemuda/launchrail add browser-testing   # enable a module
 npx @wemuda/launchrail doctor                # repository and environment checks
 npx @wemuda/launchrail verify                # deterministic verification gate
-npx @wemuda/launchrail smoke                 # scaffold a browser-smoke evidence bundle
 npx @wemuda/launchrail eject <module|file>   # opt out of management (vendor mode: --all)
 ```
 

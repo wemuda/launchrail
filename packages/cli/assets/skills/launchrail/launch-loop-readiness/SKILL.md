@@ -1,6 +1,6 @@
 ---
 name: launch-loop-readiness
-description: Check and tune a repository for the implementation loop — measure the verification gates, then set the fast per-land gate, parallelize browser journeys, share caches for parallel builders, narrow CI triggers, create the tracker labels, add hosted-session setup, and document the verbatim commands. Measured first, applied with one confirmation, never a gate on the rail. Run once before the first /launch-implement on an existing codebase, or whenever doctor's `ralph …` readiness lines warn.
+description: Check and tune a repository for the implementation loop — measure the verification gates, then set the fast per-land gate, parallelize the e2e specs, share caches for parallel builders, narrow CI triggers, create the tracker labels, add hosted-session setup, and document the verbatim commands. Measured first, applied with one confirmation, never a gate on the rail. Run once before the first /launch-implement on an existing codebase, or whenever doctor's `ralph …` readiness lines warn.
 ---
 
 # Loop readiness — tune the repo for the implementation loop
@@ -11,16 +11,16 @@ It is advice, never a gate: `/launch-implement` runs whether or not this skill e
 
 ## Contract
 
-- **Measure before proposing.** Every finding carries a number — seconds cold, seconds warm, journeys count — from a run you made, not an estimate.
-- **Propose in impact order, with the expected saving**, then apply everything reversible in **one confirmation round** (the interaction contract in [`workflow.md`](../launch/workflow.md): reversible implementation details are yours, the user confirms only what touches their testing methodology — which journeys stay serial, what CI still runs).
-- **Never weaken coverage.** No deleted, skipped, or loosened tests; no lowered assertions; latency-sensitive journeys stay serial. Speed comes from tiering, parallelism, caching, and not running the same suite twice.
+- **Measure before proposing.** Every finding carries a number — seconds cold, seconds warm, e2e spec count — from a run you made, not an estimate.
+- **Propose in impact order, with the expected saving**, then apply everything reversible in **one confirmation round** (the interaction contract in [`workflow.md`](../launch/workflow.md): reversible implementation details are yours, the user confirms only what touches their testing methodology — which e2e specs stay serial, what CI still runs).
+- **Never weaken coverage.** No deleted, skipped, or loosened tests; no lowered assertions; latency-sensitive e2e specs stay serial. Speed comes from tiering, parallelism, caching, and not running the same suite twice.
 - **Idempotent.** Re-running on a tuned repo reports "ready" and changes nothing.
 - **One commit** at the end, in the project's convention (`chore: tune the repo for the implementation loop`), listing what changed.
 
 ## Step 1 — Inventory (read-only)
 
 1. `npx @wemuda/launchrail doctor` — collect every `ralph …` line; they are the deterministic half of this checklist.
-2. `.launchrail.yml` `testing.*` (unit, check, e2e, dev, smoke) and `AGENTS.md`'s Commands section: which commands exist verbatim, which are missing.
+2. `.launchrail.yml` `testing.*` (unit, check, e2e, dev) and `AGENTS.md`'s Commands section: which commands exist verbatim, which are missing.
 3. The package manager and its install command (frozen-lockfile form); the scripts (`test`, `lint`, `typecheck`, `build`, `check`); the monorepo tool (turbo, nx, workspaces) and its cache configuration; the test runners and their configs (vitest/jest workers and cache, Playwright `workers`, `fullyParallel`, `projects`, `retries`).
 4. CI: every workflow's triggers and jobs; whether the required check is the same command the loop runs locally.
 5. Data: the migration tool and its generate/renumber command; whether tests need a database, ports, or external services, and how they isolate per run.
@@ -32,7 +32,7 @@ It is advice, never a gate: `/launch-implement` runs whether or not this skill e
 Run, and time, in this order — twice each, so cold and warm are both known:
 
 - `npx @wemuda/launchrail verify --fast` (the per-land gate).
-- `npx @wemuda/launchrail verify` (the checkpoint and release gate); note the per-package breakdown the runner prints and, with browser journeys, their count and their share of the time.
+- `npx @wemuda/launchrail verify` (the checkpoint and release gate); note the per-package breakdown the runner prints and, with e2e specs, their count and their share of the time.
 - The install command in a fresh worktree (`git worktree add ../readiness-probe HEAD`, install, then remove it) — what every builder pays before its first test.
 
 Write the numbers down; they anchor every proposal and the closing card.
@@ -41,8 +41,8 @@ Write the numbers down; they anchor every proposal and the closing card.
 
 Work through these; each names the check, the fix, and why it matters to the loop.
 
-1. **The fast gate** — `testing.checkCommand` unset, or slower than ~2 minutes warm. Set it to lint + typecheck + the unit suites without browser journeys (on turbo: `turbo run lint typecheck test --filter=!<web-package>` plus the web package's unit runner). Every land and every hand-off runs this; the journeys move to the checkpoints.
-2. **Browser journeys** — a global `workers: 1` or `fullyParallel: false`. Split: a `serial` Playwright project holding the latency-asserting journeys (matched by directory or a `@serial` tag) and a `parallel` project for the rest; run them as two invocations from the e2e command (`playwright test --project=parallel --workers=4 && playwright test --project=serial --workers=1`). Which journeys are latency-sensitive is the user's call — ask with the list in hand. Target: the full suite in a fraction of its serial time with identical assertions.
+1. **The fast gate** — `testing.checkCommand` unset, or slower than ~2 minutes warm. Set it to lint + typecheck + the unit suites without e2e specs (on turbo: `turbo run lint typecheck test --filter=!<web-package>` plus the web package's unit runner). Every land and every hand-off runs this; the e2e specs move to the checkpoints.
+2. **E2e specs** — a global `workers: 1` or `fullyParallel: false`. Split: a `serial` Playwright project holding the latency-asserting specs (matched by directory or a `@serial` tag) and a `parallel` project for the rest; run them as two invocations from the e2e command (`playwright test --project=parallel --workers=4 && playwright test --project=serial --workers=1`). Which specs are latency-sensitive is the user's call — ask with the list in hand. Target: the full suite in a fraction of its serial time with identical assertions.
 3. **Caches for parallel builders** — each builder starts in a fresh worktree with an empty cache. Enable the monorepo tool's shared cache: turbo remote cache, or `TURBO_CACHE_DIR` pointing at a path outside the worktree (persist it for hosted sessions via `$CLAUDE_ENV_FILE` in the SessionStart hook); a shared vitest `cacheDir`; the package manager's content-addressable store (pnpm has one by default). Unchanged packages then cost nothing at the builder's gate and at the lander's.
 4. **CI triggers** — a workflow that runs on every push. The loop pushes `ralph/*` on every green step and the integration branch on every land; each would start a run nobody waits on. Trigger on `pull_request` and pushes to the default branch only, and add a `concurrency` group with `cancel-in-progress` so a release PR's re-pushes do not queue behind each other. Cloud CI runs once, on the release PR — make sure the required check there is the same full gate the loop ran at release.
 5. **Tracker labels** — create any of `ready-for-agent`, `ralph:building`, `needs-info`, `spec` that are missing, with the descriptions from `docs/agents/issue-tracker.md`. A run refuses or mislabels without them.
@@ -54,7 +54,7 @@ Work through these; each names the check, the fix, and why it matters to the loo
 
 ## Step 4 — Confirm, apply, re-measure
 
-Present the proposals as one list — finding, fix, expected saving — and ask one round of at most three questions, only about what needs the user's judgment (which journeys stay serial; whether CI may be narrowed; anything touching production or secrets). Then apply everything approved, run `doctor` again, re-run the Step 2 timings, and commit.
+Present the proposals as one list — finding, fix, expected saving — and ask one round of at most three questions, only about what needs the user's judgment (which e2e specs stay serial; whether CI may be narrowed; anything touching production or secrets). Then apply everything approved, run `doctor` again, re-run the Step 2 timings, and commit.
 
 ## Step 5 — The readiness card
 
@@ -63,7 +63,7 @@ Close with a card the user can act on without scrolling back:
 ```
 Loop readiness — <project>
 Fast gate:   <before> → <after> (warm <n>s) · <command>
-Full gate:   <before> → <after> · journeys <n> (<parallel>/<serial>)
+Full gate:   <before> → <after> · e2e specs <n> (<parallel>/<serial>)
 Builder cold start: install <n>s · first fast gate <n>s
 Changed:  <one line per change, with the file>
 Left for you: <anything that needs a human — secrets, remote cache login, CI settings>
