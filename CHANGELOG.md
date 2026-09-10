@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.1](https://github.com/wemuda/launchrail/compare/v1.15.0...v1.15.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **cli:** ralph preflight verifies the integration base on the live remote ([550e0c1](https://github.com/wemuda/launchrail/commit/550e0c1270d514931ccb4c8920e53f82ff3f3fe9))
+
 ## [1.15.0](https://github.com/wemuda/launchrail/compare/v1.14.0...v1.15.0) (2026-09-09)
 
 
