@@ -344,7 +344,7 @@ describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
       const n = Number(/#(\d+)/.exec(label)?.[1] ?? 0);
       if (label === "preflight")
         return {
-          green: true, headSha: "base0", skippedGate: false, repo: "wemuda/x", base: target || "master", defaultBranch: "master",
+          green: true, headSha: "base0", baseOnRemote: "base0", skippedGate: false, repo: "wemuda/x", base: target || "master", defaultBranch: "master",
           issueTracker: "github", trackerAccess: "GitHub MCP tools", installCommand: "pnpm install",
           verifyCommand: "npx @wemuda/launchrail verify", fastGateCommand: "npx @wemuda/launchrail verify --fast",
           localCommands: [], browserTesting: false, pushedBranches: opts.pushedBranches ?? [], failures: [],
@@ -686,6 +686,12 @@ describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
     expect(preflight.prompt).toContain('compare headSha with "base0"');
     expect(preflight.prompt).toContain("skip the verification gate");
     expect(preflight.prompt).toContain("git ls-remote --heads origin 'ralph/*'");
+    // The base is verified against the LIVE remote (prune + ls-remote), never a stale
+    // local tracking ref, and the confirming sha is reported as baseOnRemote.
+    expect(preflight.prompt).toContain("git fetch --prune origin");
+    expect(preflight.prompt).toContain("git ls-remote --heads origin <default>");
+    expect(preflight.prompt).toContain("NEVER `git branch -r`");
+    expect(preflight.prompt).toContain("report the sha it returns as baseOnRemote");
     expect(logs.join("\n")).toContain("known green — gate skipped");
     expect(logs.join("\n")).toContain("Adopting pushed branches for #2, #7");
     const build = dispatches.find((d) => d.label === "build:#2")!;
@@ -698,5 +704,19 @@ describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
     expect(red.result).toMatchObject({ refused: true, reason: "preflight not green" });
     expect(red.labels).toEqual(["preflight"]);
     await expect(runRalph({ args: "not json" })).rejects.toThrow("refusing to run");
+  });
+
+  test("a green preflight that never confirmed the base on origin refuses to dispatch", async () => {
+    // The bug: a stale refs/remotes/origin/<base> makes a local-only base look present, so
+    // preflight flips green while the base is absent from origin — every land would then fail
+    // at `git fetch origin <base>`. The green verdict must be grounded in a live-remote sha.
+    const absent = await runRalph({ preflight: { green: true, baseOnRemote: "", headSha: "base0" } });
+    expect(absent.result).toMatchObject({ refused: true, reason: expect.stringContaining("origin") });
+    expect(absent.labels).toEqual(["preflight"]);
+    // A base on origin but behind the checkout's tip (unpushed local commits) is refused too:
+    // baseOnRemote must equal headSha, so the run only builds against a tip origin actually has.
+    const behind = await runRalph({ preflight: { green: true, baseOnRemote: "origintip", headSha: "localtip" } });
+    expect(behind.result).toMatchObject({ refused: true });
+    expect(behind.labels).toEqual(["preflight"]);
   });
 });

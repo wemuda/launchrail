@@ -139,6 +139,15 @@ const PREFLIGHT_SCHEMA = {
     base: { type: 'string', description: "the run's integration base: the declared target branch when one is set, else the default branch" },
     defaultBranch: { type: 'string', description: 'the repository default branch name' },
     targetCreated: { type: 'boolean', description: 'true when a declared target branch was missing from the remote and was created from the default branch tip' },
+    baseOnRemote: {
+      type: 'string',
+      description:
+        'the base tip as `git ls-remote --heads origin <base>` reports it on the LIVE remote (after `git fetch --prune`), or "" when the base is absent from origin. NEVER inferred from `git branch -r` or a local refs/remotes/origin/<base> tracking ref — those go stale and make a local-only base look present. green requires this non-empty and equal to headSha.',
+    },
+    basePushed: {
+      type: 'boolean',
+      description: 'true when the base existed only locally (a session-pinned working branch with unpushed commits) and preflight pushed it to origin so the run can land onto it',
+    },
     issueTracker: { type: 'string', description: 'issueTracker from .launchrail.yml (github | linear | none)' },
     trackerAccess: {
       type: 'string',
@@ -684,13 +693,13 @@ async function drive(pre, ticket, pushed) {
 // ---------------------------------------------------------------------------
 phase('Preflight')
 const pre = await agent(
-  `Preflight for a Ralph loop run in THIS checkout — the loop lands tickets here (one land at a time), while builders use their own worktrees. Report actual state; fix nothing — the permitted mutations are creating the declared integration branch (step 2) and syncing this checkout onto the base.
+  `Preflight for a Ralph loop run in THIS checkout — the loop lands tickets here (one land at a time), while builders use their own worktrees. Report actual state; fix nothing — the permitted mutations are publishing the declared integration base to origin (step 2: creating it from the default branch tip, or pushing a base that exists only locally) and syncing this checkout onto it.
 1. Read .launchrail.yml (issueTracker, testing commands, modules) and AGENTS.md (verbatim commands).
-2. Identify the repo (git remote) and its default branch; report the default branch name as defaultBranch. ${
+2. Identify the repo (git remote) and its default branch; report the default branch name as defaultBranch. Prune stale remote-tracking refs first: \`git fetch --prune origin\` — a leftover refs/remotes/origin/<base> from an earlier fetch otherwise makes a local-only base look present. Then judge the base's presence ON THE LIVE REMOTE with \`git ls-remote --heads origin <base>\`, NEVER \`git branch -r\` or a local tracking ref: a base that is not actually on origin passes on a stale ref here and then fails every land at \`git fetch origin <base>\`. ${
     POLICY.target
-      ? `This run consolidates onto the integration branch "${POLICY.target}" — that branch is the base. If it does not exist on the remote, create it from the default branch's tip (no force; the default branch itself is never touched) and report targetCreated: true. A missing DEFAULT branch is still not green — do not guess.`
-      : `This run lands onto the default branch (trunk) — that branch is the base. If it does not exist on the remote, report not green and say the base is missing — do not guess another branch.`
-  } Sync the base INTO THIS CHECKOUT: the tree must be clean (\`git status --porcelain\` shows no modified or staged files — untracked files are fine; a dirty tree is not green: say so, stash nothing); \`git fetch origin\`, check out the base (tracking origin) and \`git merge --ff-only origin/<base>\` — a local base that has diverged from origin is not green (say "push or reset it first"). Report the base name as base and its tip as headSha.
+      ? `This run's integration base is the branch "${POLICY.target}". If \`git ls-remote --heads origin ${POLICY.target}\` returns it, that is the base. If it is ABSENT from origin: when a local "${POLICY.target}" branch holds commits not yet on origin (a session-pinned working branch), those commits ARE the base — push it (\`git push -u origin ${POLICY.target}\`) and report basePushed: true; otherwise mint it from the default branch's tip (\`git branch ${POLICY.target} origin/<default> && git push -u origin ${POLICY.target}\`; no force, the default branch itself is never touched) and report targetCreated: true. If you can neither push nor create it, report not green with "push the base first: ${POLICY.target} exists only locally". A missing DEFAULT branch is still not green — do not guess.`
+      : `This run lands onto the default branch (trunk) — that branch is the base. If \`git ls-remote --heads origin <default>\` does not return it, report not green and say the base is missing — do not guess another branch.`
+  } Sync the base INTO THIS CHECKOUT: the tree must be clean (\`git status --porcelain\` shows no modified or staged files — untracked files are fine; a dirty tree is not green: say so, stash nothing); with origin now carrying the base, check out the base (tracking origin) and \`git merge --ff-only origin/<base>\` — a local base that has diverged from origin is not green (say "push or reset it first"). Report the base name as base and its tip as headSha, then re-run \`git ls-remote --heads origin <base>\` and report the sha it returns as baseOnRemote — green REQUIRES baseOnRemote non-empty and equal to headSha (origin carries the base at exactly the tip this checkout builds against).
 3. Determine how the tracker is reachable from THIS environment: check whether the CLI the project docs assume (e.g. gh) is installed; if not, name the concrete substitute available here (e.g. GitHub MCP tools) as an instruction future agents can follow.
 4. List in-flight work from previous sessions: \`git ls-remote --heads origin 'ralph/*'\` — report every branch with its sha as pushedBranches (the loop adopts them; delete nothing).
 5. Run the project's install command (report it verbatim as installCommand). ${
@@ -699,7 +708,7 @@ const pre = await agent(
       : 'Then run the FULL verification gate'
   }: npx @wemuda/launchrail verify. Report the actual exit codes, not the reassuring summary line. An empty verification contract failing the gate is a refusal condition, not something to work around.
 Report verifyCommand as "npx @wemuda/launchrail verify" and fastGateCommand as "npx @wemuda/launchrail verify --fast" (the fast tier: testing.checkCommand, else the unit command — never e2e).
-green means: base synced in this checkout AND (the full gate exited 0 OR it was skipped as known green).`,
+green means: the base is confirmed on origin (baseOnRemote non-empty and equal to headSha — proven by \`git ls-remote\`, never inferred from a local tracking ref) AND synced in this checkout AND (the full gate exited 0 OR it was skipped as known green).`,
   { label: 'preflight', phase: 'Preflight', schema: PREFLIGHT_SCHEMA },
 )
 if (!pre) throw new Error('preflight agent died — refusing to start')
@@ -707,6 +716,18 @@ if (!pre.green) {
   // A broken base poisons every implementer after it; a run that starts red
   // can only end with unverifiable results.
   return { refused: true, reason: 'preflight not green', failures: pre.failures }
+}
+// The green verdict must be grounded in the LIVE remote, not inferred locally: a stale
+// refs/remotes/origin/<base> tracking ref makes a local-only base look present, preflight
+// reports green, and then EVERY land fails at `git fetch origin <base>` (with canary, no
+// land ever succeeds and the whole run is wasted). Refuse unless preflight confirmed the
+// base on origin — via `git ls-remote` — at exactly the tip this checkout builds against.
+if (!pre.baseOnRemote || pre.baseOnRemote !== (pre.headSha ?? '')) {
+  return {
+    refused: true,
+    reason: `preflight reported green but did not confirm the base ${pre.base} on origin at the checkout tip (git ls-remote --heads origin ${pre.base} → ${pre.baseOnRemote || 'absent'}, headSha ${pre.headSha || 'unset'}) — refusing to dispatch; every land would fail at git fetch origin ${pre.base}`,
+    failures: pre.failures,
+  }
 }
 if ((pre.issueTracker ?? 'none') === 'none') {
   return { refused: true, reason: 'no issue tracker configured (.launchrail.yml issueTracker: none) — Ralph needs tickets' }
@@ -727,7 +748,7 @@ phase('Graph')
 log(
   `Base green at ${pre.headSha ?? pre.base} on ${pre.base}${pre.skippedGate ? ' (known green — gate skipped)' : ''}. ` +
     (POLICY.target
-      ? `Consolidating onto ${pre.base}${pre.targetCreated ? ' (created from the default branch tip)' : ''}; ${pre.defaultBranch || 'the default branch'} stays untouched. `
+      ? `Consolidating onto ${pre.base}${pre.targetCreated ? ' (created from the default branch tip)' : pre.basePushed ? ' (pushed to origin from local-only commits)' : ''}; ${pre.defaultBranch || 'the default branch'} stays untouched. `
       : `Trunk mode — each ticket lands on ${pre.base}. `) +
     (POLICY.only.length > 0
       ? `Scoped to ${POLICY.only.map((n) => `#${n}`).join(', ')}.`
