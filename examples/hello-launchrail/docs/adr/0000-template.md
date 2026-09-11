@@ -1,9 +1,9 @@
-# ADR-NNNN: Short decision title
+# Short decision title
 
 ## Status
-Proposed | Accepted | Accepted — amended by ADR-NNNN | Superseded by ADR-NNNN
+Proposed | Accepted | Superseded by [slug](YYYY-MM-DD-slug.md)
 
-When a later ADR amends or supersedes this one, update this line and the registry index ([README.md](README.md)) in the same commit.
+Name here what this record supersedes, amends, or extends, linking the earlier record by file (`Accepted — amends [slug](YYYY-MM-DD-slug.md): what changed`). The registry index ([README.md](README.md)) derives the reverse links, so an earlier record need not be edited when this one amends it; when this record is superseded later, this line is rewritten to name the successor. Re-run `launchrail adr index` after any change here.
 
 ## Context
 What requirement or constraint requires a decision?

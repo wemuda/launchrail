@@ -74,6 +74,7 @@ npx @wemuda/launchrail doctor                # repository and environment checks
 npx @wemuda/launchrail verify                # deterministic verification gate
 npx @wemuda/launchrail dev --background      # start the smokeable stack from the manifest; --check proves the contract
 npx @wemuda/launchrail eject <module|file>   # opt out of management (vendor mode: --all)
+npx @wemuda/launchrail adr index             # regenerate the ADR registry's index table from the records (--check for CI)
 ```
 
 Initialized projects carry two files: `.launchrail.yml` (configuration) and `.launchrail-lock.json` (versions, checksums, applied migrations; committed to the repo). Full walkthrough: [docs/getting-started.md](docs/getting-started.md). Committed, unedited example of what `init` produces: [examples/hello-launchrail](examples/hello-launchrail).
@@ -146,7 +147,7 @@ The toolchain is stable and versioned. The full surface — `init`/`doctor`, the
 See [CONTRIBUTING.md](CONTRIBUTING.md). The short version:
 
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`type(scope): summary`); see [ADR-0002](docs/adr/0002-conventional-commits.md). Releases and the changelog are generated from them ([docs/releasing.md](docs/releasing.md)).
-- Meaningful decisions are recorded as ADRs in [docs/adr/](docs/adr/); the registry index [docs/adr/README.md](docs/adr/README.md) says which are live.
+- Meaningful decisions are recorded as ADRs in [docs/adr/](docs/adr/), named by decision date and slug; the registry index [docs/adr/README.md](docs/adr/README.md) says which are live, and `launchrail adr index` regenerates it.
 - The agent operating contract lives in [AGENTS.md](AGENTS.md).
 - Security issues go through [SECURITY.md](SECURITY.md), not public issues.
 

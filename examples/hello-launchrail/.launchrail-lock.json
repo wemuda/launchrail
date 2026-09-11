@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "launchrailVersion": "1.15.1",
+  "launchrailVersion": "1.16.0",
   "files": {
     ".claude/hooks/ralph-permission-guard.py": {
       "class": "managed",
@@ -36,7 +36,7 @@
     },
     ".claude/skills/launch-grill/domain-modeling.md": {
       "class": "managed",
-      "checksum": "38769e87e5a8dbb8840fe9c1ab78accd5994a9a0ab6748bac12c87db3597b5a0"
+      "checksum": "f616fc1814f37b22ac09cefabb54768c311f3e32a7047b0300c4898584b2badb"
     },
     ".claude/skills/launch-grill/SKILL.md": {
       "class": "managed",
@@ -88,11 +88,11 @@
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "d6d03fa4f274838b088bf51ae07b0c918a337c59da406c77918829f169ed4eb8"
+      "checksum": "30f6dc099c079a5a0752608c5da0f3ae229b71843b5db0b382b365bf5e16ec4d"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "51d54433a7df38b954d511a5eefb18970c1cc292799d6e9d9abaf48d86a361ff"
+      "checksum": "aa160fcd4522fa200b4e0bb03e1ad44355b53ff63fdb7433b9c2fde546c92015"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",
@@ -104,15 +104,15 @@
     },
     ".launchrail.yml": {
       "class": "seeded",
-      "checksum": "e863b2d0b3cb4824ac6cb30e6a43efcbd1a08aa07d174544ab5bce5c3f311986"
+      "checksum": "0c63368fc08a84410992ef5b029ea2b6203c4ce1b14db367cf19e7e05cad73ff"
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "d40dfce51a37cdf148a817584d828d7b81afd54432466bdbb5c82a5867458820"
+      "checksum": "b42e3f410aca05caab54d66b749154f3801ebd7f800f8368f9f52f2ac9808515"
     },
     "AGENTS.md": {
       "class": "seeded",
-      "checksum": "5c282944cef8fe151153560a21206e7cb1864bfbfa5accb09b77e4ea5ff56375"
+      "checksum": "cddeaee3ed249e6e748bf162eef4769ebe0cfe498c0f736adefc626d49a6f9e4"
     },
     "CLAUDE.md": {
       "class": "seeded",
@@ -120,15 +120,15 @@
     },
     "docs/adr/0000-template.md": {
       "class": "seeded",
-      "checksum": "9c4686c96c0720890cb2f9cdd4a462578bf8abedff5ffd08fa234511a005b405"
+      "checksum": "4b817879a85fa16b640d1ecb083a242f5a7de4694a29b73a0ca74d147c23c816"
     },
     "docs/adr/README.md": {
       "class": "seeded",
-      "checksum": "633b4d5e39c9a0bc965487777dd62e73e9affcdb0f3ea3079d6b135b7b0086e1"
+      "checksum": "86f3b030ef13588b62d81fc6696ed6185e0c015f78a21a83ed67ee75b46b01b5"
     },
     "docs/agents/domain.md": {
       "class": "seeded",
-      "checksum": "906ec8dc734cccd99f4fbef57182a3ccae533d61e8790ebb56740f3d2232cb3b"
+      "checksum": "d854034c775c09da9ba97c7a4e08a03260d08b848778be3410e56e1d241e324e"
     },
     "docs/agents/issue-tracker.md": {
       "class": "seeded",

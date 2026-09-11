@@ -27,7 +27,7 @@ Conventional Commits: `type(scope): summary` — types `feat`, `fix`, `docs`, `c
 - Ask, don't guess. On product decisions, data-model or schema changes, security-relevant behaviour, or anything genuinely ambiguous, stop and ask rather than guessing — a wrong guess on these costs more than the question.
 - Do not silently change scope; surface deviations from the spec or ADRs.
 - If implementation invalidates an artifact (vision, spec, ADR, design note), update that artifact in the same change.
-- Decisions that are hard to reverse, surprising without context, and the result of a real trade-off become lightweight ADRs in `docs/adr/` using [docs/adr/0000-template.md](docs/adr/0000-template.md), with a row added to the registry index in the same commit. Prefer amending the ADR that owns an area over minting a sibling; product decisions belong in the spec, not an ADR.
+- Decisions that are hard to reverse, surprising without context, and the result of a real trade-off become lightweight ADRs in `docs/adr/` using [docs/adr/0000-template.md](docs/adr/0000-template.md), named `YYYY-MM-DD-short-slug.md` (the decision date, then a slug unique in the directory — no sequence number to claim), with the registry index regenerated (`launchrail adr index`) in the same commit. Prefer amending the ADR that owns an area over minting a sibling; product decisions belong in the spec, not an ADR.
 
 ## Definition of done
 
