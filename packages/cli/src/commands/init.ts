@@ -24,6 +24,7 @@ import {
   parseManifest,
   serializeManifest,
   type IssueTracker,
+  DEFAULT_SMOKE,
   type Manifest,
   type Origin,
 } from "../lib/manifest.js";
@@ -85,6 +86,7 @@ function defaultManifestFor(detection: RepoDetection): Manifest {
         detection.conventionalCommitRatio === null ? true : detection.conventionalCommitRatio >= 0.5,
     },
     testing: defaultTesting(detection),
+    smoke: { ...DEFAULT_SMOKE, origins: {} },
     modules: defaultModules(),
   };
 }
@@ -140,6 +142,7 @@ async function interview(detection: RepoDetection): Promise<Manifest> {
     // script gets it recorded, anything else stays null until the workflow
     // (or `add`, or a manifest edit) settles it once the stack exists.
     testing: defaultTesting(detection),
+    smoke: { ...DEFAULT_SMOKE, origins: {} },
     modules: defaultModules(),
   };
 }

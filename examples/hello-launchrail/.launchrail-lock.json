@@ -1,14 +1,18 @@
 {
   "schemaVersion": 1,
-  "launchrailVersion": "1.14.0",
+  "launchrailVersion": "1.15.1",
   "files": {
     ".claude/hooks/ralph-permission-guard.py": {
       "class": "managed",
       "checksum": "bca907ed767a1f5caf9efe4354ae226ad38e63e32696d97b7e97ee64a1deee64"
     },
+    ".claude/skills/launch-browser-smoke/composed-stack.md": {
+      "class": "managed",
+      "checksum": "8674ee8c867e34b1a4540eac26fe58b6ecdeb7410223e10b827cf98226a5871e"
+    },
     ".claude/skills/launch-browser-smoke/SKILL.md": {
       "class": "managed",
-      "checksum": "184dc07121c3528fe66c78c41760a07313e48b786e1fea0cd3313e5f51b85ab2"
+      "checksum": "d1af795f25c61bb1814a2882ea0fa3cc6dcc3c501d58b869d0274b440f9a1ff1"
     },
     ".claude/skills/launch-code-review/SKILL.md": {
       "class": "managed",
@@ -44,7 +48,7 @@
     },
     ".claude/skills/launch-loop-readiness/SKILL.md": {
       "class": "managed",
-      "checksum": "f678c936aeabc567d0a44efc1102c7cbb9d7543e6960c2835657a02e2e2115bc"
+      "checksum": "c98ff4de9322c9ffbab2d2ccf59ea9cdeb5be408371f27a6d49900b33e2790c0"
     },
     ".claude/skills/launch-project-alignment/SKILL.md": {
       "class": "managed",
@@ -104,7 +108,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "29d597646181466904cc55359a41b997313f0b543f83cd77af0fb3cf620463e0"
+      "checksum": "d40dfce51a37cdf148a817584d828d7b81afd54432466bdbb5c82a5867458820"
     },
     "AGENTS.md": {
       "class": "seeded",

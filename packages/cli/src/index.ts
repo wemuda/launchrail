@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { AVAILABLE_MODULES, runAdd } from "./commands/add.js";
 import { printDiff, runDiff } from "./commands/diff.js";
+import { runDev } from "./commands/dev.js";
 import { runDoctor, printDoctor } from "./commands/doctor.js";
 import { runEject } from "./commands/eject.js";
 import { runInit } from "./commands/init.js";
@@ -18,6 +19,7 @@ Commands:
   doctor    Validate the repository and environment
   add       Add a module to the project (available: ${AVAILABLE_MODULES.join(", ")})
   verify    Run the deterministic verification contract
+  dev       Start the smokeable stack from the manifest and record its state
   status    Inspect versions, enabled modules, drift, and missing requirements
   diff      Preview upstream changes
   sync      Synchronize managed capabilities and run migrations
@@ -34,6 +36,13 @@ init / add options:
 
 verify options:
   --fast           Run only the fast gate (testing.checkCommand, else unitCommand; never e2e)
+
+dev options:
+  --background     Start detached, wait for every origin to answer, leave it running
+  --port <n>       Re-address the app origin and expose PORT to the start command
+  --stop           Stop the background stack recorded in .launchrail/state/dev.pid
+  --check          Start, wait, assert the state files, tear down — proves the start contract
+  --timeout <s>    Readiness deadline for --background/--check (default 120)
 
 sync options:
   --dry-run        Preview migrations and file updates without writing
@@ -90,6 +99,21 @@ if (command === "add") {
 
 if (command === "verify") {
   process.exit(runVerify(process.cwd(), { fast: flags.has("--fast") }).code);
+}
+
+if (command === "dev") {
+  const portIndex = args.indexOf("--port");
+  const timeoutIndex = args.indexOf("--timeout");
+  const timeoutSeconds = timeoutIndex !== -1 ? Number(args[timeoutIndex + 1]) : NaN;
+  const outcome = await runDev({
+    cwd: process.cwd(),
+    background: flags.has("--background"),
+    port: portIndex !== -1 ? (args[portIndex + 1] ?? null) : null,
+    stop: flags.has("--stop"),
+    check: flags.has("--check"),
+    timeoutMs: Number.isFinite(timeoutSeconds) ? timeoutSeconds * 1000 : undefined,
+  });
+  process.exit(outcome.code);
 }
 
 if (command === "status") {

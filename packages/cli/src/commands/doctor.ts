@@ -24,6 +24,7 @@ import {
   sessionStartHookState,
 } from "../lib/readiness.js";
 import { skillNames } from "../lib/skills.js";
+import { resolveBrowserEnv, resolveStackStart, stateDirUnignored } from "../lib/stack.js";
 
 export type CheckStatus = "pass" | "warn" | "fail";
 
@@ -203,15 +204,46 @@ export function runDoctor(cwd: string): DoctorOutcome {
     } else {
       add("fail", "playwright config", "no playwright.config.* found — re-run `launchrail add browser-testing`");
     }
-    // The browser smoke's driver (ADR-0034) installs through scripts/setup.mjs;
-    // a missing one is a warning because the skill carries a script fallback.
+    // The smokeable stack's start contract (ADR-0036) — file-based here; the
+    // run-it-and-see proof is `launchrail dev --check`, never doctor.
+    const stack = resolveStackStart(manifest);
+    if (stack.command) {
+      add(
+        "pass",
+        "app start",
+        `${stack.source}: ${stack.command} → ${Object.keys(stack.origins).length} origin(s)${stack.composed ? " (composed stack)" : ""}; prove it with \`launchrail dev --check\``,
+      );
+    } else {
+      add(
+        "warn",
+        "app start",
+        `no start command — set testing.devCommand in ${MANIFEST_FILENAME}, or smoke.start with smoke.origins for a composed stack`,
+      );
+    }
+    // The browser smoke's driver (ADR-0034) installs through scripts/setup.mjs
+    // and reuses Playwright's Chromium (ADR-0036); both are warnings because the
+    // skill carries a fallback for each.
+    const browser = resolveBrowserEnv();
     if (detection.hasBrowserDriverDep) {
-      add("pass", "browser driver", `${BROWSER_DRIVER_PACKAGE} declared`);
+      add(
+        browser.executablePath ? "pass" : "warn",
+        "browser driver",
+        browser.executablePath
+          ? `${BROWSER_DRIVER_PACKAGE} declared; Chromium: ${browser.executablePath} (${browser.source})`
+          : `${BROWSER_DRIVER_PACKAGE} declared; no Playwright Chromium found — it will download its own (\`npx ${BROWSER_DRIVER_PACKAGE} install\`)`,
+      );
     } else {
       add(
         "warn",
         "browser driver",
         `${BROWSER_DRIVER_PACKAGE} not declared — run \`node scripts/setup.mjs\` so the browser smoke has its driver`,
+      );
+    }
+    if (stateDirUnignored(cwd)) {
+      add(
+        "warn",
+        "state directory",
+        ".launchrail/state/ exists but does not ignore itself — `launchrail dev` writes the ignore; delete stray files or run it once",
       );
     }
     const missingScripts = SEMANTIC_SCRIPTS.filter((name) => !existsSync(join(cwd, "scripts", `${name}.mjs`)));

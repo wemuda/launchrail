@@ -1,4 +1,4 @@
-import { rmSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runAdd } from "../src/commands/add.js";
@@ -115,6 +115,8 @@ describe("launchrail doctor", () => {
     expect(outcome.checks.find((c) => c.name === "playwright config")?.status).toBe("pass");
     // The browser smoke's driver is advice, never a failure — the skill has a fallback.
     expect(outcome.checks.find((c) => c.name === "browser driver")?.status).toBe("warn");
+    // The start contract is reported from files; the proof is `dev --check`.
+    expect(outcome.checks.find((c) => c.name === "app start")).toMatchObject({ status: "warn" });
     expect(outcome.checks.find((c) => c.name === "semantic scripts")?.status).toBe("pass");
     expect(outcome.checks.find((c) => c.name === "testing commands")?.status).toBe("pass");
   });
@@ -126,9 +128,21 @@ describe("launchrail doctor", () => {
       JSON.stringify({ name: "app", devDependencies: { "@playwright/test": "^1.0.0", "agent-browser": "^0.1.0" } }),
     );
     await runAdd({ cwd: tmp.root, module: "browser-testing", dryRun: false, yes: true });
-    const outcome = runDoctor(tmp.root);
-    expect(outcome.checks.filter((c) => c.status === "fail")).toEqual([]);
-    expect(outcome.checks.find((c) => c.name === "browser driver")?.status).toBe("pass");
+    const manifestPath = join(tmp.root, ".launchrail.yml");
+    writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace("devCommand: null", "devCommand: npm run dev"));
+    const previous = process.env.AGENT_BROWSER_EXECUTABLE_PATH;
+    process.env.AGENT_BROWSER_EXECUTABLE_PATH = "/opt/some/chrome";
+    try {
+      const outcome = runDoctor(tmp.root);
+      expect(outcome.checks.filter((c) => c.status === "fail")).toEqual([]);
+      expect(outcome.checks.find((c) => c.name === "browser driver")).toMatchObject({ status: "pass" });
+      expect(outcome.checks.find((c) => c.name === "browser driver")?.message).toContain("/opt/some/chrome");
+      expect(outcome.checks.find((c) => c.name === "app start")).toMatchObject({ status: "pass" });
+      expect(outcome.checks.find((c) => c.name === "app start")?.message).toContain("testing.devCommand: npm run dev");
+    } finally {
+      if (previous === undefined) delete process.env.AGENT_BROWSER_EXECUTABLE_PATH;
+      else process.env.AGENT_BROWSER_EXECUTABLE_PATH = previous;
+    }
   });
 });
 

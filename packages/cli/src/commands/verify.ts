@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BROWSER_TESTING_MODULE } from "../lib/browser-testing.js";
 import { MANIFEST_FILENAME, parseManifest } from "../lib/manifest.js";
+import { INSTALL_HINT, missingDependencies } from "../lib/stack.js";
 
 export interface VerifyStep {
   name: string;
@@ -45,6 +46,13 @@ export function runVerify(cwd: string, options: VerifyOptions = {}): VerifyOutco
   if (!parsed.manifest) {
     console.error(`launchrail: ${MANIFEST_FILENAME} is invalid:`);
     for (const error of parsed.errors) console.error(`  - ${error}`);
+    return { code: 1, results: [] };
+  }
+
+  // A fresh clone (every hosted session) has no node_modules: the failure to
+  // name is the missing install, not "turbo: not found" from the first step.
+  if (missingDependencies(cwd)) {
+    console.error(`launchrail: dependencies are not installed (no node_modules) — ${INSTALL_HINT}.`);
     return { code: 1, results: [] };
   }
 

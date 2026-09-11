@@ -12,9 +12,6 @@ export const SEMANTIC_SCRIPTS = ["setup", "dev", "verify", "doctor"] as const;
  */
 export const BROWSER_DRIVER_PACKAGE = "agent-browser";
 
-/** Where `scripts/dev.mjs` records the URL and pid of the app it started. */
-export const DEV_STATE_DIR = ".launchrail/state";
-
 /**
  * Paths the module seeded before ADR-0034 — the journey catalogue, the
  * `smoke` entry point and the Playwright MCP config. The retirement migration
@@ -106,61 +103,13 @@ if (!existsSync("node_modules/@playwright/test")) {
 }
 // Cloud and CI machines need browser OS dependencies; local machines usually have them.
 run(cloud ? "npx playwright install --with-deps chromium" : "npx playwright install chromium");
-// The browser smoke's driver: a shell-driven browser for agents, with its own Chromium.
+// The browser smoke's driver (a shell-driven browser for agents). It reuses Playwright's
+// Chromium via .launchrail/state/browser.env, written by \`launchrail dev\` — no second download.
+// Where no Playwright Chromium exists, \`npx ${BROWSER_DRIVER_PACKAGE} install\` fetches its own.
 if (!existsSync("node_modules/${BROWSER_DRIVER_PACKAGE}")) {
   run("${addDev(BROWSER_DRIVER_PACKAGE)}");
 }
-run("npx ${BROWSER_DRIVER_PACKAGE} install");
 console.log("\\nSetup complete. Next: node scripts/doctor.mjs");
-`;
-}
-
-function devScript(devCommand: string | null, appUrl: string | null): string {
-  return `#!/usr/bin/env node
-// Seeded by Launchrail — yours to adapt. Starts the app for development and testing.
-import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, openSync, writeFileSync } from "node:fs";
-
-const DEV_COMMAND = ${JSON.stringify(devCommand ?? "")};
-const APP_URL = ${JSON.stringify(appUrl ?? DEFAULT_APP_URL)};
-const STATE_DIR = ${JSON.stringify(DEV_STATE_DIR)};
-
-if (DEV_COMMAND === "") {
-  console.error("No dev command configured. Edit scripts/dev.mjs and set DEV_COMMAND to whatever starts this app.");
-  process.exit(1);
-}
-
-// Parallel builders each start their own app: \`--port <n>\` picks a port nobody
-// else uses. The dev command sees it as PORT — adapt this file if your app reads
-// another name or flag.
-const args = process.argv.slice(2);
-const portFlag = args.indexOf("--port");
-const port = portFlag !== -1 ? args[portFlag + 1] : process.env.PORT;
-const url = new URL(APP_URL);
-if (port) url.port = String(port);
-const appUrl = url.href.replace(/\\/$/, "");
-const env = port ? { ...process.env, PORT: String(port) } : process.env;
-
-// Agents read the URL (and the pid, in background mode) from here; the state
-// directory ignores itself so nothing in it reaches git.
-mkdirSync(STATE_DIR, { recursive: true });
-if (!existsSync(STATE_DIR + "/.gitignore")) writeFileSync(STATE_DIR + "/.gitignore", "*\\n");
-writeFileSync(STATE_DIR + "/dev.url", appUrl + "\\n");
-
-if (args.includes("--background")) {
-  // Cloud and CI sessions need the app running without holding the terminal.
-  const log = openSync(STATE_DIR + "/dev.log", "a");
-  const child = spawn(DEV_COMMAND, { shell: true, detached: true, stdio: ["ignore", log, log], env });
-  child.unref();
-  writeFileSync(STATE_DIR + "/dev.pid", String(child.pid) + "\\n");
-  console.log(
-    "Started \`" + DEV_COMMAND + "\` in the background (pid " + child.pid + ") for " + appUrl +
-      ". Logs: " + STATE_DIR + "/dev.log — stop it with \`kill $(cat " + STATE_DIR + "/dev.pid)\`.",
-  );
-} else {
-  const result = spawnSync(DEV_COMMAND, { shell: true, stdio: "inherit", env });
-  process.exit(result.status ?? 0);
-}
 `;
 }
 
@@ -191,7 +140,8 @@ export interface BrowserTestingContext {
  *
  * Two lanes (ADR-0034): the deterministic e2e baseline runs inside `verify`;
  * the browser smoke is one-off driving by the agent and seeds no file of its
- * own — its driver installs through `scripts/setup.mjs`.
+ * own — its driver installs through `scripts/setup.mjs`, and the stack it
+ * drives starts through `launchrail dev` (ADR-0036).
  */
 export function browserTestingFiles(ctx: BrowserTestingContext): FileSpec[] {
   const pm = ctx.detection.packageManager ?? "npm";
@@ -206,12 +156,9 @@ export function browserTestingFiles(ctx: BrowserTestingContext): FileSpec[] {
 
   specs.push(
     { relPath: "scripts/setup.mjs", content: setupScript(pm), ownership: "seeded", executable: true },
-    {
-      relPath: "scripts/dev.mjs",
-      content: devScript(ctx.manifest.testing.devCommand, ctx.manifest.testing.appUrl),
-      ownership: "seeded",
-      executable: true,
-    },
+    // dev delegates too (ADR-0036): the CLI owns the start contract — state files,
+    // --port, readiness, the driver's browser — so an adapted copy cannot drift from it.
+    { relPath: "scripts/dev.mjs", content: delegatingScript("dev"), ownership: "seeded", executable: true },
     { relPath: "scripts/verify.mjs", content: delegatingScript("verify"), ownership: "seeded", executable: true },
     { relPath: "scripts/doctor.mjs", content: delegatingScript("doctor"), ownership: "seeded", executable: true },
   );

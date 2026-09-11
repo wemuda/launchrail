@@ -115,13 +115,16 @@ function planBrowserTesting(
     notes.push(`Existing ${detection.playwrightConfigFile} detected — keeping it; no config or baseline spec seeded.`);
   }
   const nextSteps = [
-    `Run \`node scripts/setup.mjs\` — installs @playwright/test, ${BROWSER_DRIVER_PACKAGE} (the browser smoke's driver) and their browsers.`,
+    `Run \`node scripts/setup.mjs\` — installs @playwright/test, its Chromium, and ${BROWSER_DRIVER_PACKAGE} (the browser smoke's driver, which reuses that Chromium).`,
   ];
   if (!answers.devCommand) {
-    nextSteps.push("Set the dev command: edit scripts/dev.mjs (DEV_COMMAND) and testing.devCommand in .launchrail.yml.");
+    nextSteps.push(
+      "Set the start command: testing.devCommand in .launchrail.yml — or, for a composed stack (several origins, an in-process backend, fixtures), smoke.start plus smoke.origins; see .claude/skills/launch-browser-smoke/composed-stack.md.",
+    );
   }
   nextSteps.push(
-    "Review the seeded files — they are yours: playwright config, tests/e2e/baseline.spec.ts, scripts/.",
+    "Prove the start contract: `npx @wemuda/launchrail dev --check` starts the stack, waits for every origin, asserts the state files, and tears down. Do this now, not inside someone's smoke.",
+    "Review the seeded files — they are yours: playwright config, tests/e2e/baseline.spec.ts, scripts/ (dev/verify/doctor delegate to the CLI).",
     "Verify: `node scripts/verify.mjs` runs the deterministic gate (unit + the e2e baseline).",
     "Browser smoke: after building user-facing behavior, the launch-browser-smoke skill drives the running app with agent-browser — a one-off check of the change, not a test suite (ADR-0034).",
   );

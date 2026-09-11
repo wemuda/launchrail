@@ -26,6 +26,7 @@ It is advice, never a gate: `/launch-implement` runs whether or not this skill e
 5. Data: the migration tool and its generate/renumber command; whether tests need a database, ports, or external services, and how they isolate per run.
 6. Tracker: the labels the loop uses (`ready-for-agent`, `ralph:building`, `needs-info`, `spec`) exist — check with the tracker tools named in `docs/agents/issue-tracker.md`.
 7. `.claude/settings.json`: hooks (the Ralph guard, any `SessionStart`), permissions; the seeded `scripts/setup.mjs` when the browser-testing module is on.
+8. With the browser-testing module on: `npx @wemuda/launchrail dev --check` — starts the smokeable stack from the manifest, waits for every origin, asserts the state files, tears down. A failure here is a readiness finding: the project needs `testing.devCommand`, or `smoke.start` plus `smoke.origins` for a composed stack (`.claude/skills/launch-browser-smoke/composed-stack.md`) — fix it in this pass, so no smoke ever discovers the stack by hand.
 
 ## Step 2 — Measure
 

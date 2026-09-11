@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -53,23 +52,16 @@ describe("launchrail add browser-testing", () => {
     expect(setup).toContain("@playwright/test");
     expect(setup).toContain("npx playwright install");
     expect(setup).toContain("agent-browser");
-    expect(setup).toContain("npx agent-browser install");
   });
 
-  test("dev.mjs honors --port, exposes it as PORT, and records the URL for agents", async () => {
-    // A dev script that prints the port it was given stands in for the app.
-    writeFileSync(
-      join(tmp.root, "package.json"),
-      JSON.stringify({ name: "app", scripts: { dev: "node -e \"console.log('PORT=' + process.env.PORT)\"" } }),
-    );
+  test("dev.mjs delegates to the CLI, like verify and doctor — the start contract is Launchrail's (ADR-0036)", async () => {
     await addBrowserTesting();
-    const output = execFileSync(process.execPath, ["scripts/dev.mjs", "--port", "4321"], {
-      cwd: tmp.root,
-      encoding: "utf8",
-    });
-    expect(output).toContain("PORT=4321");
-    expect(readFileSync(join(tmp.root, ".launchrail/state/dev.url"), "utf8")).toBe("http://localhost:4321\n");
-    expect(readFileSync(join(tmp.root, ".launchrail/state/.gitignore"), "utf8")).toBe("*\n");
+    for (const name of ["dev", "verify", "doctor"]) {
+      const script = readFileSync(join(tmp.root, `scripts/${name}.mjs`), "utf8");
+      expect(script, name).toContain(`"@wemuda/launchrail", "${name}"`);
+    }
+    const setup = readFileSync(join(tmp.root, "scripts/setup.mjs"), "utf8");
+    expect(setup).not.toContain("npx agent-browser install\"");
   });
 
   test("regenerates the managed Claude instructions with the two-lane browser-testing section", async () => {

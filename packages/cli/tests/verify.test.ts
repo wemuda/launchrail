@@ -29,6 +29,14 @@ describe("launchrail verify", () => {
     expect(outcome.results[0]?.status).toBe(3);
   });
 
+  test("a Node project without node_modules fails on the install, by name, before any command runs", () => {
+    writeFileSync(join(tmp.root, "package.json"), JSON.stringify({ name: "app" }));
+    writeManifest('testing:\n  unitCommand: node -e "process.exit(0)"\n');
+    const outcome = runVerify(tmp.root);
+    expect(outcome.code).toBe(1);
+    expect(outcome.results).toEqual([]);
+  });
+
   test("an empty verification contract cannot pass", () => {
     writeManifest("");
     expect(runVerify(tmp.root).code).toBe(1);

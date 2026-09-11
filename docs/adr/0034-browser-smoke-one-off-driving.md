@@ -1,7 +1,7 @@
 # ADR-0034: Browser smoke is one-off driving of the running stack; the e2e lane stays thin
 
 ## Status
-Accepted — amends [ADR-0004](0004-browser-testing-module.md) (the journey contract, the evidence bundle, the `smoke` command and the seeded Playwright MCP are retired; the Playwright baseline, `verify` and the semantic scripts stand). Where [ADR-0032](0032-ralph-lean-local-gate-loop.md) and [ADR-0033](0033-loop-readiness.md) say "browser journeys", read the Playwright e2e specs — the deterministic lane below.
+Accepted — amended by [ADR-0036](0036-cli-owned-stack-start.md): the stack starts through `launchrail dev` (never an adapted seeded script), composed stacks are declared in the manifest's `smoke` block, the driver's browser is resolved by the CLI, and the gate precondition is proportionate. Amends [ADR-0004](0004-browser-testing-module.md) (the journey contract, the evidence bundle, the `smoke` command and the seeded Playwright MCP are retired; the Playwright baseline, `verify` and the semantic scripts stand). Where [ADR-0032](0032-ralph-lean-local-gate-loop.md) and [ADR-0033](0033-loop-readiness.md) say "browser journeys", read the Playwright e2e specs — the deterministic lane below.
 
 ## Context
 ADR-0004 set up two complementary systems: deterministic Playwright e2e tests as the release gate, and agentic smoke testing as exploratory acceptance, driven from a Markdown catalogue of journeys and recorded in a committed evidence bundle. Two consuming platforms show what that contract produced in the field:

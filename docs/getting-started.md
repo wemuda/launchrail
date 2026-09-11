@@ -76,7 +76,7 @@ npx @wemuda/launchrail add browser-testing   # Playwright e2e baseline + the bro
 npx @wemuda/launchrail add ralph             # re-install the Ralph loop's materials (installed by init; ADR-0005/0018)
 ```
 
-Both update the manifest (preserving your comments), seed or manage their files, and extend the generated Claude instructions. `verify` runs the deterministic gate; the browser smoke is the `launch-browser-smoke` skill driving the running app — one-off, nothing scaffolded. The Ralph loop itself needs no `add` on the golden path — `init` installs it, and `sync` brings older projects current.
+Both update the manifest (preserving your comments), seed or manage their files, and extend the generated Claude instructions. `verify` runs the deterministic gate; `dev --background` starts the smokeable stack from the manifest (`dev --check` proves that contract once, at adoption); the browser smoke is the `launch-browser-smoke` skill driving that stack — one-off, nothing scaffolded. The Ralph loop itself needs no `add` on the golden path — `init` installs it, and `sync` brings older projects current.
 
 ## Updating to a new release
 

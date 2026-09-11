@@ -13,6 +13,7 @@ const manifest: Manifest = {
     e2eCommand: "npx playwright test",
     appUrl: "http://localhost:3000",
   },
+  smoke: { start: null, origins: {} },
   modules: { core: true },
 };
 
@@ -21,6 +22,23 @@ describe("manifest", () => {
     const parsed = parseManifest(serializeManifest(manifest));
     expect(parsed.errors).toEqual([]);
     expect(parsed.manifest).toEqual(manifest);
+  });
+
+  test("a default smoke block is not written; a declared one round-trips", () => {
+    expect(serializeManifest(manifest)).not.toContain("smoke:");
+    const composed: Manifest = {
+      ...manifest,
+      smoke: { start: "node scripts/smoke-stack.mjs", origins: { dashboard: "http://localhost:5173", api: "http://localhost:3001/health" } },
+    };
+    const source = serializeManifest(composed);
+    expect(source).toContain("smoke:");
+    expect(parseManifest(source).manifest).toEqual(composed);
+  });
+
+  test("rejects a malformed smoke block", () => {
+    expect(parseManifest("schemaVersion: 1\nsmoke: nope\n").errors.join(" ")).toContain("smoke must be a mapping");
+    expect(parseManifest("schemaVersion: 1\nsmoke:\n  origins:\n    api: 3001\n").errors.join(" ")).toContain("smoke.origins");
+    expect(parseManifest("schemaVersion: 1\nsmoke:\n  start: [a]\n").errors.join(" ")).toContain("smoke.start");
   });
 
   test("serialization is deterministic", () => {
@@ -60,6 +78,7 @@ describe("manifest", () => {
         e2eCommand: null,
         appUrl: null,
       },
+      smoke: { start: null, origins: {} },
       modules: { core: true },
     });
   });

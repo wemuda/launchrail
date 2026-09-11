@@ -22,6 +22,21 @@ export type IssueTracker = (typeof ISSUE_TRACKERS)[number];
 export const TESTING_KEYS = ["unitCommand", "checkCommand", "devCommand", "e2eCommand", "appUrl"] as const;
 export type TestingKey = (typeof TESTING_KEYS)[number];
 
+/**
+ * How the smokeable stack starts (ADR-0036). Single-process apps need nothing
+ * here: `launchrail dev` runs `testing.devCommand` and checks `testing.appUrl`.
+ * A composed stack — several origins, an in-process backend, fixtures — names
+ * its own start command and the origins it must answer on.
+ */
+export interface SmokeConfig {
+  /** Boots the smokeable stack; may merge extra fields into .launchrail/state/stack.json. Falls back to testing.devCommand. */
+  start: string | null;
+  /** name → URL; every one must answer HTTP before the stack counts as ready. Empty means the single `app` origin at testing.appUrl. */
+  origins: Record<string, string>;
+}
+
+export const DEFAULT_SMOKE: SmokeConfig = { start: null, origins: {} };
+
 export interface Manifest {
   schemaVersion: 1;
   origin: Origin;
@@ -30,6 +45,7 @@ export interface Manifest {
     conventionalCommits: boolean;
   };
   testing: Record<TestingKey, string | null>;
+  smoke: SmokeConfig;
   modules: Record<string, boolean>;
 }
 
@@ -105,6 +121,25 @@ export function validateManifest(data: unknown): ManifestParseResult {
     }
   }
 
+  const smoke: SmokeConfig = { start: null, origins: {} };
+  if (data.smoke !== undefined) {
+    if (isRecord(data.smoke)) {
+      if (data.smoke.start !== undefined && data.smoke.start !== null) {
+        if (typeof data.smoke.start === "string") smoke.start = data.smoke.start;
+        else errors.push("smoke.start must be a string or null");
+      }
+      if (data.smoke.origins !== undefined && data.smoke.origins !== null) {
+        if (isRecord(data.smoke.origins) && Object.values(data.smoke.origins).every((v) => typeof v === "string")) {
+          smoke.origins = { ...(data.smoke.origins as Record<string, string>) };
+        } else {
+          errors.push("smoke.origins must map origin names to URLs");
+        }
+      }
+    } else {
+      errors.push("smoke must be a mapping");
+    }
+  }
+
   let modules: Record<string, boolean> = { core: true };
   if (data.modules !== undefined) {
     if (isRecord(data.modules) && Object.values(data.modules).every((v) => typeof v === "boolean")) {
@@ -128,6 +163,7 @@ export function validateManifest(data: unknown): ManifestParseResult {
       issueTracker,
       conventions: { conventionalCommits },
       testing,
+      smoke,
       modules,
     },
     errors: [],
@@ -148,7 +184,11 @@ export function serializeManifest(manifest: Manifest): string {
   const header =
     "# Launchrail project manifest — https://github.com/wemuda/launchrail\n" +
     "# This file is yours to edit; Launchrail reads it and never force-overwrites it.\n";
-  return header + stringify(manifest);
+  // The smoke block is opt-in for composed stacks; a default one is noise in
+  // every single-process project's manifest, so it is written only when set.
+  const { smoke, ...rest } = manifest;
+  const body = smoke.start === null && Object.keys(smoke.origins).length === 0 ? rest : { ...rest, smoke };
+  return header + stringify(body);
 }
 
 export interface ModuleEnableResult {
