@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.0](https://github.com/wemuda/launchrail/compare/v1.16.0...v1.17.0) (2026-09-11)
+
+
+### Features
+
+* **cli:** identify ADRs by decision date and slug; generate the registry index ([4261ab5](https://github.com/wemuda/launchrail/commit/4261ab5e87556e297b9da4f3e9c0667ded09b781))
+
 ## [1.16.0](https://github.com/wemuda/launchrail/compare/v1.15.1...v1.16.0) (2026-09-11)
 
 
