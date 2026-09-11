@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.0](https://github.com/wemuda/launchrail/compare/v1.15.1...v1.16.0) (2026-09-11)
+
+
+### Features
+
+* **cli:** launchrail dev owns the smokeable stack's start contract (ADR-0036) ([127cc7b](https://github.com/wemuda/launchrail/commit/127cc7be9ea1d6e6e9d9036c15c55b5396d8bc03))
+
 ## [1.15.1](https://github.com/wemuda/launchrail/compare/v1.15.0...v1.15.1) (2026-09-10)
 
 
