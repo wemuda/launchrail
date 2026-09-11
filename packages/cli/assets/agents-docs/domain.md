@@ -44,7 +44,7 @@ Multi-context repo (presence of `CONTEXT-MAP.md` at the root):
         └── docs/adr/
 ```
 
-ADRs use the project's own format — copy `docs/adr/0000-template.md`, take the next free number (`NNNN-short-slug.md`), and add the record's row to the registry index (`docs/adr/README.md`) in the same commit.
+ADRs use the project's own format — copy `docs/adr/0000-template.md` to `YYYY-MM-DD-short-slug.md` (the decision date, then a slug unique in the directory; no sequence number to claim), declare in its `## Status` what it amends or supersedes, and regenerate the registry index (`launchrail adr index`, writing `docs/adr/README.md`) in the same commit.
 
 ## Use the glossary's vocabulary
 

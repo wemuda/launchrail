@@ -62,7 +62,7 @@ A planning session (a grill, a wayfinder ticket, an interview) closes with the b
 | 3 | Discovery research | Launchrail `discovery` skill (composes `launch-research`) | Vision + intended stack | Landscape/options map in `docs/research/` (`discovery-*.md`) |
 | 4 | Complexity grill | `launch-grill` | Vision + exploration + discovery | Grill constraints in `docs/research/` |
 | 5 | Technical research | `launch-research` | **Grill constraints** | Research notes in `docs/research/` |
-| 6 | Architecture decisions | ADRs (seeded template) | Research | `docs/adr/NNNN-*.md` |
+| 6 | Architecture decisions | ADRs (seeded template) | Research | `docs/adr/YYYY-MM-DD-*.md` |
 | 7 | MVP specification | `launch-wayfinder` / `launch-spec` † | Vision, ADRs, research | A `spec`-labeled issue on the tracker (or `docs/specs/` in local mode) ‡ |
 | 8 | Design validation | Launchrail `design-validation` skill | Spec (+ Claude Design at the top fidelity) | Revised spec with `## Design validation` section |
 | 9 | Tickets | `launch-tickets` † | Validated spec | Tickets in the tracker: `ready-for-agent` label, `Blocked by: #n` edges |

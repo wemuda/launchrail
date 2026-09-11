@@ -2,6 +2,7 @@ import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runAdd } from "../src/commands/add.js";
+import { runAdrIndex } from "../src/commands/adr.js";
 import { runDoctor } from "../src/commands/doctor.js";
 import { runInit } from "../src/commands/init.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
@@ -146,8 +147,9 @@ describe("launchrail doctor", () => {
   });
 });
 
-// Filename-level invariants only (ADR-0031): record contents use the project's
-// own format, so doctor never inspects them — and both checks warn, never fail.
+// Filename-level invariants plus the generated index (ADR-0031, as amended by
+// adr-date-slug-identifiers): record contents use the project's own format, so
+// doctor never judges them — and every check warns, never fails.
 describe("launchrail doctor — ADR checks", () => {
   function check(name: string) {
     return runDoctor(tmp.root).checks.find((c) => c.name === name);
@@ -156,36 +158,54 @@ describe("launchrail doctor — ADR checks", () => {
   test("a repo without decision records gets no ADR checks", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     // The seeded template and registry are not records.
-    expect(check("adr numbering")).toBeUndefined();
+    expect(check("adr identifiers")).toBeUndefined();
     expect(check("adr registry")).toBeUndefined();
   });
 
-  test("unique numbers and a covering index pass", async () => {
+  test("unique identifiers and a current generated index pass", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
-    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# ADR-0001: Use Postgres\n");
-    writeFileSync(
-      join(tmp.root, "docs/adr/README.md"),
-      "# ADR registry\n\n| [0001](0001-use-postgres.md) | Use Postgres | Accepted |\n",
-    );
-    expect(check("adr numbering")?.status).toBe("pass");
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# ADR-0001: Use Postgres\n\n## Status\nAccepted\n");
+    writeFileSync(join(tmp.root, "docs/adr/2026-09-11-event-bus.md"), "# One event bus\n\n## Status\nAccepted\n");
+    expect(runAdrIndex({ cwd: tmp.root, check: false }).result).toBe("updated");
+    expect(check("adr identifiers")?.status).toBe("pass");
+    expect(check("adr identifiers")?.message).toContain("2 decision record(s)");
     expect(check("adr registry")?.status).toBe("pass");
   });
 
-  test("warns when two records claim one number", async () => {
+  test("warns when two records claim one identifier — a number or a slug", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# Use Postgres\n");
     writeFileSync(join(tmp.root, "docs/adr/0001-use-mysql.md"), "# Use MySQL\n");
-    const numbering = check("adr numbering");
-    expect(numbering?.status).toBe("warn");
-    expect(numbering?.message).toContain("0001");
+    writeFileSync(join(tmp.root, "docs/adr/2026-09-11-event-bus.md"), "# One event bus\n");
+    writeFileSync(join(tmp.root, "docs/adr/2026-09-12-event-bus.md"), "# Another event bus\n");
+    const identifiers = check("adr identifiers");
+    expect(identifiers?.status).toBe("warn");
+    expect(identifiers?.message).toContain("0001");
+    expect(identifiers?.message).toContain("event-bus");
   });
 
-  test("warns on records missing from the index, and on a missing registry", async () => {
+  test("warns on records missing from the index, a stale index, and a missing registry", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
-    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# Use Postgres\n");
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# Use Postgres\n\n## Status\nAccepted\n");
     const unindexed = check("adr registry");
     expect(unindexed?.status).toBe("warn");
     expect(unindexed?.message).toContain("0001-use-postgres.md");
+    expect(unindexed?.message).toContain("launchrail adr index");
+
+    runAdrIndex({ cwd: tmp.root, check: false });
+    expect(check("adr registry")?.status).toBe("pass");
+    // Re-statusing a record without regenerating leaves the table stale.
+    writeFileSync(
+      join(tmp.root, "docs/adr/0001-use-postgres.md"),
+      "# Use Postgres\n\n## Status\nSuperseded by [use-mysql](2026-09-11-use-mysql.md)\n",
+    );
+    writeFileSync(join(tmp.root, "docs/adr/2026-09-11-use-mysql.md"), "# Use MySQL\n\n## Status\nAccepted\n");
+    runAdrIndex({ cwd: tmp.root, check: false });
+    writeFileSync(join(tmp.root, "docs/adr/2026-09-11-use-mysql.md"), "# Use MySQL\n\n## Status\nProposed\n");
+    const stale = check("adr registry");
+    expect(stale?.status).toBe("warn");
+    expect(stale?.message).toContain("out of date");
+
     rmSync(join(tmp.root, "docs/adr/README.md"));
     const missing = check("adr registry");
     expect(missing?.status).toBe("warn");

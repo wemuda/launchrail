@@ -69,7 +69,7 @@ describe("launchrail diff", () => {
     const entry = outcome.entries.find((e) => e.relPath === "docs/adr/0000-template.md");
     expect(entry?.kind).toBe("create");
     expect(entry?.diff.startsWith("@@ -0,0")).toBe(true);
-    expect(entry?.diff).toContain("+# ADR-NNNN");
+    expect(entry?.diff).toContain("+# Short decision title");
   });
 
   test("fails with guidance when the project is not initialized", () => {

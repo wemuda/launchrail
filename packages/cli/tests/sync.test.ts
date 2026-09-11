@@ -56,7 +56,7 @@ describe("launchrail sync", () => {
     expect(outcome.code).toBe(0);
     expect(outcome.actions.find((a) => a.spec.relPath === "docs/adr/README.md")?.kind).toBe("create");
     const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
-    expect(registry).toContain("| [0001](0001-use-postgres.md) | Use Postgres | Unclassified |");
+    expect(registry).toContain("| [0001](0001-use-postgres.md) | — | Use Postgres | Unclassified |");
   });
 
   test("never overwrites a registry the project maintains — including a hand-made one", () => {

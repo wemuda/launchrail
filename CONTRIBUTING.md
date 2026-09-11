@@ -30,7 +30,7 @@ A pull request that violates one of these will be declined regardless of how use
 
 ## Making changes
 
-1. **Discuss first for anything structural.** Open an issue before large changes. Meaningful decisions become ADRs in [docs/adr/](docs/adr/) (numbered `NNNN-short-title.md`, using the [template](docs/adr/0000-template.md)) — ADRs for meaningful decisions, not every dependency.
+1. **Discuss first for anything structural.** Open an issue before large changes. Meaningful decisions become ADRs in [docs/adr/](docs/adr/) (named `YYYY-MM-DD-short-slug.md`, using the [template](docs/adr/0000-template.md); regenerate the index with `launchrail adr index`) — ADRs for meaningful decisions, not every dependency.
 2. **Write tests with the change.** File-manipulation logic gets snapshot/fixture tests; CLI behavior gets integration tests against temporary Git repositories (see `packages/cli/tests/` for the pattern). Anything that writes files in a consuming repo needs dry-run coverage.
 3. **Stay lightweight.** Prefer composing upstream tools over reimplementing them. No empty directories, no ceremony ahead of need, no speculative abstraction.
 

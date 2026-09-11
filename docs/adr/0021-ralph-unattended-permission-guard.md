@@ -1,7 +1,7 @@
 # ADR-0021: Ralph's unattended-launch permission guard
 
 ## Status
-Accepted — extends [ADR-0005](0005-ralph-two-frontends-one-policy.md) (the two Ralph frontends) and reuses the additive `.claude/settings.json` merge model of [ADR-0003](0003-plugin-subscription-via-project-settings.md)/[ADR-0019](0019-vendor-skills-retire-plugin.md). Landed alongside [ADR-0020](0020-independent-skill-set.md), which made Ralph the sole implementation loop and removed the plugin-declaration machinery from `init`; the guard's own settings.json registration is independent of that machinery and unaffected.
+Accepted — extends [ADR-0005](0005-ralph-two-frontends-one-policy.md) (the two Ralph frontends); reuses the additive `.claude/settings.json` merge model of [ADR-0003](0003-plugin-subscription-via-project-settings.md)/[ADR-0019](0019-vendor-skills-retire-plugin.md). Landed alongside [ADR-0020](0020-independent-skill-set.md), which made Ralph the sole implementation loop and removed the plugin-declaration machinery from `init`; the guard's own settings.json registration is independent of that machinery and unaffected.
 
 ## Context
 The Ralph loop (ADR-0005) is meant to be launched and then left unattended for hours while it drives a ticket backlog to merged code — most sharply as the `ralph` workflow, which the Workflow tool runs headless. Its host is usually an ephemeral cloud container that is reclaimed once the session sits idle.

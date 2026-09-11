@@ -21,7 +21,7 @@ Read `.launchrail.yml` (`origin`, `modules`, `issueTracker`) first — it is the
 | 3 | Discovery | `launch-discovery` | Landscape map committed under `docs/research/` (`discovery-*.md`) |
 | 4 | Complexity grill | `launch-grill` | Grill constraints committed under `docs/research/` |
 | 5 | Technical research | `launch-research`, fed the grill constraints | Research notes committed under `docs/research/` |
-| 6 | Architecture decisions | ADRs (`docs/adr/0000-template.md`) | `docs/adr/NNNN-*.md` beyond the template |
+| 6 | Architecture decisions | ADRs (`docs/adr/0000-template.md`) | `docs/adr/YYYY-MM-DD-*.md` beyond the template |
 | 7 | MVP specification | `launch-wayfinder` / `launch-spec` † | A spec exists — a `spec`-labeled issue on the tracker, or a `docs/specs/` file in local mode (read `docs/agents/issue-tracker.md`) |
 | 8 | Design validation | `launch-design-validation` (fidelity chosen inside the skill) | The spec carries a `## Design validation` section (a recorded skip counts) |
 | 9 | Tickets | `launch-tickets` † | Tracker has `ready-for-agent` tickets with `Blocked by: #n` edges |

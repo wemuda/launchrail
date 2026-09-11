@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { AVAILABLE_MODULES, runAdd } from "./commands/add.js";
+import { runAdrIndex } from "./commands/adr.js";
 import { printDiff, runDiff } from "./commands/diff.js";
 import { runDev } from "./commands/dev.js";
 import { runDoctor, printDoctor } from "./commands/doctor.js";
@@ -24,6 +25,7 @@ Commands:
   diff      Preview upstream changes
   sync      Synchronize managed capabilities and run migrations
   eject     Stop managing a selected module or file
+  adr       Maintain the decision-record registry (adr index [--check])
   promote   Inspect potential reusable local improvements
 
 Options:
@@ -49,7 +51,10 @@ sync options:
 
 eject usage:
   launchrail eject <module|file> [--dry-run]   Stop managing a module's files or one file
-  launchrail eject --all [--dry-run]           Vendor mode: eject everything`;
+  launchrail eject --all [--dry-run]           Vendor mode: eject everything
+
+adr usage:
+  launchrail adr index [--check]               Regenerate docs/adr/README.md's index table from the records (--check: report only)`;
 
 const NOT_IMPLEMENTED = ["promote"];
 
@@ -141,6 +146,14 @@ if (command === "eject") {
     dryRun: flags.has("--dry-run"),
   });
   process.exit(outcome.code);
+}
+
+if (command === "adr") {
+  if (args[1] !== "index") {
+    console.error("launchrail: usage: launchrail adr index [--check]");
+    process.exit(1);
+  }
+  process.exit(runAdrIndex({ cwd: process.cwd(), check: flags.has("--check") }).code);
 }
 
 if (NOT_IMPLEMENTED.includes(command)) {

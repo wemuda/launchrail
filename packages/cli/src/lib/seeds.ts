@@ -55,7 +55,7 @@ ${commitSection}
 - Ask, don't guess. On product decisions, data-model or schema changes, security-relevant behaviour, or anything genuinely ambiguous, stop and ask rather than guessing — a wrong guess on these costs more than the question.
 - Do not silently change scope; surface deviations from the spec or ADRs.
 - If implementation invalidates an artifact (vision, spec, ADR, design note), update that artifact in the same change.
-- Decisions that are hard to reverse, surprising without context, and the result of a real trade-off become lightweight ADRs in \`docs/adr/\` using [docs/adr/0000-template.md](docs/adr/0000-template.md), with a row added to the registry index in the same commit. Prefer amending the ADR that owns an area over minting a sibling; product decisions belong in the spec, not an ADR.
+- Decisions that are hard to reverse, surprising without context, and the result of a real trade-off become lightweight ADRs in \`docs/adr/\` using [docs/adr/0000-template.md](docs/adr/0000-template.md), named \`YYYY-MM-DD-short-slug.md\` (the decision date, then a slug unique in the directory — no sequence number to claim), with the registry index regenerated (\`launchrail adr index\`) in the same commit. Prefer amending the ADR that owns an area over minting a sibling; product decisions belong in the spec, not an ADR.
 
 ## Definition of done
 
@@ -120,12 +120,12 @@ ${browserTesting}${ralph}`;
 }
 
 function adrTemplate(): string {
-  return `# ADR-NNNN: Short decision title
+  return `# Short decision title
 
 ## Status
-Proposed | Accepted | Accepted — amended by ADR-NNNN | Superseded by ADR-NNNN
+Proposed | Accepted | Superseded by [slug](YYYY-MM-DD-slug.md)
 
-When a later ADR amends or supersedes this one, update this line and the registry index ([README.md](README.md)) in the same commit.
+Name here what this record supersedes, amends, or extends, linking the earlier record by file (\`Accepted — amends [slug](YYYY-MM-DD-slug.md): what changed\`). The registry index ([README.md](README.md)) derives the reverse links, so an earlier record need not be edited when this one amends it; when this record is superseded later, this line is rewritten to name the successor. Re-run \`launchrail adr index\` after any change here.
 
 ## Context
 What requirement or constraint requires a decision?

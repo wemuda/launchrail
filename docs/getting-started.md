@@ -35,7 +35,7 @@ The interview asks three things — whether this is a new project or an existing
 - `AGENTS.md` + `CLAUDE.md` — the agent operating contract (with your chosen conventions baked in) and the Claude Code entry point importing it. Seeded once; existing files are never overwritten.
 - `.launchrail/CLAUDE.generated.md` — managed workflow instructions, replaced on `sync` as modules change.
 - `.claude/workflows/ralph.js` — the implementation loop's workflow form, managed ([ADR-0018](adr/0018-implement-front-door.md)): the loop is present from day one, so `/launch-implement` works the moment tickets exist.
-- `docs/adr/0000-template.md` — ADR template.
+- `docs/adr/0000-template.md` and `docs/adr/README.md` — the ADR template (records are named `YYYY-MM-DD-slug.md`) and the decision registry; `launchrail adr index` regenerates the registry's index table from the records.
 - `docs/agents/` — the issue-tracker conventions (templated from your `issueTracker` answer, the rail's label vocabulary included) and the domain-doc consumer rules. Seeded: yours to edit — delete one and `sync` re-seeds it from the manifest's current answers.
 - `.claude/skills/` — the workflow skills as **managed files** ([ADR-0019](adr/0019-vendor-skills-retire-plugin.md)): Launchrail's own complete, `launch-*` prefixed set ([ADR-0020](adr/0020-independent-skill-set.md)), plus a `NOTICE.md` carrying the MIT attribution for the skills with upstream-derived text. Committed to the repo, so the whole team — and every session, cloud or local, on any agent — has them after a `git pull`. `.claude/settings.json` is never touched.
 

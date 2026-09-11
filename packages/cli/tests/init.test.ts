@@ -91,8 +91,8 @@ describe("launchrail init", () => {
     writeFileSync(join(tmp.root, "docs/adr/0002-event-bus.md"), "# One event bus\n\nBecause.\n");
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
-    expect(registry).toContain("| [0001](0001-use-postgres.md) | Use Postgres | Unclassified |");
-    expect(registry).toContain("| [0002](0002-event-bus.md) | One event bus | Unclassified |");
+    expect(registry).toContain("| [0001](0001-use-postgres.md) | — | Use Postgres | Unclassified |");
+    expect(registry).toContain("| [0002](0002-event-bus.md) | — | One event bus | Unclassified |");
     expect(registry).not.toContain("0000-template.md) |");
     // Re-running stays idempotent: same records, same content.
     const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
