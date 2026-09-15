@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ADR_REGISTRY_PATH, duplicateAdrIds, scanAdrs, unindexedAdrs, withRegeneratedIndex } from "../lib/adr.js";
+import { ADR_REGISTRY_PATH, adrDuplicates, scanAdrs, unindexedAdrs, withRegeneratedIndex } from "../lib/adr.js";
 import { BROWSER_DRIVER_PACKAGE, BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
 import { missingImports } from "../lib/claudeImports.js";
@@ -127,14 +127,15 @@ export function runDoctor(cwd: string): DoctorOutcome {
   // project-doc hygiene, so they warn rather than fail.
   const adrs = scanAdrs(cwd);
   if (adrs.length > 0) {
-    const dupes = duplicateAdrIds(adrs);
+    const dupes = adrDuplicates(adrs);
     if (dupes.length === 0) {
       add("pass", "adr identifiers", `${adrs.length} decision record(s), identifiers unique`);
     } else {
+      const detail = dupes.map((d) => `${d.id} (${d.files.join(", ")})`).join("; ");
       add(
         "warn",
         "adr identifiers",
-        `identifier(s) ${dupes.join(", ")} claimed by more than one file — references are ambiguous; rename one of each pair (dated records: change the slug) and update its links`,
+        `${detail} — each id is claimed by more than one file, so every reference by it is ambiguous; give the newer collider a dated \`YYYY-MM-DD-slug.md\` name (dated ids never collide) and update its links`,
       );
     }
     if (!existsSync(join(cwd, ADR_REGISTRY_PATH))) {

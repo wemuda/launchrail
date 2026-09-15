@@ -4,7 +4,18 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runAdrIndex } from "../src/commands/adr.js";
 import { runInit } from "../src/commands/init.js";
 import { runSync } from "../src/commands/sync.js";
-import { adrIndexTable, adrRelations, adrStatusCell, scanAdrs, withRegeneratedIndex } from "../src/lib/adr.js";
+import {
+  ADR_MAINTAINING_SECTION,
+  adrDuplicates,
+  adrIndexTable,
+  adrRegistryContent,
+  adrRelations,
+  adrStatusCell,
+  healRegistryMinting,
+  PRE_DATE_SLUG_MAINTAINING_SECTION,
+  scanAdrs,
+  withRegeneratedIndex,
+} from "../src/lib/adr.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
 
 let tmp: TmpRepo;
@@ -112,6 +123,64 @@ describe("ADR relations and the generated index", () => {
   test("a registry in the project's own format, without an index, is left alone", () => {
     record("0001-use-postgres.md", "Use Postgres");
     expect(withRegeneratedIndex("# Our decisions\n\nProse only.\n", scanAdrs(tmp.root))).toBeNull();
+  });
+});
+
+// The pre-date-slug registry told agents to "take the next free number"; the
+// managed-not-seeded-guidance ADR moves the authoritative rule to the managed
+// surface, keeps a project-owned summary in the registry, and heals the seeded
+// prose Launchrail wrote before the dated scheme.
+describe("minting guidance", () => {
+  const registryWith = (section: string) =>
+    `# ADR registry\n\nIntro.\n\n## Index\n\n| ADR | Title | Status |\n| --- | --- | --- |\n| [0001](0001-x.md) | X | Accepted |\n\n## The live picture\n\nProject-owned prose.\n\n${section}\n`;
+
+  test("the seeded registry teaches date-and-slug, defers to the managed contract, and never mints a number", () => {
+    const seed = adrRegistryContent([]);
+    expect(seed).toContain(ADR_MAINTAINING_SECTION);
+    expect(seed).not.toContain("next free number");
+    expect(seed).toContain("There is no sequence number to claim");
+    expect(seed).toContain(".launchrail/CLAUDE.generated.md");
+  });
+
+  test("heals only the exact pre-date-slug section, preserving the index and live picture", () => {
+    const stale = registryWith(PRE_DATE_SLUG_MAINTAINING_SECTION);
+    const { state, next } = healRegistryMinting(stale);
+    expect(state).toBe("healed");
+    expect(next).toBe(registryWith(ADR_MAINTAINING_SECTION));
+    expect(next).not.toContain("next free number");
+    // The project's own sections are untouched — only the guidance changed.
+    expect(next).toContain("| ADR | Title | Status |");
+    expect(next).toContain("## The live picture\n\nProject-owned prose.");
+  });
+
+  test("a current registry is left alone; healing is idempotent", () => {
+    const current = registryWith(ADR_MAINTAINING_SECTION);
+    const first = healRegistryMinting(current);
+    expect(first.state).toBe("current");
+    expect(first.next).toBe(current);
+    expect(healRegistryMinting(healRegistryMinting(registryWith(PRE_DATE_SLUG_MAINTAINING_SECTION)).next).state).toBe(
+      "current",
+    );
+  });
+
+  test("a project-edited section is reported modified and never rewritten", () => {
+    const edited = registryWith(`${PRE_DATE_SLUG_MAINTAINING_SECTION}\n- Our own extra house rule.`);
+    const { state, next } = healRegistryMinting(edited);
+    expect(state).toBe("modified");
+    expect(next).toBe(edited);
+  });
+
+  test("a registry without a Maintaining section is absent", () => {
+    expect(healRegistryMinting("# ADR registry\n\nJust an index, no maintenance notes.\n").state).toBe("absent");
+  });
+});
+
+describe("duplicate identifiers", () => {
+  test("names every file that claims a shared id, across numbered and dated records", () => {
+    record("0053-first.md", "First");
+    record("0053-second.md", "Second");
+    record("2026-09-10-solo.md", "Solo");
+    expect(adrDuplicates(scanAdrs(tmp.root))).toEqual([{ id: "0053", files: ["0053-first.md", "0053-second.md"] }]);
   });
 });
 
