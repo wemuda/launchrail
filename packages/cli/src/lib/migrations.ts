@@ -1,5 +1,13 @@
 import { existsSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import {
+  ADR_DIR,
+  ADR_REGISTRY_PATH,
+  ADR_TEMPLATE,
+  ADR_TEMPLATE_FILENAME,
+  healRegistryMinting,
+  PRE_DATE_SLUG_ADR_TEMPLATE,
+} from "./adr.js";
 import { sha256 } from "./checksum.js";
 import {
   applyPluginDeclaration,
@@ -348,6 +356,60 @@ export const MIGRATIONS: Migration[] = [
           }
           for (const relPath of keptModified) delete ctx.lockfile.files[relPath];
           if (keyRemoval.changed) writeFileSync(manifestPath, keyRemoval.source, "utf8");
+        },
+      };
+    },
+  },
+  {
+    id: "2026-09-heal-adr-minting-guidance",
+    description:
+      "rewrite the pre-date-slug ADR minting guidance seeded before the dated-identifier ADR — the registry's Maintaining section and the 0000-template — so agents name records by date and slug instead of minting colliding numbers (managed-not-seeded-guidance)",
+    plan(ctx) {
+      // The forward fix (naming, `adr index`, the seed) only reached new repos;
+      // this carries it into repos seeded earlier. Sync deliberately never
+      // rewrites a seeded file, so the correction rides this one-time migration
+      // instead — and only over the exact prose Launchrail wrote, so a section a
+      // project has since edited (or ejected) stays theirs. The authoritative
+      // rule now lives in the managed workflow instructions, which the same sync
+      // regenerates right after this runs.
+      const changes: string[] = [];
+      const writes: Array<() => void> = [];
+
+      const registryEntry = ctx.lockfile.files[ADR_REGISTRY_PATH];
+      const registryPath = join(ctx.cwd, ADR_REGISTRY_PATH);
+      if (existsSync(registryPath) && registryEntry?.class !== "ejected") {
+        const heal = healRegistryMinting(readFileSync(registryPath, "utf8"));
+        if (heal.state === "healed") {
+          changes.push(
+            `${ADR_REGISTRY_PATH} — replace the pre-date-slug "Maintaining this registry" guidance (mint the next number → name by date and slug)`,
+          );
+          writes.push(() => {
+            writeFileSync(registryPath, heal.next, "utf8");
+            if (registryEntry) ctx.lockfile.files[ADR_REGISTRY_PATH] = { class: registryEntry.class, checksum: sha256(heal.next) };
+          });
+        }
+      }
+
+      const templateRel = `${ADR_DIR}/${ADR_TEMPLATE_FILENAME}`;
+      const templateEntry = ctx.lockfile.files[templateRel];
+      const templatePath = join(ctx.cwd, ADR_DIR, ADR_TEMPLATE_FILENAME);
+      if (
+        existsSync(templatePath) &&
+        templateEntry?.class !== "ejected" &&
+        readFileSync(templatePath, "utf8") === PRE_DATE_SLUG_ADR_TEMPLATE
+      ) {
+        changes.push(`${templateRel} — replace the pre-date-slug ADR template (ADR-NNNN title → date and slug)`);
+        writes.push(() => {
+          writeFileSync(templatePath, ADR_TEMPLATE, "utf8");
+          if (templateEntry) ctx.lockfile.files[templateRel] = { class: templateEntry.class, checksum: sha256(ADR_TEMPLATE) };
+        });
+      }
+
+      if (changes.length === 0) return { changes: [], apply: () => {} };
+      return {
+        changes,
+        apply: () => {
+          for (const write of writes) write();
         },
       };
     },

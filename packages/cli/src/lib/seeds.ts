@@ -1,4 +1,4 @@
-import { ADR_REGISTRY_PATH, adrRegistryContent, scanAdrs } from "./adr.js";
+import { ADR_REGISTRY_PATH, ADR_TEMPLATE, adrRegistryContent, scanAdrs } from "./adr.js";
 import type { Manifest } from "./manifest.js";
 import { AGENTS_COMMANDS_TODO } from "./readiness.js";
 import type { FileSpec } from "./writer.js";
@@ -112,36 +112,12 @@ function claudeGeneratedMd(ctx: SeedContext): string {
 - This project follows the Launchrail rail — six phases: Intent → Exploration → Decisions → Blueprint → Build → Ship. Report position with the rail banner at every transition; the stage detail and the interaction contract live in \`.claude/skills/launch/workflow.md\`.
 - Product knowledge (vision, specs, ADRs, designs, tickets, code) is project-owned; Launchrail never overwrites it.
 - Architecture decisions: read \`docs/adr/README.md\` — the registry index — first, and open only the ADRs touching your area. An ADR records a decision, not the current system; never take one as evidence that a component exists or still works as described — the code is the source of truth.
+- Recording an ADR (the authoritative minting contract — the registry's own guidance summarizes this): copy [docs/adr/0000-template.md](docs/adr/0000-template.md) to \`docs/adr/YYYY-MM-DD-short-slug.md\` — the decision date, then a slug unique in the directory. There is **no sequence number to claim**, so parallel sessions never collide and nothing is renumbered; the slug is the record's handle in prose and links, and titles carry no \`ADR-NNNN:\` prefix. Declare what the record supersedes, amends, or extends in its own \`## Status\` line, linking the earlier record by file — the index derives the reverse links, so amending one never means editing it. Regenerate the index with \`launchrail adr index\` and commit it in the same change. Records that predate this scheme keep their \`NNNN-\` names and are cited by number.
 - \`.launchrail.yml\` is project configuration; \`.launchrail-lock.json\` is machine-managed — do not hand-edit it.
 - The issue-tracker workflow (labels included) and the domain-doc consumer rules live in \`docs/agents/\` — seeded from \`.launchrail.yml\`, yours to edit.
 - Before claiming completion, run the project's deterministic checks. Completion requires evidence, not assertion.
 - Run \`npx @wemuda/launchrail doctor\` when repository state seems inconsistent.
 ${browserTesting}${ralph}`;
-}
-
-function adrTemplate(): string {
-  return `# Short decision title
-
-## Status
-Proposed | Accepted | Superseded by [slug](YYYY-MM-DD-slug.md)
-
-Name here what this record supersedes, amends, or extends, linking the earlier record by file (\`Accepted — amends [slug](YYYY-MM-DD-slug.md): what changed\`). The registry index ([README.md](README.md)) derives the reverse links, so an earlier record need not be edited when this one amends it; when this record is superseded later, this line is rewritten to name the successor. Re-run \`launchrail adr index\` after any change here.
-
-## Context
-What requirement or constraint requires a decision?
-
-## Decision
-What was selected?
-
-## Alternatives considered
-What realistic alternatives were rejected?
-
-## Consequences
-What becomes easier, harder, or constrained?
-
-## Revisit when
-What change would justify reconsidering this decision?
-`;
 }
 
 /** The managed Claude instructions file — regenerated whenever module configuration changes. */
@@ -154,7 +130,7 @@ export function seedFiles(ctx: SeedContext): FileSpec[] {
   return [
     { relPath: "AGENTS.md", content: agentsMd(ctx), ownership: "seeded" },
     { relPath: "CLAUDE.md", content: claudeMd(), ownership: "seeded" },
-    { relPath: "docs/adr/0000-template.md", content: adrTemplate(), ownership: "seeded" },
+    { relPath: "docs/adr/0000-template.md", content: ADR_TEMPLATE, ownership: "seeded" },
     // The registry (ADR-0031) makes the corpus navigable: agents read its index,
     // not the whole directory. Adopting a repo with existing records prefills it.
     { relPath: ADR_REGISTRY_PATH, content: adrRegistryContent(scanAdrs(ctx.cwd)), ownership: "seeded" },

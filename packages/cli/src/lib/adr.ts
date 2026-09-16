@@ -77,11 +77,14 @@ export function scanAdrs(cwd: string): AdrEntry[] {
   return entries;
 }
 
-/** Ids (numbers or slugs) claimed by more than one record — every reference by id is ambiguous. */
-export function duplicateAdrIds(entries: AdrEntry[]): string[] {
-  const counts = new Map<string, number>();
-  for (const entry of entries) counts.set(entry.id, (counts.get(entry.id) ?? 0) + 1);
-  return [...counts.entries()].filter(([, n]) => n > 1).map(([id]) => id);
+/**
+ * Ids (numbers or slugs) claimed by more than one record, each with the files
+ * that claim it — every reference by such an id is ambiguous.
+ */
+export function adrDuplicates(entries: AdrEntry[]): { id: string; files: string[] }[] {
+  const byId = new Map<string, string[]>();
+  for (const entry of entries) byId.set(entry.id, [...(byId.get(entry.id) ?? []), entry.file]);
+  return [...byId.entries()].filter(([, files]) => files.length > 1).map(([id, files]) => ({ id, files }));
 }
 
 /** Records whose filename never appears in the registry — rows the index is missing. */
@@ -231,6 +234,119 @@ export function withRegeneratedIndex(registrySource: string, entries: AdrEntry[]
   return `${before}\n${table}\n${after}`;
 }
 
+// --- Minting guidance: a managed contract, a seeded summary, a one-time heal ----
+//
+// How a record is minted is an *operational instruction* the toolchain must be
+// able to keep current. The authoritative copy therefore lives in the managed
+// workflow instructions (`.launchrail/CLAUDE.generated.md`), which sync rewrites
+// every version. The seeded registry and template carry only a project-owned
+// summary and defer to it. The strings below are shared by the seed and by the
+// heal migration so both write the same bytes, and the pre-date-slug versions
+// are pinned exactly so the migration corrects a repo Launchrail seeded before
+// the dated-identifier scheme without ever touching one a project has edited.
+
+/** The seeded ADR template: date-and-slug titled, teaching the forward-declared relation model. */
+export const ADR_TEMPLATE = `# Short decision title
+
+## Status
+Proposed | Accepted | Superseded by [slug](YYYY-MM-DD-slug.md)
+
+Name here what this record supersedes, amends, or extends, linking the earlier record by file (\`Accepted — amends [slug](YYYY-MM-DD-slug.md): what changed\`). The registry index ([README.md](README.md)) derives the reverse links, so an earlier record need not be edited when this one amends it; when this record is superseded later, this line is rewritten to name the successor. Re-run \`launchrail adr index\` after any change here.
+
+## Context
+What requirement or constraint requires a decision?
+
+## Decision
+What was selected?
+
+## Alternatives considered
+What realistic alternatives were rejected?
+
+## Consequences
+What becomes easier, harder, or constrained?
+
+## Revisit when
+What change would justify reconsidering this decision?
+`;
+
+/** The `# ADR-NNNN:`-titled template seeded before the dated-identifier ADR (byte-stable until then). */
+export const PRE_DATE_SLUG_ADR_TEMPLATE = `# ADR-NNNN: Short decision title
+
+## Status
+Proposed | Accepted | Accepted — amended by ADR-NNNN | Superseded by ADR-NNNN
+
+When a later ADR amends or supersedes this one, update this line and the registry index ([README.md](README.md)) in the same commit.
+
+## Context
+What requirement or constraint requires a decision?
+
+## Decision
+What was selected?
+
+## Alternatives considered
+What realistic alternatives were rejected?
+
+## Consequences
+What becomes easier, harder, or constrained?
+
+## Revisit when
+What change would justify reconsidering this decision?
+`;
+
+/** The registry's project-owned summary of how records are minted; defers to the managed contract. */
+export const ADR_MAINTAINING_SECTION = `## Maintaining this registry
+
+- New ADRs copy [0000-template.md](0000-template.md) to \`YYYY-MM-DD-short-slug.md\` — the date the decision was made, then a slug unique in this directory. There is no sequence number to claim, so parallel branches never collide, and nothing is renumbered.
+- The index table between the markers is **generated**: run \`launchrail adr index\` after adding or re-statusing a record (and after merging), and commit the result. Never hand-edit the rows; the rest of this file is yours.
+- A new ADR declares what it supersedes, amends, or extends in its own \`## Status\` line, linking the earlier record by file. The index derives the reverse links, so amending an ADR does not require editing it. A superseded ADR's \`## Status\` line is still rewritten to name its successor — that is the one fact a reader of the record alone must not miss.
+- Never delete or rename an ADR once it is referenced; superseded ADRs are historical records other documents link to.
+- The naming and relation mechanics above summarize a contract Launchrail keeps current in the managed workflow instructions (\`.launchrail/CLAUDE.generated.md\`); if this seeded summary ever drifts from that managed contract, the managed contract is what holds.`;
+
+/**
+ * The "Maintaining this registry" section seeded before the dated-identifier ADR —
+ * the one that told agents to "take the next free number". Byte-stable from
+ * ADR-0031 until that ADR, so `healRegistryMinting` matches it exactly.
+ */
+export const PRE_DATE_SLUG_MAINTAINING_SECTION = `## Maintaining this registry
+
+- New ADRs copy [0000-template.md](0000-template.md), take the next free number (\`NNNN-short-slug.md\` — check both this index and the files on disk), and add their row here **in the same commit**. The shared row turns two branches minting the same number into a visible merge conflict instead of a silent collision.
+- When a new ADR supersedes or amends an earlier one — including reversing part of the earlier one's context — update the earlier ADR's \`## Status\` line and its row here in the same commit.
+- Never delete or renumber an ADR once it is referenced; superseded ADRs are historical records other documents link to.`;
+
+const MAINTAINING_HEADING = "## Maintaining this registry";
+
+/** Slice a registry into the text before/at/after its "Maintaining this registry" section (to the next `## ` heading or EOF). */
+function maintainingSlice(source: string): { before: string; section: string; after: string } | null {
+  const start = source.indexOf(MAINTAINING_HEADING);
+  if (start === -1) return null;
+  const bodyStart = start + MAINTAINING_HEADING.length;
+  const nextRel = source.slice(bodyStart).search(/\n## /);
+  const end = nextRel === -1 ? source.length : bodyStart + nextRel;
+  return { before: source.slice(0, start), section: source.slice(start, end), after: source.slice(end) };
+}
+
+export type MintingGuidanceState = "healed" | "current" | "modified" | "absent";
+
+/**
+ * Correct a registry's minting guidance in place. Returns `healed` (with the
+ * rewritten source) only when the section is exactly the pre-date-slug text
+ * Launchrail seeded; `current` when it already matches the canonical section;
+ * `modified` when a project has edited it (left untouched — it is theirs);
+ * `absent` when there is no such section. The heal migration acts only on
+ * `healed`; the others are no-ops, which keeps a re-run empty.
+ */
+export function healRegistryMinting(source: string): { state: MintingGuidanceState; next: string } {
+  const slice = maintainingSlice(source);
+  if (!slice) return { state: "absent", next: source };
+  const found = slice.section.trim();
+  if (found === ADR_MAINTAINING_SECTION.trim()) return { state: "current", next: source };
+  if (found === PRE_DATE_SLUG_MAINTAINING_SECTION.trim()) {
+    const tail = slice.after === "" ? "\n" : slice.after;
+    return { state: "healed", next: slice.before + ADR_MAINTAINING_SECTION.trim() + tail };
+  }
+  return { state: "modified", next: source };
+}
+
 /**
  * The seeded ADR registry. When init/sync adopts a repository that already has
  * decision records, the index prefills from them; a fresh repository gets the
@@ -264,11 +380,6 @@ How the accepted decisions compose into the current system. This section describ
 
 ${livePicture}
 
-## Maintaining this registry
-
-- New ADRs copy [0000-template.md](0000-template.md) to \`YYYY-MM-DD-short-slug.md\` — the date the decision was made, then a slug unique in this directory. There is no sequence number to claim, so parallel branches never collide.
-- The index table between the markers is **generated**: run \`launchrail adr index\` after adding or re-statusing a record (and after merging), and commit the result. Never hand-edit the rows; the rest of this file is yours.
-- A new ADR declares what it supersedes, amends, or extends in its own \`## Status\` line, linking the earlier record by file. The index derives the reverse links, so amending an ADR does not require editing it. A superseded ADR's \`## Status\` line is still rewritten to name its successor — that is the one fact a reader of the record alone must not miss.
-- Never delete or rename an ADR once it is referenced; superseded ADRs are historical records other documents link to.
+${ADR_MAINTAINING_SECTION}
 `;
 }

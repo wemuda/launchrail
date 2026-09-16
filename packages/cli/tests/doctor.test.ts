@@ -70,6 +70,17 @@ describe("launchrail doctor", () => {
     expect(check?.status).toBe("pass");
   });
 
+  test("names every file that claims a duplicated ADR id and prescribes a dated rename", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    writeFileSync(join(tmp.root, "docs/adr/0053-first.md"), "# First\n\n## Status\nAccepted\n");
+    writeFileSync(join(tmp.root, "docs/adr/0053-second.md"), "# Second\n\n## Status\nAccepted\n");
+    const check = runDoctor(tmp.root).checks.find((c) => c.name === "adr identifiers");
+    expect(check?.status).toBe("warn");
+    expect(check?.message).toContain("0053-first.md");
+    expect(check?.message).toContain("0053-second.md");
+    expect(check?.message).toContain("dated");
+  });
+
   test("passes the workflow skills check after init; the ralph path declares no plugin", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     const checks = runDoctor(tmp.root).checks;

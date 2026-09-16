@@ -1,6 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import {
+  ADR_MAINTAINING_SECTION,
+  ADR_TEMPLATE,
+  PRE_DATE_SLUG_ADR_TEMPLATE,
+  PRE_DATE_SLUG_MAINTAINING_SECTION,
+} from "../src/lib/adr.js";
 import { sha256 } from "../src/lib/checksum.js";
 import { emptyLockfile, type Lockfile } from "../src/lib/lockfile.js";
 import {
@@ -296,5 +302,63 @@ describe("2026-09-browser-smoke-one-off (ADR-0034)", () => {
     const results = applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS);
     expect(results.find((r) => r.id === ID)?.status).toBe("already-satisfied");
     expect(existsSync(join(tmp.root, ".mcp.json"))).toBe(true);
+  });
+});
+
+describe("2026-09-heal-adr-minting-guidance (managed-not-seeded-guidance)", () => {
+  const ID = "2026-09-heal-adr-minting-guidance";
+  const registryWith = (section: string) =>
+    `# ADR registry\n\nIntro.\n\n## Index\n\n| ADR | Title | Status |\n| --- | --- | --- |\n| [0001](0001-x.md) | X | Accepted |\n\n## The live picture\n\nProject-owned prose.\n\n${section}\n`;
+
+  function seed(relPath: string, content: string, klass: "seeded" | "ejected" = "seeded"): void {
+    const abs = join(tmp.root, relPath);
+    mkdirSync(join(abs, ".."), { recursive: true });
+    writeFileSync(abs, content, "utf8");
+    lockfile.files[relPath] = { class: klass, checksum: sha256(content) };
+  }
+
+  test("heals the pre-date-slug registry section and template, preserves project content, and is idempotent", () => {
+    seed("docs/adr/README.md", registryWith(PRE_DATE_SLUG_MAINTAINING_SECTION));
+    seed("docs/adr/0000-template.md", PRE_DATE_SLUG_ADR_TEMPLATE);
+
+    const result = applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS).find((r) => r.id === ID);
+    expect(result?.status).toBe("applied");
+
+    const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
+    // Only the guidance changed; the index table and live picture are the project's.
+    expect(registry).toBe(registryWith(ADR_MAINTAINING_SECTION));
+    expect(registry).not.toContain("next free number");
+    expect(registry).toContain("## The live picture\n\nProject-owned prose.");
+    expect(readFileSync(join(tmp.root, "docs/adr/0000-template.md"), "utf8")).toBe(ADR_TEMPLATE);
+
+    // The lockfile records the healed seed content, not the stale checksum.
+    expect(lockfile.files["docs/adr/README.md"]?.checksum).toBe(sha256(registry));
+    expect(lockfile.files["docs/adr/0000-template.md"]?.checksum).toBe(sha256(ADR_TEMPLATE));
+
+    const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
+    expect(planned.find((p) => p.id === ID)?.changes).toEqual([]);
+  });
+
+  test("leaves a project-edited registry section and a customized template untouched", () => {
+    const edited = registryWith(`${PRE_DATE_SLUG_MAINTAINING_SECTION}\n- Our own extra rule.`);
+    seed("docs/adr/README.md", edited);
+    seed("docs/adr/0000-template.md", "# Our template\n");
+    const result = applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS).find((r) => r.id === ID);
+    expect(result?.status).toBe("already-satisfied");
+    expect(readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8")).toBe(edited);
+    expect(readFileSync(join(tmp.root, "docs/adr/0000-template.md"), "utf8")).toBe("# Our template\n");
+  });
+
+  test("never rewrites an ejected registry", () => {
+    seed("docs/adr/README.md", registryWith(PRE_DATE_SLUG_MAINTAINING_SECTION), "ejected");
+    const result = applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS).find((r) => r.id === ID);
+    expect(result?.status).toBe("already-satisfied");
+    expect(readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8")).toContain("next free number");
+  });
+
+  test("is a no-op when there is no registry", () => {
+    expect(
+      applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS).find((r) => r.id === ID)?.status,
+    ).toBe("already-satisfied");
   });
 });
