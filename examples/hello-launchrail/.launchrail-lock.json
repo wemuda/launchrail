@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "launchrailVersion": "1.16.0",
+  "launchrailVersion": "1.17.0",
   "files": {
     ".claude/hooks/ralph-permission-guard.py": {
       "class": "managed",
@@ -12,7 +12,7 @@
     },
     ".claude/skills/launch-browser-smoke/SKILL.md": {
       "class": "managed",
-      "checksum": "d1af795f25c61bb1814a2882ea0fa3cc6dcc3c501d58b869d0274b440f9a1ff1"
+      "checksum": "32b7337846dc17fffaea6312c10338681f2e491de60850211971dd7de2bd9dff"
     },
     ".claude/skills/launch-code-review/SKILL.md": {
       "class": "managed",
@@ -20,7 +20,15 @@
     },
     ".claude/skills/launch-design-handoff/SKILL.md": {
       "class": "managed",
-      "checksum": "890e9cc1e73de1b423613ed0610e33fc511a5043d2cab1b664072a6003f404ab"
+      "checksum": "b2e9953b99264df550e1d448d968b270912d97ff950d991b6548f81acb5a8c88"
+    },
+    ".claude/skills/launch-design-implement/fidelity.md": {
+      "class": "managed",
+      "checksum": "b97721ee1cc371756a012ce8733b7b1dbfeda44dc3473ab91d67f359ec3af35a"
+    },
+    ".claude/skills/launch-design-implement/SKILL.md": {
+      "class": "managed",
+      "checksum": "9710df668c4dd3a277bad59c69d067160cf3feacd49169a2fdc56e47703330e4"
     },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
@@ -56,7 +64,7 @@
     },
     ".claude/skills/launch-ralph-implement/SKILL.md": {
       "class": "managed",
-      "checksum": "dc057dcd6a051062412fb801978eb21d960a5696abeb43028809cc806e12ebc2"
+      "checksum": "5049e08c9ebfc92a0fd21fb848f6f019e048c901442d6b232c8386a9a0058947"
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
@@ -88,11 +96,11 @@
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "30f6dc099c079a5a0752608c5da0f3ae229b71843b5db0b382b365bf5e16ec4d"
+      "checksum": "f6e33b98a36760c22680024139cbc47d1a0beb814813bfea08753b3cd2a41c47"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "aa160fcd4522fa200b4e0bb03e1ad44355b53ff63fdb7433b9c2fde546c92015"
+      "checksum": "3d590acc72ebae270c3eb0e57b7d6d18f225143bab8892913d687e7aa4d4e563"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",
@@ -108,7 +116,7 @@
     },
     ".launchrail/CLAUDE.generated.md": {
       "class": "managed",
-      "checksum": "b42e3f410aca05caab54d66b749154f3801ebd7f800f8368f9f52f2ac9808515"
+      "checksum": "ef37a0017333f8da0cb328a24b6f9ab9cafb67abdc209396745f2c300134aec4"
     },
     "AGENTS.md": {
       "class": "seeded",
@@ -124,7 +132,7 @@
     },
     "docs/adr/README.md": {
       "class": "seeded",
-      "checksum": "86f3b030ef13588b62d81fc6696ed6185e0c015f78a21a83ed67ee75b46b01b5"
+      "checksum": "e1040cd8fb5abead2f7531d39f467ea1187bf758112c3f4306bab6a943430924"
     },
     "docs/agents/domain.md": {
       "class": "seeded",
@@ -143,7 +151,8 @@
     "2026-08-vendor-workflow-skills",
     "2026-08-wire-default-implementation-loop",
     "2026-08-workflow-skills-independence",
-    "2026-09-browser-smoke-one-off"
+    "2026-09-browser-smoke-one-off",
+    "2026-09-heal-adr-minting-guidance"
   ],
   "decisions": {
     "origin": "existing",
