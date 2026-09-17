@@ -46,12 +46,18 @@ describe("shipped skill frontmatter", () => {
   });
 
   test("exactly the user-typed stages disable model invocation", () => {
-    // The † contract in workflow.md: these four are started only by the user;
+    // The † contract in workflow.md: these five are started only by the user;
     // every other skill must stay reachable via the Skill tool.
     const userTyped = [...skills]
       .filter(([, fm]) => fm["disable-model-invocation"] === true)
       .map(([dir]) => dir)
       .sort();
-    expect(userTyped).toEqual(["launch-implement", "launch-spec", "launch-tickets", "launch-wayfinder"]);
+    expect(userTyped).toEqual([
+      "launch-design-implement",
+      "launch-implement",
+      "launch-spec",
+      "launch-tickets",
+      "launch-wayfinder",
+    ]);
   });
 });
