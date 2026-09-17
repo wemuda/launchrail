@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.18.0](https://github.com/wemuda/launchrail/compare/v1.17.0...v1.18.0) (2026-09-17)
+
+
+### Features
+
+* **cli:** heal pre-date-slug ADR guidance in existing repos; author the minting contract in the managed surface ([f283c12](https://github.com/wemuda/launchrail/commit/f283c124976c8b966416985a3b4a9fc76c5de261))
+* **cli:** heal pre-date-slug ADR guidance in existing repos; author the minting contract in the managed surface ([4c20aea](https://github.com/wemuda/launchrail/commit/4c20aea1f4bb9ededec87eec9a7dafc04054f686))
+* **cli:** launch-design-implement — build a Claude Design canvas true to the prototype ([ee54168](https://github.com/wemuda/launchrail/commit/ee541689cf52a8156f781647ce0ec7455064370c))
+* **cli:** launch-design-implement — build a Claude Design canvas true to the prototype (design-fidelity-build) ([629896c](https://github.com/wemuda/launchrail/commit/629896cb47ca49926f658801d5d24012f99fcf12))
+* **cli:** launch-design-implement is one invocation — the drop is packaged on the way ([6cfdbe9](https://github.com/wemuda/launchrail/commit/6cfdbe9dc260909ad999a14faf0c04c2286ad782))
+* **cli:** Ralph loop lands branches with a merge, preserving each ticket's commits ([de3ea95](https://github.com/wemuda/launchrail/commit/de3ea95e9c9dd50bb2fc92b59bbf69914cfb60bd))
+* **cli:** Ralph loop lands branches with a merge, preserving each ticket's commits ([57c6e86](https://github.com/wemuda/launchrail/commit/57c6e86c149e39be4c811be46a3b821048e8df71))
+
 ## [1.17.0](https://github.com/wemuda/launchrail/compare/v1.16.0...v1.17.0) (2026-09-11)
 
 
