@@ -128,11 +128,13 @@ describe("launchrail add ralph", () => {
 
   test("the workflow is the lean local-gate loop (ADR-0032): no per-ticket PR, no CI wait", () => {
     const content = ralphWorkflowContent();
-    // Builders hand off a pushed branch; the loop lands it with a local squash-merge under
-    // the fast gate, one land at a time, and the full gate runs at checkpoints.
+    // Builders hand off a pushed branch; the loop lands it with a local non-fast-forward
+    // merge (the branch's commits preserved) under the fast gate, one land at a time, and
+    // the full gate runs at checkpoints.
     expect(content).toContain("'ready'");
     expect(content).toContain("phase: 'Land'");
-    expect(content).toContain("git merge --squash");
+    expect(content).toContain("git merge --no-ff");
+    expect(content).not.toContain("git merge --squash");
     expect(content).toContain("withLandLock");
     expect(content).toContain("checkpointEvery: A.checkpointEvery ?? 5");
     expect(content).toContain("resyncs: A.resyncs ?? 2");
@@ -407,13 +409,13 @@ describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
     expect(build.prompt).toContain("commit and push after every green step");
     expect(build.prompt).toContain("never open a PR");
     expect(build.prompt).toContain("npx @wemuda/launchrail verify --fast");
-    // The lander squash-merges in the main checkout (no worktree) under the fast gate, on
-    // the session model at low effort; the remote verifier rides the small model.
+    // The lander merges (no squash) in the main checkout (no worktree) under the fast gate,
+    // on the session model at low effort; the remote verifier rides the small model.
     const land = dispatches.find((d) => d.label === "land:#1")!;
     expect(land.isolation).toBeUndefined();
     expect(land.effort).toBe("low");
     expect(land.model).toBeUndefined();
-    expect(land.prompt).toContain("git merge --squash origin/ralph/1-t1");
+    expect(land.prompt).toContain("git merge --no-ff origin/ralph/1-t1");
     expect(land.prompt).toContain("the FAST gate: npx @wemuda/launchrail verify --fast");
     expect(land.prompt).toContain("git push origin spec/1-x");
     expect(land.prompt).toContain("close issue #1 explicitly");

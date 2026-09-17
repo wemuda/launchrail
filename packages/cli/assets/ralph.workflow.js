@@ -11,7 +11,7 @@
 //
 // The lean shape (ADR-0032): builders push their branch from the first commit on, so
 // a lost container costs minutes, not a build; each finished branch is landed by the
-// loop itself — a local squash-merge onto the integration base gated by the FAST
+// loop itself — a local merge onto the integration base — the branch's commits preserved — gated by the FAST
 // verification tier, in this checkout, one land at a time — and pushed; the FULL
 // gate runs at checkpoints (every N lands) and at release, with one bounded repair
 // when a checkpoint is red. No per-ticket PR, no cloud-CI wait anywhere in the loop:
@@ -26,7 +26,7 @@ export const meta = {
     { title: 'Preflight', detail: 'read project config, sync the integration base into this checkout, run the full gate (or honor knownGreen)' },
     { title: 'Graph', detail: 'list ready tickets and their blocking edges, verbatim' },
     { title: 'Build', detail: 'one fresh-context implementer per ticket on a pushed ralph/<n>-* branch, handing off at a green fast gate' },
-    { title: 'Land', detail: 'local squash-merge onto the base under the fast gate, push, explicit close — one land at a time' },
+    { title: 'Land', detail: 'local merge onto the base under the fast gate, push, explicit close — one land at a time' },
     { title: 'Verify', detail: 'remote ground truth for every claimed land' },
     { title: 'Checkpoint', detail: 'the full gate on the base every N lands, with one bounded repair when red' },
     { title: 'Park', detail: 'comment failure history, label needs-info' },
@@ -87,7 +87,7 @@ const POLICY = {
   // separately at the same number.
   attempts: A.attempts ?? 2,
   // Land hand-backs that spend no attempt: the base moved under a finished branch and the
-  // squash-merge conflicted, or the merged tree failed the loop's gate although the branch
+  // merge conflicted, or the merged tree failed the loop's gate although the branch
   // was fine on its own. The builder did nothing wrong, so a fresh implementer re-syncs the
   // pushed branch (minutes, not a rebuild) — up to this many times per ticket before it
   // counts as a real failure.
@@ -230,7 +230,7 @@ const BUILD_SCHEMA = {
     headSha: { type: 'string', description: 'the pushed tip, as the remote reports it' },
     commitTitle: {
       type: 'string',
-      description: 'a Conventional Commit title for the squash the loop will make, e.g. "feat(auth): add magic-link sign-in"',
+      description: 'a Conventional Commit title for the merge commit the loop will make, e.g. "feat(auth): add magic-link sign-in"',
     },
     summary: { type: 'string', description: 'what happened, short; on failure, enough for a retry to act on' },
     failure: {
@@ -254,7 +254,7 @@ const LAND_SCHEMA = {
       type: 'string',
       enum: ['landed', 'conflict', 'gate-failed', 'stale', 'failed'],
       description:
-        '"landed": squashed onto the base, gate green, pushed, remote confirmed; "conflict": the squash-merge conflicted; "gate-failed": the merged tree failed the gate; "stale": the remote base kept moving outside this loop; "failed": a precondition (dirty or diverged checkout, empty squash)',
+        '"landed": merged onto the base, gate green, pushed, remote confirmed; "conflict": the merge conflicted; "gate-failed": the merged tree failed the gate; "stale": the remote base kept moving outside this loop; "failed": a precondition (dirty or diverged checkout, an already-merged branch)',
     },
     mergeCommit: { type: 'string', description: 'on landed: the landing commit sha, as the remote reports it' },
     baseMoved: {
@@ -351,7 +351,7 @@ Steps, in order:
 4. Branch and push immediately. ${adopt} From here on the pushed branch is your checkpoint: commit and push after every green step (a passing test slice, a finished subtask) — a session that dies keeps everything up to its last push, and its successor resumes from there instead of rebuilding. The pushes are also the loop's liveness signal.
 5. Implement by invoking the launch-ralph-implement skill — it owns the per-ticket contract: TDD, commit-and-push cadence, the fast gate, browser smoke for user-facing changes, self-review via launch-code-review, commit conventions.
 6. Pre-land sync: merge the latest origin/${pre.base} into your branch. Conflicts are ordinary work — resolve them with the launch-resolving-merge-conflicts skill. If ${pre.base} gained DB migrations since you branched, regenerate yours to follow them with the project's migration tool — never hand-edit the migration journal. Re-run the fast gate if anything changed, then push.
-7. Hand off: confirm the tip is pushed (\`git ls-remote origin refs/heads/<branch>\` equals \`git rev-parse HEAD\`) and report status "ready" with branch, headSha, and commitTitle — a Conventional Commit title for the squash the loop will make (e.g. "feat(auth): add magic-link sign-in"). Then STOP: the loop lands your branch (a local squash-merge onto ${pre.base} under its own gate run, the push, the explicit issue close). Never push to ${pre.base} yourself, never merge your work into ${pre.base}, and never open a PR — the campaign is released by one PR at the end.
+7. Hand off: confirm the tip is pushed (\`git ls-remote origin refs/heads/<branch>\` equals \`git rev-parse HEAD\`) and report status "ready" with branch, headSha, and commitTitle — a Conventional Commit title for the merge commit the loop will make (e.g. "feat(auth): add magic-link sign-in"). Then STOP: the loop lands your branch (a local merge onto ${pre.base} under its own gate run, the push, the explicit issue close). Never push to ${pre.base} yourself, never merge your work into ${pre.base}, and never open a PR — the campaign is released by one PR at the end.
 
 ${INTEGRITY}
 
@@ -370,19 +370,19 @@ function landPrompt(pre, subject, full) {
     : `ticket #${subject.number} ("${subject.title}")`
   const title = subject.commitTitle || (subject.repair ? `fix: repair ${pre.base}` : `feat: ${subject.title}`)
   const trailer = subject.repair ? '' : ` -m "Closes #${subject.number}"`
-  return `You are landing ${what}: the implementer pushed branch ${subject.branch} (head ${subject.headSha || 'see remote'}) and reports the fast gate green there. You own the local squash-merge onto ${pre.base}, the loop's own gate run, the push, and the tracker bookkeeping — nothing else. You never write code and never repair a branch: a squash that conflicts or a gate that fails is reported, not fixed here. Work in THIS checkout (no worktree); exactly one land runs at a time, so nothing else touches it while you do.
+  return `You are landing ${what}: the implementer pushed branch ${subject.branch} (head ${subject.headSha || 'see remote'}) and reports the fast gate green there. You own the local merge onto ${pre.base}, the loop's own gate run, the push, and the tracker bookkeeping — nothing else. You never write code and never repair a branch: a merge that conflicts or a gate that fails is reported, not fixed here. Work in THIS checkout (no worktree); exactly one land runs at a time, so nothing else touches it while you do.
 Tracker access from this environment: ${pre.trackerAccess}
 1. Preconditions: \`git status --porcelain\` must show no modified or staged files (untracked files are fine) — a dirty tree is status "failed" ("dirty checkout"); never stash or discard anything. Then \`git fetch origin ${pre.base} ${subject.branch}\`.
 2. Check out the base: \`git checkout ${pre.base}\` (or \`git checkout -b ${pre.base} --track origin/${pre.base}\` when no local branch exists), then \`git merge --ff-only origin/${pre.base}\`. If the fast-forward is refused, the local ${pre.base} has diverged from the remote — report status "failed" saying so; do not reset it.
 3. Record whether the base moved since the implementer synced: \`git merge-base --is-ancestor origin/${pre.base} origin/${subject.branch}\` — exit 0 means the branch already contains the base tip (baseMoved: false); otherwise baseMoved: true.
-4. Squash-merge: \`git merge --squash origin/${subject.branch}\`. On conflicts, restore the exact clean state of step 2 with \`git reset --hard origin/${pre.base}\` and report status "conflict" naming the conflicting files. Otherwise commit: \`git commit -m ${JSON.stringify(subject.repair ? title : `${title} (#${subject.number})`)}${trailer} -m "Landed by the Ralph loop from ${subject.branch}@${subject.headSha || 'HEAD'}"\`. Nothing to commit → status "failed" (the branch adds nothing to the base).
+4. Merge, preserving every commit on the branch: \`git merge --no-ff origin/${subject.branch} -m ${JSON.stringify(subject.repair ? title : `${title} (#${subject.number})`)}${trailer} -m "Landed by the Ralph loop from ${subject.branch}@${subject.headSha || 'HEAD'}"\`. \`--no-ff\` always records a merge commit carrying that message, so the branch's own commits land intact beneath it — never a squash. On conflicts, restore the exact clean state of step 2 with \`git reset --hard origin/${pre.base}\` and report status "conflict" naming the conflicting files. A merge that reports "Already up to date" made no commit — the branch adds nothing to the base → status "failed".
 5. If the landed change touched a dependency manifest or lockfile (\`git diff --name-only HEAD~1 HEAD\`), run the install command first: ${pre.installCommand}. Then run ${gate}. It must exit 0. On failure, undo the landing with \`git reset --hard origin/${pre.base}\` and report status "gate-failed" with the failing checks/tests and their key lines — enough for a fresh implementer to act on. A red base is never pushed.
 6. \`git push origin ${pre.base}\`. A rejected (non-fast-forward) push means the remote moved outside this loop: \`git fetch origin ${pre.base} && git reset --hard origin/${pre.base}\` and redo steps 3–6 ONCE; a second rejection is status "stale".
 7. Confirm on the remote: \`git ls-remote origin refs/heads/${pre.base}\` must equal \`git rev-parse HEAD\`. That sha is mergeCommit.${
     subject.repair
       ? ''
       : `
-8. Tracker bookkeeping: close issue #${subject.number} explicitly (auto-close never fires off the default branch) and read it back closed; remove the ralph:building label; post one comment: "Landed on ${pre.base} at <sha> (squash of ${subject.branch}) by the Ralph loop." Report status "landed" with mergeCommit and issueClosed.`
+8. Tracker bookkeeping: close issue #${subject.number} explicitly (auto-close never fires off the default branch) and read it back closed; remove the ralph:building label; post one comment: "Landed on ${pre.base} at <sha> (merge of ${subject.branch}) by the Ralph loop." Report status "landed" with mergeCommit and issueClosed.`
   }
 Report "landed" only after step 7 confirmed the remote; every other outcome by its status, with a summary the loop can act on.`
 }
@@ -639,7 +639,7 @@ async function drive(pre, ticket, pushed) {
       s.failures.push(`[attempt ${s.attempts}] reported ready but returned no branch`)
       return { ticket, ok: false }
     }
-    // The loop owns the landing (ADR-0022, ADR-0032): a local squash-merge onto the base
+    // The loop owns the landing (ADR-0022, ADR-0032): a local merge onto the base
     // under the fast gate, one at a time. No PR, no CI wait — the builder's branch is
     // pushed, so nothing is lost whatever happens next.
     const land = await landTicket(pre, ticket, { ...build, resyncLabel: resync ? `:resync${s.resyncs}` : '' })
@@ -667,7 +667,7 @@ async function drive(pre, ticket, pushed) {
         return { ticket, ok: true }
       }
       // Landed-but-issue-open fails verification too: the retry finds the ticket's work on
-      // the base (empty squash) or the issue open, finishes the bookkeeping, and settles.
+      // the base (already merged) or the issue open, finishes the bookkeeping, and settles.
       s.failures.push(`[attempt ${s.attempts}] claimed landed, remote disagrees: ${verdict ? verdict.evidence : 'verifier died'}`)
       return { ticket, ok: false }
     }
