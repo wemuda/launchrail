@@ -19,7 +19,8 @@ _No decisions recorded yet. When ADRs land, summarize here how they compose into
 
 ## Maintaining this registry
 
-- New ADRs copy [0000-template.md](0000-template.md) to `YYYY-MM-DD-short-slug.md` — the date the decision was made, then a slug unique in this directory. There is no sequence number to claim, so parallel branches never collide.
+- New ADRs copy [0000-template.md](0000-template.md) to `YYYY-MM-DD-short-slug.md` — the date the decision was made, then a slug unique in this directory. There is no sequence number to claim, so parallel branches never collide, and nothing is renumbered.
 - The index table between the markers is **generated**: run `launchrail adr index` after adding or re-statusing a record (and after merging), and commit the result. Never hand-edit the rows; the rest of this file is yours.
 - A new ADR declares what it supersedes, amends, or extends in its own `## Status` line, linking the earlier record by file. The index derives the reverse links, so amending an ADR does not require editing it. A superseded ADR's `## Status` line is still rewritten to name its successor — that is the one fact a reader of the record alone must not miss.
 - Never delete or rename an ADR once it is referenced; superseded ADRs are historical records other documents link to.
+- The naming and relation mechanics above summarize a contract Launchrail keeps current in the managed workflow instructions (`.launchrail/CLAUDE.generated.md`); if this seeded summary ever drifts from that managed contract, the managed contract is what holds.

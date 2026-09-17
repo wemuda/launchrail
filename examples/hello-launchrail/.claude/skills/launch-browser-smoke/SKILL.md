@@ -33,7 +33,7 @@ A hosted session (`CLAUDE_CODE_REMOTE=true`) is always a fresh clone, and a miss
    - `npx agent-browser errors`, `console`, `network requests` — after each step, not only at the end. `errors` is uncaught exceptions only; `console` carries the page's own error logs.
 3. **Click around beyond the happy path.** The obvious wrong input, the empty state, a reload, the back button. You are looking for what the ticket did not spell out.
 4. **The standard checks, every time:** no uncaught exceptions, no failed requests, the success state visible in a screenshot you looked at, the data still there after a reload.
-5. **Design:** compare the screen to a design only when the ticket or spec names one (a `docs/design/` handoff, a mockup). Never invent a comparison.
+5. **Design:** compare the screen to a design only when the ticket or spec names one (a `docs/design/` handoff, a mockup). Never invent a comparison. When it is a handoff package, the comparison is the [fidelity protocol's](../launch-design-implement/fidelity.md) side-by-side: the prototype driven to the same state in a second session at the designed viewport, both screenshots looked at, the verdict recorded in the package's `fidelity.md`.
 
 ## When something is wrong
 
