@@ -9,6 +9,14 @@ import {
   type ClaudeImportsPlan,
 } from "../lib/claudeImports.js";
 import {
+  adrMergeDriverConfigState,
+  applyAdrMergeAttribute,
+  ADR_MERGE_DRIVER_NAME,
+  GITATTRIBUTES_FILENAME,
+  planAdrMergeAttribute,
+  registerAdrMergeDriver,
+} from "../lib/adrMergeDriver.js";
+import {
   applyRalphGuardHook,
   CLAUDE_SETTINGS_PATH,
   planRalphGuardHook,
@@ -255,6 +263,13 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   }
 
   if (opts.dryRun) {
+    const attr = planAdrMergeAttribute(opts.cwd);
+    if (attr.content !== null) {
+      console.log(`  ${attr.kind === "create" ? "create  " : "update  "}  ${GITATTRIBUTES_FILENAME}  (${attr.detail})`);
+    }
+    if (adrMergeDriverConfigState(opts.cwd) !== "registered") {
+      console.log(`  git-config  merge.${ADR_MERGE_DRIVER_NAME}  (register the ADR index merge driver in this clone)`);
+    }
     if (!detection.isGitRepo) {
       console.log("  git-init  .  (not a git repository — init will run `git init` first)");
     }
@@ -269,6 +284,13 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     const applied = applyRalphGuardHook(opts.cwd, planRalphGuardHook(opts.cwd));
     if (applied && !written.includes(CLAUDE_SETTINGS_PATH)) written.push(CLAUDE_SETTINGS_PATH);
   }
+  // Install the ADR index merge driver (2026-09-adr-index-merge-driver): the
+  // committed .gitattributes binding plus this clone's git config that backs it,
+  // so parallel ADRs merge without ever landing a hand-resolved index conflict.
+  if (applyAdrMergeAttribute(opts.cwd) && !written.includes(GITATTRIBUTES_FILENAME)) {
+    written.push(GITATTRIBUTES_FILENAME);
+  }
+  registerAdrMergeDriver(opts.cwd);
   // Wire the workflow imports into a pre-existing CLAUDE.md (no-op when init
   // just seeded a fresh one, which already carries both). Additive and
   // idempotent, mirroring the old .claude/settings.json merge (ADR-0012).

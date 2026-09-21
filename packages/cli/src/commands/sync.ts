@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { adrMergeDriverConfigState, ADR_MERGE_DRIVER_NAME, registerAdrMergeDriver } from "../lib/adrMergeDriver.js";
 import { writeLockfile } from "../lib/lockfile.js";
 import { MANIFEST_FILENAME, parseManifest } from "../lib/manifest.js";
 import {
@@ -69,6 +70,9 @@ export function runSync(opts: SyncOptions): SyncOutcome {
     const actions = planWrites(opts.cwd, desiredSpecs(state), state.lockfile);
     printActions(actions);
     reportConflicts(actions);
+    if (adrMergeDriverConfigState(opts.cwd) === "unregistered" || adrMergeDriverConfigState(opts.cwd) === "mismatch") {
+      console.log(`  git-config  merge.${ADR_MERGE_DRIVER_NAME}  (register the ADR index merge driver in this clone)`);
+    }
     console.log("\nDry run — nothing was written.");
     return { code: 0, actions, migrations: [] };
   }
@@ -99,6 +103,11 @@ export function runSync(opts: SyncOptions): SyncOutcome {
   const actions = planWrites(opts.cwd, desiredSpecs(state), state.lockfile);
   printActions(actions);
   const written = applyPlan(opts.cwd, actions, state.lockfile);
+
+  // The ADR index merge driver's config is per-clone (never committed), so it is
+  // registered on every sync rather than once behind a lockfile-recorded
+  // migration — a fresh clone that runs sync gets it without any manual step.
+  registerAdrMergeDriver(opts.cwd);
 
   state.lockfile.launchrailVersion = VERSION;
   if (JSON.stringify(state.lockfile) !== lockBefore) writeLockfile(opts.cwd, state.lockfile);

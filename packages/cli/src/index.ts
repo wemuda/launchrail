@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { AVAILABLE_MODULES, runAdd } from "./commands/add.js";
-import { runAdrIndex } from "./commands/adr.js";
+import { runAdrIndex, runAdrMergeDriver } from "./commands/adr.js";
 import { printDiff, runDiff } from "./commands/diff.js";
 import { runDev } from "./commands/dev.js";
 import { runDoctor, printDoctor } from "./commands/doctor.js";
@@ -54,7 +54,8 @@ eject usage:
   launchrail eject --all [--dry-run]           Vendor mode: eject everything
 
 adr usage:
-  launchrail adr index [--check]               Regenerate docs/adr/README.md's index table from the records (--check: report only)`;
+  launchrail adr index [--check]               Regenerate docs/adr/README.md's index table from the records (--check: report only)
+  launchrail adr merge-driver <O> <A> <B> [P]  Resolve a docs/adr/README.md index conflict by regeneration (git invokes this; install via init / sync / doctor)`;
 
 const NOT_IMPLEMENTED = ["promote"];
 
@@ -149,11 +150,21 @@ if (command === "eject") {
 }
 
 if (command === "adr") {
-  if (args[1] !== "index") {
-    console.error("launchrail: usage: launchrail adr index [--check]");
-    process.exit(1);
+  if (args[1] === "index") {
+    process.exit(runAdrIndex({ cwd: process.cwd(), check: flags.has("--check") }).code);
   }
-  process.exit(runAdrIndex({ cwd: process.cwd(), check: flags.has("--check") }).code);
+  if (args[1] === "merge-driver") {
+    // Invoked by git as the merge driver bound in .gitattributes; args are
+    // git's %O %A %B %P (base, ours, theirs, path).
+    const [base, ours, theirs, path] = [args[2], args[3], args[4], args[5]];
+    if (!base || !ours || !theirs) {
+      console.error("launchrail: usage: launchrail adr merge-driver <base> <ours> <theirs> [path]");
+      process.exit(2);
+    }
+    process.exit(runAdrMergeDriver({ cwd: process.cwd(), base, ours, theirs, path }).code);
+  }
+  console.error("launchrail: usage: launchrail adr index [--check]");
+  process.exit(1);
 }
 
 if (NOT_IMPLEMENTED.includes(command)) {
