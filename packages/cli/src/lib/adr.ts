@@ -52,6 +52,35 @@ function adrStatus(source: string): string {
   return paragraph.replace(/\s+/g, " ").trim();
 }
 
+/** Whether a filename in docs/adr/ is a decision record (not the template, not the registry). */
+export function isAdrRecordFilename(file: string): boolean {
+  return file !== ADR_TEMPLATE_FILENAME && parseFilename(file) !== null;
+}
+
+/** Parse one record's file and source into an entry; null when the filename is not a record. */
+export function parseAdrEntry(file: string, source: string): AdrEntry | null {
+  if (file === ADR_TEMPLATE_FILENAME) return null;
+  const parsed = parseFilename(file);
+  if (!parsed) return null;
+  return { ...parsed, file, title: adrTitle(source, file), status: adrStatus(source) };
+}
+
+/**
+ * The record list built from an explicit set of file→source pairs, sorted by
+ * filename exactly as scanAdrs sorts the directory — numbered records first,
+ * dated records after them in date order. The merge driver uses this to
+ * assemble the corpus from the working tree plus the records only the incoming
+ * side carries, which are not yet on disk when git invokes the driver.
+ */
+export function entriesFromSources(sources: Iterable<readonly [string, string]>): AdrEntry[] {
+  const entries: AdrEntry[] = [];
+  for (const [file, source] of [...sources].sort(([a], [b]) => a.localeCompare(b))) {
+    const entry = parseAdrEntry(file, source);
+    if (entry) entries.push(entry);
+  }
+  return entries;
+}
+
 /**
  * The decision records already in a repository's docs/adr/ (template and
  * registry excluded), sorted by filename — numbered records first, dated
@@ -61,20 +90,18 @@ function adrStatus(source: string): string {
 export function scanAdrs(cwd: string): AdrEntry[] {
   const dir = join(cwd, ADR_DIR);
   if (!existsSync(dir)) return [];
-  const entries: AdrEntry[] = [];
-  for (const file of readdirSync(dir).sort()) {
-    if (file === ADR_TEMPLATE_FILENAME) continue;
-    const parsed = parseFilename(file);
-    if (!parsed) continue;
+  const sources: Array<[string, string]> = [];
+  for (const file of readdirSync(dir)) {
+    if (!isAdrRecordFilename(file)) continue;
     let source = "";
     try {
       source = readFileSync(join(dir, file), "utf8");
     } catch {
       // Unreadable file — title falls back to the filename, status to empty.
     }
-    entries.push({ ...parsed, file, title: adrTitle(source, file), status: adrStatus(source) });
+    sources.push([file, source]);
   }
-  return entries;
+  return entriesFromSources(sources);
 }
 
 /**
@@ -211,17 +238,24 @@ export function adrIndexTable(entries: AdrEntry[]): string {
 }
 
 /**
- * The registry with its index table regenerated in place. Between the markers
- * when they exist; otherwise the first table under `## Index` is replaced and
- * the markers introduced around it (a registry written before the generator
- * migrates on its first run). Null when the registry has neither.
+ * A single-line placeholder the merge driver substitutes for the index region
+ * while it 3-way merges the registry's prose, then swaps back out for the freshly
+ * regenerated table. Comment-shaped so it is inert if it ever leaks into a file,
+ * and identical across all three sides so the prose merge sees no index diff.
  */
-export function withRegeneratedIndex(registrySource: string, entries: AdrEntry[]): string | null {
-  const table = adrIndexTable(entries);
+export const ADR_INDEX_SENTINEL = "<!-- launchrail:adr-index-merge-placeholder -->";
+
+/**
+ * Replace the registry's index region with `replacement`: everything between the
+ * markers when they exist; otherwise the first table under `## Index`, with the
+ * region newline-padded (a registry written before the generator migrates on its
+ * first run). Null when the registry has neither — there is nothing to replace.
+ */
+export function replaceIndexRegion(registrySource: string, replacement: string): string | null {
   const start = registrySource.indexOf("<!-- adr-index:start");
   const end = registrySource.indexOf(ADR_INDEX_END);
   if (start !== -1 && end !== -1 && end > start) {
-    return registrySource.slice(0, start) + table + registrySource.slice(end + ADR_INDEX_END.length);
+    return registrySource.slice(0, start) + replacement + registrySource.slice(end + ADR_INDEX_END.length);
   }
   const heading = /^##\s+Index\s*$/m.exec(registrySource);
   if (!heading) return null;
@@ -231,7 +265,16 @@ export function withRegeneratedIndex(registrySource: string, entries: AdrEntry[]
   if (!tableMatch) return null;
   const before = registrySource.slice(0, afterHeading + tableMatch.index);
   const after = rest.slice(tableMatch.index + tableMatch[0].length);
-  return `${before}\n${table}\n${after}`;
+  return `${before}\n${replacement}\n${after}`;
+}
+
+/**
+ * The registry with its index table regenerated in place. Between the markers
+ * when they exist; otherwise the first table under `## Index` is replaced and
+ * the markers introduced around it. Null when the registry has neither.
+ */
+export function withRegeneratedIndex(registrySource: string, entries: AdrEntry[]): string | null {
+  return replaceIndexRegion(registrySource, adrIndexTable(entries));
 }
 
 // --- Minting guidance: a managed contract, a seeded summary, a one-time heal ----
@@ -297,7 +340,7 @@ What change would justify reconsidering this decision?
 export const ADR_MAINTAINING_SECTION = `## Maintaining this registry
 
 - New ADRs copy [0000-template.md](0000-template.md) to \`YYYY-MM-DD-short-slug.md\` — the date the decision was made, then a slug unique in this directory. There is no sequence number to claim, so parallel branches never collide, and nothing is renumbered.
-- The index table between the markers is **generated**: run \`launchrail adr index\` after adding or re-statusing a record (and after merging), and commit the result. Never hand-edit the rows; the rest of this file is yours.
+- The index table between the markers is **generated**: run \`launchrail adr index\` after adding or re-statusing a record, and commit the result. Never hand-edit the rows; the rest of this file is yours. Parallel branches do not collide on it — Launchrail installs a git merge driver (\`launchrail doctor\` registers it in each clone) that rebuilds the table from the records on merge or rebase, so both branches' new rows land in date order with no conflict. If you ever do see a conflict here — a fresh clone before \`launchrail doctor\` ran, say — never resolve it by editing rows: run \`launchrail adr index && git add docs/adr/README.md\` and continue the merge or rebase.
 - A new ADR declares what it supersedes, amends, or extends in its own \`## Status\` line, linking the earlier record by file. The index derives the reverse links, so amending an ADR does not require editing it. A superseded ADR's \`## Status\` line is still rewritten to name its successor — that is the one fact a reader of the record alone must not miss.
 - Never delete or rename an ADR once it is referenced; superseded ADRs are historical records other documents link to.
 - The naming and relation mechanics above summarize a contract Launchrail keeps current in the managed workflow instructions (\`.launchrail/CLAUDE.generated.md\`); if this seeded summary ever drifts from that managed contract, the managed contract is what holds.`;

@@ -1,6 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ADR_REGISTRY_PATH, adrDuplicates, scanAdrs, unindexedAdrs, withRegeneratedIndex } from "../lib/adr.js";
+import {
+  adrMergeDriverConfigState,
+  ADR_MERGE_DRIVER_NAME,
+  GITATTRIBUTES_FILENAME,
+  planAdrMergeAttribute,
+  registerAdrMergeDriver,
+} from "../lib/adrMergeDriver.js";
 import { BROWSER_DRIVER_PACKAGE, BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
 import { missingImports } from "../lib/claudeImports.js";
@@ -157,6 +164,35 @@ export function runDoctor(cwd: string): DoctorOutcome {
       } else {
         add("pass", "adr registry", "every record indexed, index current");
       }
+    }
+  }
+
+  // The ADR index merge driver (2026-09-21-adr-index-merge-driver): the generated
+  // index is the one file parallel branches collide on. The committed
+  // .gitattributes binds it to the driver; the driver itself is per-clone git
+  // config, so a fresh clone carries the binding but not the definition. Doctor
+  // both reports the binding and repairs the config here, so no merge ever depends
+  // on a developer configuring git by hand.
+  if (existsSync(join(cwd, ADR_REGISTRY_PATH))) {
+    if (planAdrMergeAttribute(cwd).content === null) {
+      add("pass", "adr merge driver", `${GITATTRIBUTES_FILENAME} binds ${ADR_REGISTRY_PATH} to ${ADR_MERGE_DRIVER_NAME}`);
+    } else {
+      add(
+        "warn",
+        "adr merge driver",
+        `${GITATTRIBUTES_FILENAME} does not bind ${ADR_REGISTRY_PATH} to the index merge driver — run \`launchrail sync\` so parallel ADRs never conflict on the generated index`,
+      );
+    }
+    if (detection.isGitRepo) {
+      const wasRegistered = adrMergeDriverConfigState(cwd) === "registered";
+      registerAdrMergeDriver(cwd);
+      add(
+        "pass",
+        "adr merge driver config",
+        wasRegistered
+          ? `${ADR_MERGE_DRIVER_NAME} registered in this clone's git config`
+          : `registered ${ADR_MERGE_DRIVER_NAME} in this clone's git config`,
+      );
     }
   }
 

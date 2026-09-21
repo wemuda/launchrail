@@ -8,6 +8,7 @@ import {
   healRegistryMinting,
   PRE_DATE_SLUG_ADR_TEMPLATE,
 } from "./adr.js";
+import { applyAdrMergeAttribute, GITATTRIBUTES_FILENAME, planAdrMergeAttribute } from "./adrMergeDriver.js";
 import { sha256 } from "./checksum.js";
 import {
   applyPluginDeclaration,
@@ -288,6 +289,26 @@ export const MIGRATIONS: Migration[] = [
           }
           if (settingsRemoval !== null) applyRemovePluginDeclaration(ctx.cwd, settingsRemoval);
           if (ralphActions.length > 0) applyPlan(ctx.cwd, ralphActions, ctx.lockfile);
+        },
+      };
+    },
+  },
+  {
+    id: "2026-09-adr-index-merge-driver",
+    description: `bind ${ADR_REGISTRY_PATH} to the ADR index merge driver in ${GITATTRIBUTES_FILENAME}, so parallel branches never conflict on the generated index (2026-09-21-adr-index-merge-driver)`,
+    plan(ctx) {
+      // Only the committed half lives here — the `.gitattributes` line. The
+      // per-clone git config that actually defines the driver is registered by
+      // init / sync / doctor, never behind this lockfile-recorded migration
+      // (which runs once, whereas every clone needs the config). Additive and
+      // idempotent: a repo that already carries the line records the migration
+      // with no change, and a project's own `.gitattributes` rules are kept.
+      const plan = planAdrMergeAttribute(ctx.cwd);
+      if (plan.content === null) return { changes: [], apply: () => {} };
+      return {
+        changes: [`${GITATTRIBUTES_FILENAME} — ${plan.detail}`],
+        apply: () => {
+          applyAdrMergeAttribute(ctx.cwd);
         },
       };
     },
