@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.19.0](https://github.com/wemuda/launchrail/compare/v1.18.0...v1.19.0) (2026-09-21)
+
+
+### Features
+
+* **cli:** auto-resolve the generated ADR index on merge via a git merge driver ([0e2999b](https://github.com/wemuda/launchrail/commit/0e2999b72c78319bd4e622dad7243eedee37ba10))
+* **cli:** auto-resolve the generated ADR index on merge via a git merge driver ([d97c7d1](https://github.com/wemuda/launchrail/commit/d97c7d133cd842a7f64933c91c301dfb687fdac7))
+
 ## [1.18.0](https://github.com/wemuda/launchrail/compare/v1.17.0...v1.18.0) (2026-09-17)
 
 
