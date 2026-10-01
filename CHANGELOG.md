@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.20.0](https://github.com/wemuda/launchrail/compare/v1.19.0...v1.20.0) (2026-10-01)
+
+
+### Features
+
+* **cli:** print the ADR index on demand instead of committing it ([15726b9](https://github.com/wemuda/launchrail/commit/15726b9e03ab96cb9fc7ec286b64591174722b64))
+* **cli:** print the ADR index on demand instead of committing it ([792de65](https://github.com/wemuda/launchrail/commit/792de65fee61856da88ac0cabb97ab176dbd1a6b))
+
 ## [1.19.0](https://github.com/wemuda/launchrail/compare/v1.18.0...v1.19.0) (2026-09-21)
 
 
