@@ -68,7 +68,7 @@
     },
     ".claude/skills/launch-ralph/SKILL.md": {
       "class": "managed",
-      "checksum": "0df5d3266194c7066632e8aa263158e4f70806066071a87bca677674def22a47"
+      "checksum": "b8695806bf0259dc0f870d351052b71847bc27df6c12e42f9bc8f8376fe0f1a6"
     },
     ".claude/skills/launch-research/SKILL.md": {
       "class": "managed",
@@ -76,7 +76,7 @@
     },
     ".claude/skills/launch-resolving-merge-conflicts/SKILL.md": {
       "class": "managed",
-      "checksum": "141944f03c00ff3b455b4ec134baab742da964d2aaeb916b18a2fc6a602f16ec"
+      "checksum": "72fa805a35fef2152547050d9eeba9e992f5888196411757078c306377eae95c"
     },
     ".claude/skills/launch-spec/SKILL.md": {
       "class": "managed",
@@ -108,7 +108,7 @@
     },
     ".claude/workflows/ralph.js": {
       "class": "managed",
-      "checksum": "d341b97ed16b9670a2bf12fb35619389c3593162d12b3a7add9593205385b965"
+      "checksum": "bc7b08643259121e9fd5dfd630cb188291e35fa8606cdccae8365f51c2a39d61"
     },
     ".launchrail.yml": {
       "class": "seeded",
