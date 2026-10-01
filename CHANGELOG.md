@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.20.1](https://github.com/wemuda/launchrail/compare/v1.20.0...v1.20.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **cli:** Ralph re-syncs under the land lock; retire the predicted migration flag ([9383f64](https://github.com/wemuda/launchrail/commit/9383f6446f04f0fa44274ad4d3a730e2596c059e))
+* **cli:** Ralph re-syncs under the land lock; retire the predicted migration flag ([c43839f](https://github.com/wemuda/launchrail/commit/c43839f050df25200c5d8e776b31627413b76264))
+
 ## [1.20.0](https://github.com/wemuda/launchrail/compare/v1.19.0...v1.20.0) (2026-10-01)
 
 
