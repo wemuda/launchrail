@@ -1,10 +1,11 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runAdd } from "../src/commands/add.js";
-import { runAdrIndex } from "../src/commands/adr.js";
 import { runDoctor } from "../src/commands/doctor.js";
 import { runInit } from "../src/commands/init.js";
+import { ADR_INDEX_END, ADR_INDEX_START } from "../src/lib/adr.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
 
 let tmp: TmpRepo;
@@ -173,11 +174,10 @@ describe("launchrail doctor — ADR checks", () => {
     expect(check("adr registry")).toBeUndefined();
   });
 
-  test("unique identifiers and a current generated index pass", async () => {
+  test("unique identifiers and a registry without a committed index pass — no regeneration step", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# ADR-0001: Use Postgres\n\n## Status\nAccepted\n");
     writeFileSync(join(tmp.root, "docs/adr/2026-09-11-event-bus.md"), "# One event bus\n\n## Status\nAccepted\n");
-    expect(runAdrIndex({ cwd: tmp.root, check: false }).result).toBe("updated");
     expect(check("adr identifiers")?.status).toBe("pass");
     expect(check("adr identifiers")?.message).toContain("2 decision record(s)");
     expect(check("adr registry")?.status).toBe("pass");
@@ -195,31 +195,35 @@ describe("launchrail doctor — ADR checks", () => {
     expect(identifiers?.message).toContain("event-bus");
   });
 
-  test("warns on records missing from the index, a stale index, and a missing registry", async () => {
+  test("warns on a committed index left behind and on a missing registry", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# Use Postgres\n\n## Status\nAccepted\n");
-    const unindexed = check("adr registry");
-    expect(unindexed?.status).toBe("warn");
-    expect(unindexed?.message).toContain("0001-use-postgres.md");
-    expect(unindexed?.message).toContain("launchrail adr index");
-
-    runAdrIndex({ cwd: tmp.root, check: false });
     expect(check("adr registry")?.status).toBe("pass");
-    // Re-statusing a record without regenerating leaves the table stale.
-    writeFileSync(
-      join(tmp.root, "docs/adr/0001-use-postgres.md"),
-      "# Use Postgres\n\n## Status\nSuperseded by [use-mysql](2026-09-11-use-mysql.md)\n",
-    );
-    writeFileSync(join(tmp.root, "docs/adr/2026-09-11-use-mysql.md"), "# Use MySQL\n\n## Status\nAccepted\n");
-    runAdrIndex({ cwd: tmp.root, check: false });
-    writeFileSync(join(tmp.root, "docs/adr/2026-09-11-use-mysql.md"), "# Use MySQL\n\n## Status\nProposed\n");
-    const stale = check("adr registry");
-    expect(stale?.status).toBe("warn");
-    expect(stale?.message).toContain("out of date");
 
-    rmSync(join(tmp.root, "docs/adr/README.md"));
+    const registry = join(tmp.root, "docs/adr/README.md");
+    writeFileSync(registry, `# ADR registry\n\n${ADR_INDEX_START}\n| ADR |\n| --- |\n${ADR_INDEX_END}\n`);
+    const committed = check("adr registry");
+    expect(committed?.status).toBe("warn");
+    expect(committed?.message).toContain("launchrail sync");
+
+    rmSync(registry);
     const missing = check("adr registry");
     expect(missing?.status).toBe("warn");
     expect(missing?.message).toContain("launchrail sync");
+  });
+
+  test("drops the retired merge driver from the clone's config and flags its .gitattributes line", async () => {
+    await runInit({ cwd: tmp.root, dryRun: false, yes: true });
+    writeFileSync(join(tmp.root, ".gitattributes"), "docs/adr/README.md merge=launchrail-adr-index\n");
+    execFileSync("git", ["config", "--local", "merge.launchrail-adr-index.driver", "npx --yes @wemuda/launchrail adr merge-driver %O %A %B %P"], {
+      cwd: tmp.root,
+    });
+    const checks = runDoctor(tmp.root).checks.filter((c) => c.name === "adr merge driver");
+    expect(checks.map((c) => c.status).sort()).toEqual(["pass", "warn"]);
+    expect(checks.find((c) => c.status === "warn")?.message).toContain("launchrail sync");
+    expect(() => execFileSync("git", ["config", "--local", "--get", "merge.launchrail-adr-index.driver"], { cwd: tmp.root })).toThrow();
+    // Nothing left to report once the config is gone and the line removed.
+    rmSync(join(tmp.root, ".gitattributes"));
+    expect(check("adr merge driver")).toBeUndefined();
   });
 });

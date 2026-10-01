@@ -1,9 +1,9 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { runAdrIndex } from "../src/commands/adr.js";
 import { runInit } from "../src/commands/init.js";
-import { runSync } from "../src/commands/sync.js";
 import {
   ADR_MAINTAINING_SECTION,
   adrDuplicates,
@@ -11,10 +11,16 @@ import {
   adrRegistryContent,
   adrRelations,
   adrStatusCell,
+  ADR_INDEX_END,
+  ADR_INDEX_POINTER,
+  ADR_INDEX_START,
+  COMMITTED_INDEX_BULLETS,
+  healCommittedIndexBullet,
   healRegistryMinting,
   PRE_DATE_SLUG_MAINTAINING_SECTION,
+  PRINTED_INDEX_BULLET,
   scanAdrs,
-  withRegeneratedIndex,
+  withoutCommittedIndex,
 } from "../src/lib/adr.js";
 import { makeTmpRepo, type TmpRepo } from "./helpers.js";
 
@@ -69,13 +75,13 @@ describe("ADR relations and the generated index", () => {
     // 0001 still says plain "Accepted": the successor is only proposed, so the
     // cell reports it as partial rather than declaring the record superseded.
     expect(adrStatusCell(postgres!, entries)).toBe(
-      "Accepted — partially superseded by [drop-postgres](2026-09-12-drop-postgres.md); amended by [read-replicas](2026-09-11-read-replicas.md)",
+      "Accepted — partially superseded by [drop-postgres](docs/adr/2026-09-12-drop-postgres.md); amended by [read-replicas](docs/adr/2026-09-11-read-replicas.md)",
     );
     expect(adrStatusCell(replicas!, entries)).toBe(
-      "Accepted; amends [0001](0001-use-postgres.md); extended by [drop-postgres](2026-09-12-drop-postgres.md)",
+      "Accepted; amends [0001](docs/adr/0001-use-postgres.md); extended by [drop-postgres](docs/adr/2026-09-12-drop-postgres.md)",
     );
     expect(adrStatusCell(drop!, entries)).toBe(
-      "Proposed; supersedes [0001](0001-use-postgres.md); extends [read-replicas](2026-09-11-read-replicas.md)",
+      "Proposed; supersedes [0001](docs/adr/0001-use-postgres.md); extends [read-replicas](docs/adr/2026-09-11-read-replicas.md)",
     );
   });
 
@@ -85,44 +91,52 @@ describe("ADR relations and the generated index", () => {
     record("0003-use-mysql.md", "Use MySQL", "Accepted (amends ADR-0002)");
     const entries = scanAdrs(tmp.root);
     const cells = entries.map((e) => adrStatusCell(e, entries));
-    expect(cells[0]).toBe("**Superseded by [0003](0003-use-mysql.md)**; extended by [0002](0002-event-bus.md)");
-    expect(cells[1]).toBe("Accepted; extends [0001](0001-use-postgres.md); amended by [0003](0003-use-mysql.md)");
-    expect(cells[2]).toBe("Accepted; supersedes [0001](0001-use-postgres.md); amends [0002](0002-event-bus.md)");
+    expect(cells[0]).toBe("**Superseded by [0003](docs/adr/0003-use-mysql.md)**; extended by [0002](docs/adr/0002-event-bus.md)");
+    expect(cells[1]).toBe("Accepted; extends [0001](docs/adr/0001-use-postgres.md); amended by [0003](docs/adr/0003-use-mysql.md)");
+    expect(cells[2]).toBe("Accepted; supersedes [0001](docs/adr/0001-use-postgres.md); amends [0002](docs/adr/0002-event-bus.md)");
   });
 
   test("a record without a status is Unclassified", () => {
     writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# Use Postgres\n\nNo status section.\n");
     const entries = scanAdrs(tmp.root);
-    expect(adrIndexTable(entries)).toContain("| [0001](0001-use-postgres.md) | — | Use Postgres | Unclassified |");
+    expect(adrIndexTable(entries)).toContain("| [0001](docs/adr/0001-use-postgres.md) | — | Use Postgres | Unclassified |");
   });
 
-  test("regenerates between the markers and leaves everything else alone", () => {
-    record("0001-use-postgres.md", "Use Postgres");
-    const entries = scanAdrs(tmp.root);
-    const registry = `# ADR registry\n\nDoctrine.\n\n## Index\n\n${adrIndexTable([])}\n\n## The live picture\n\nOurs.\n`;
-    const next = withRegeneratedIndex(registry, entries);
-    expect(next).toContain("Doctrine.\n\n## Index\n\n<!-- adr-index:start");
-    expect(next).toContain("| [0001](0001-use-postgres.md) | — | Use Postgres | Accepted |\n<!-- adr-index:end -->\n\n## The live picture\n\nOurs.\n");
-    // Idempotent.
-    expect(withRegeneratedIndex(next!, entries)).toBe(next);
+});
+
+// The index is printed, never committed (adr-index-is-printed-not-committed):
+// a table an older version committed is replaced by a pointer, and only the
+// marked rows — always Launchrail's — are ever touched.
+describe("a committed index left behind", () => {
+  const registry = (index: string) =>
+    `# ADR registry\n\nDoctrine.\n\n## Index\n\n${index}\n\nRows marked **Unclassified** — our note.\n\n## The live picture\n\nOurs.\n`;
+
+  test("the marked table is replaced by the pointer and every other line stays", () => {
+    const committed = registry(`${ADR_INDEX_START}\n| ADR | Decided | Title | Status |\n| --- | --- | --- | --- |\n| [0001](0001-x.md) | — | X | Accepted |\n${ADR_INDEX_END}`);
+    const next = withoutCommittedIndex(committed);
+    expect(next).toBe(registry(ADR_INDEX_POINTER));
+    expect(withoutCommittedIndex(next!)).toBeNull();
   });
 
-  test("migrates a registry written before the markers: the table under ## Index is replaced", () => {
-    record("0001-use-postgres.md", "Use Postgres");
-    record("2026-09-11-drop-redis.md", "Drop Redis");
-    const entries = scanAdrs(tmp.root);
-    const registry =
-      "# ADR registry\n\n## Index\n\n| ADR | Title | Status |\n| --- | --- | --- |\n| [0001](0001-use-postgres.md) | Use Postgres | Accepted |\n\n## The live picture\n\nOurs.\n";
-    const next = withRegeneratedIndex(registry, entries)!;
-    expect(next).toContain("## Index\n\n<!-- adr-index:start");
-    expect(next).not.toContain("| ADR | Title | Status |");
-    expect(next).toContain("| [drop-redis](2026-09-11-drop-redis.md) | 2026-09-11 | Drop Redis | Accepted |");
-    expect(next).toContain("<!-- adr-index:end -->\n\n## The live picture\n\nOurs.\n");
+  test("a hand-kept table without markers is the project's and is left alone", () => {
+    expect(withoutCommittedIndex(registry("| ADR | Title |\n| --- | --- |\n| [0001](0001-x.md) | X |"))).toBeNull();
   });
 
-  test("a registry in the project's own format, without an index, is left alone", () => {
+  test("the seeded regenerate-and-commit bullets heal to the printed-index bullet; a project's own wording stays", () => {
+    for (const bullet of COMMITTED_INDEX_BULLETS) {
+      const healed = healCommittedIndexBullet(`## Maintaining this registry\n\n- First.\n${bullet}\n- Last.\n`);
+      expect(healed).toBe(`## Maintaining this registry\n\n- First.\n${PRINTED_INDEX_BULLET}\n- Last.\n`);
+      expect(healCommittedIndexBullet(healed!)).toBeNull();
+    }
+    expect(healCommittedIndexBullet("- The index table between the markers is **generated** — our own wording.\n")).toBeNull();
+  });
+
+  test("the seeded registry carries the pointer, not a table", () => {
     record("0001-use-postgres.md", "Use Postgres");
-    expect(withRegeneratedIndex("# Our decisions\n\nProse only.\n", scanAdrs(tmp.root))).toBeNull();
+    const seed = adrRegistryContent(scanAdrs(tmp.root));
+    expect(seed).toContain(`## Index\n\n${ADR_INDEX_POINTER}\n`);
+    expect(seed).not.toContain("adr-index:start");
+    expect(seed).not.toContain("| ADR |");
   });
 });
 
@@ -185,26 +199,30 @@ describe("duplicate identifiers", () => {
 });
 
 describe("launchrail adr index", () => {
-  test("writes the seeded registry's table, reports current on a second run, and --check never writes", async () => {
+  test("prints the index from the records and writes nothing", async () => {
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     record("2026-09-11-drop-redis.md", "Drop Redis");
-    expect(runAdrIndex({ cwd: tmp.root, check: true }).result).toBe("stale");
-    expect(readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8")).not.toContain("drop-redis");
-    expect(runAdrIndex({ cwd: tmp.root, check: false })).toMatchObject({ code: 0, result: "updated", records: 1 });
-    const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
-    expect(registry).toContain("| [drop-redis](2026-09-11-drop-redis.md) | 2026-09-11 | Drop Redis | Accepted |");
-    expect(registry).toContain("## The live picture");
-    expect(runAdrIndex({ cwd: tmp.root, check: true })).toMatchObject({ code: 0, result: "current" });
-    // The registry is seeded: the regenerated table is the project's, and sync leaves it be.
-    const outcome = runSync({ cwd: tmp.root, dryRun: false });
-    expect(outcome.actions.find((a) => a.spec.relPath === "docs/adr/README.md")?.kind).toBe("skip-seeded-exists");
-    expect(readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8")).toBe(registry);
+    record("2026-09-12-keep-sqlite.md", "Keep SQLite", "Accepted — amends [drop-redis](2026-09-11-drop-redis.md)");
+    const before = gitStatus();
+    const outcome = runAdrIndex({ cwd: tmp.root });
+    expect(outcome).toMatchObject({ code: 0, records: 2 });
+    expect(outcome.output).toContain(
+      "| [drop-redis](docs/adr/2026-09-11-drop-redis.md) | 2026-09-11 | Drop Redis | Accepted; amended by [keep-sqlite](docs/adr/2026-09-12-keep-sqlite.md) |",
+    );
+    expect(outcome.output).not.toContain("Unclassified");
+    expect(gitStatus()).toBe(before);
   });
 
-  test("fails clearly without a registry or without an index section", () => {
-    record("0001-use-postgres.md", "Use Postgres");
-    expect(runAdrIndex({ cwd: tmp.root, check: false })).toMatchObject({ code: 1, result: "missing" });
-    writeFileSync(join(tmp.root, "docs/adr/README.md"), "# Our decisions\n");
-    expect(runAdrIndex({ cwd: tmp.root, check: false })).toMatchObject({ code: 1, result: "missing" });
+  test("notes Unclassified rows, and says so when there are no records", () => {
+    expect(runAdrIndex({ cwd: tmp.root })).toMatchObject({ code: 0, records: 0, output: "No decision records in docs/adr/ yet." });
+    writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# Use Postgres\n\nNo status section.\n");
+    const outcome = runAdrIndex({ cwd: tmp.root });
+    expect(outcome.output).toContain("| Unclassified |");
+    expect(outcome.output).toContain("Rows marked **Unclassified**");
+    expect(existsSync(join(tmp.root, "docs/adr/README.md"))).toBe(false);
   });
 });
+
+function gitStatus(): string {
+  return execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], { cwd: tmp.root, encoding: "utf8" });
+}

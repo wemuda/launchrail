@@ -2,10 +2,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
+  ADR_INDEX_END,
+  ADR_INDEX_POINTER,
+  ADR_INDEX_START,
   ADR_MAINTAINING_SECTION,
   ADR_TEMPLATE,
+  COMMITTED_INDEX_ADR_TEMPLATE,
+  COMMITTED_INDEX_BULLETS,
   PRE_DATE_SLUG_ADR_TEMPLATE,
   PRE_DATE_SLUG_MAINTAINING_SECTION,
+  PRINTED_INDEX_BULLET,
 } from "../src/lib/adr.js";
 import { sha256 } from "../src/lib/checksum.js";
 import { emptyLockfile, type Lockfile } from "../src/lib/lockfile.js";
@@ -360,5 +366,69 @@ describe("2026-09-heal-adr-minting-guidance (managed-not-seeded-guidance)", () =
     expect(
       applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS).find((r) => r.id === ID)?.status,
     ).toBe("already-satisfied");
+  });
+});
+
+describe("2026-10-adr-index-printed-not-committed (adr-index-is-printed-not-committed)", () => {
+  const ID = "2026-10-adr-index-printed-not-committed";
+  const LINE = "docs/adr/README.md merge=launchrail-adr-index";
+  const table = `${ADR_INDEX_START}\n| ADR | Decided | Title | Status |\n| --- | --- | --- | --- |\n| [0001](0001-x.md) | — | X | Accepted |\n${ADR_INDEX_END}`;
+  const registryWith = (index: string, bullet: string) =>
+    `# ADR registry\n\nIntro.\n\n## Index\n\n${index}\n\n## The live picture\n\nProject-owned prose.\n\n## Maintaining this registry\n\n- Name records by date and slug.\n${bullet}\n- Our own house rule.\n`;
+
+  function seed(relPath: string, content: string, klass: "seeded" | "ejected" | null = "seeded"): void {
+    const abs = join(tmp.root, relPath);
+    mkdirSync(join(abs, ".."), { recursive: true });
+    writeFileSync(abs, content, "utf8");
+    if (klass) lockfile.files[relPath] = { class: klass, checksum: sha256(content) };
+  }
+  const read = (relPath: string) => readFileSync(join(tmp.root, relPath), "utf8");
+  const run = () => applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS).find((r) => r.id === ID);
+
+  test("drops the committed table, its seeded guidance, the template's pointer and a Launchrail-only .gitattributes", () => {
+    seed("docs/adr/README.md", registryWith(table, COMMITTED_INDEX_BULLETS[1]!));
+    seed("docs/adr/0000-template.md", COMMITTED_INDEX_ADR_TEMPLATE);
+    seed(".gitattributes", `${LINE}\n`, null);
+
+    const result = run();
+    expect(result?.status).toBe("applied");
+    expect(result?.changes).toHaveLength(4);
+
+    const registry = read("docs/adr/README.md");
+    expect(registry).toBe(registryWith(ADR_INDEX_POINTER, PRINTED_INDEX_BULLET));
+    expect(read("docs/adr/0000-template.md")).toBe(ADR_TEMPLATE);
+    expect(existsSync(join(tmp.root, ".gitattributes"))).toBe(false);
+    expect(lockfile.files["docs/adr/README.md"]?.checksum).toBe(sha256(registry));
+    expect(lockfile.files["docs/adr/0000-template.md"]?.checksum).toBe(sha256(ADR_TEMPLATE));
+
+    // Idempotent: a re-plan finds nothing left to do.
+    const planned = planPendingMigrations({ cwd: tmp.root, lockfile: emptyLockfile("x") }, MIGRATIONS);
+    expect(planned.find((p) => p.id === ID)?.changes).toEqual([]);
+  });
+
+  test("keeps a project's own .gitattributes rules, wording and template; removes only Launchrail's line", () => {
+    const ours = registryWith("| ADR | Title |\n| --- | --- |\n| [0001](0001-x.md) | X |", "- Our own index rule.");
+    seed("docs/adr/README.md", ours);
+    seed("docs/adr/0000-template.md", "# Our template\n");
+    seed(".gitattributes", `*.png binary\n${LINE}\n*.lock -diff\n`, null);
+
+    expect(run()?.changes).toEqual([`.gitattributes — remove \`${LINE}\``]);
+    expect(read(".gitattributes")).toBe("*.png binary\n*.lock -diff\n");
+    expect(read("docs/adr/README.md")).toBe(ours);
+    expect(read("docs/adr/0000-template.md")).toBe("# Our template\n");
+  });
+
+  test("never rewrites an ejected registry", () => {
+    seed("docs/adr/README.md", registryWith(table, COMMITTED_INDEX_BULLETS[0]!), "ejected");
+    expect(run()?.status).toBe("already-satisfied");
+    expect(read("docs/adr/README.md")).toContain(ADR_INDEX_START);
+  });
+
+  test("the retired merge-driver migration no longer adds a .gitattributes line", () => {
+    seed("docs/adr/README.md", registryWith(ADR_INDEX_POINTER, PRINTED_INDEX_BULLET));
+    const results = applyPendingMigrations({ cwd: tmp.root, lockfile }, MIGRATIONS);
+    expect(results.find((r) => r.id === "2026-09-adr-index-merge-driver")?.status).toBe("already-satisfied");
+    expect(results.find((r) => r.id === ID)?.status).toBe("already-satisfied");
+    expect(existsSync(join(tmp.root, ".gitattributes"))).toBe(false);
   });
 });

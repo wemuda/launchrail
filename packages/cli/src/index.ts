@@ -1,6 +1,7 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 import { AVAILABLE_MODULES, runAdd } from "./commands/add.js";
-import { runAdrIndex, runAdrMergeDriver } from "./commands/adr.js";
+import { runAdrIndex } from "./commands/adr.js";
 import { printDiff, runDiff } from "./commands/diff.js";
 import { runDev } from "./commands/dev.js";
 import { runDoctor, printDoctor } from "./commands/doctor.js";
@@ -25,7 +26,7 @@ Commands:
   diff      Preview upstream changes
   sync      Synchronize managed capabilities and run migrations
   eject     Stop managing a selected module or file
-  adr       Maintain the decision-record registry (adr index [--check])
+  adr       Print the decision-record index (adr index)
   promote   Inspect potential reusable local improvements
 
 Options:
@@ -54,8 +55,7 @@ eject usage:
   launchrail eject --all [--dry-run]           Vendor mode: eject everything
 
 adr usage:
-  launchrail adr index [--check]               Regenerate docs/adr/README.md's index table from the records (--check: report only)
-  launchrail adr merge-driver <O> <A> <B> [P]  Resolve a docs/adr/README.md index conflict by regeneration (git invokes this; install via init / sync / doctor)`;
+  launchrail adr index                         Print the ADR index from the records in docs/adr/ (never written to a file)`;
 
 const NOT_IMPLEMENTED = ["promote"];
 
@@ -151,19 +151,21 @@ if (command === "eject") {
 
 if (command === "adr") {
   if (args[1] === "index") {
-    process.exit(runAdrIndex({ cwd: process.cwd(), check: flags.has("--check") }).code);
+    process.exit(runAdrIndex({ cwd: process.cwd() }).code);
   }
   if (args[1] === "merge-driver") {
-    // Invoked by git as the merge driver bound in .gitattributes; args are
-    // git's %O %A %B %P (base, ours, theirs, path).
-    const [base, ours, theirs, path] = [args[2], args[3], args[4], args[5]];
-    if (!base || !ours || !theirs) {
-      console.error("launchrail: usage: launchrail adr merge-driver <base> <ours> <theirs> [path]");
-      process.exit(2);
-    }
-    process.exit(runAdrMergeDriver({ cwd: process.cwd(), base, ours, theirs, path }).code);
+    // Retired with the committed index (2026-10-01-adr-index-is-printed-not-committed).
+    // A clone that still binds it — an older branch's .gitattributes, before
+    // sync or doctor drop the clone's config — gets git's own text merge, so a
+    // conflict shows the usual markers instead of an untouched file.
+    const [base, ours, theirs] = [args[2], args[3], args[4]];
+    if (!base || !ours || !theirs) process.exit(2);
+    const merged = spawnSync("git", ["merge-file", "-L", "ours", "-L", "base", "-L", "theirs", ours, base, theirs], {
+      stdio: "inherit",
+    });
+    process.exit(merged.status ?? 1);
   }
-  console.error("launchrail: usage: launchrail adr index [--check]");
+  console.error("launchrail: usage: launchrail adr index");
   process.exit(1);
 }
 

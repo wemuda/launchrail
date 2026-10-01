@@ -44,7 +44,7 @@ describe("launchrail sync", () => {
     expect(readFileSync(join(tmp.root, ".launchrail-lock.json"), "utf8")).toBe(lockBefore);
   });
 
-  test("seeds the ADR registry into a repo initialized before it existed, prefilled from its records (ADR-0031)", () => {
+  test("seeds the ADR registry into a repo initialized before it existed (ADR-0031)", () => {
     // Simulate a pre-0031 repo: the registry was never seeded and the lockfile
     // never tracked it — but the project has accumulated decision records.
     rmSync(join(tmp.root, "docs/adr/README.md"));
@@ -56,7 +56,8 @@ describe("launchrail sync", () => {
     expect(outcome.code).toBe(0);
     expect(outcome.actions.find((a) => a.spec.relPath === "docs/adr/README.md")?.kind).toBe("create");
     const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
-    expect(registry).toContain("| [0001](0001-use-postgres.md) | — | Use Postgres | Unclassified |");
+    expect(registry).toContain("npx @wemuda/launchrail adr index");
+    expect(registry).not.toContain("| [0001]");
   });
 
   test("never overwrites a registry the project maintains — including a hand-made one", () => {

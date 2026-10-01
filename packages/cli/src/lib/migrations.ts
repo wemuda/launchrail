@@ -5,10 +5,15 @@ import {
   ADR_REGISTRY_PATH,
   ADR_TEMPLATE,
   ADR_TEMPLATE_FILENAME,
+  COMMITTED_INDEX_ADR_TEMPLATE,
+  GITATTRIBUTES_FILENAME,
+  healCommittedIndexBullet,
   healRegistryMinting,
   PRE_DATE_SLUG_ADR_TEMPLATE,
+  RETIRED_ADR_MERGE_ATTRIBUTE_LINE,
+  withoutCommittedIndex,
+  withoutRetiredMergeAttribute,
 } from "./adr.js";
-import { applyAdrMergeAttribute, GITATTRIBUTES_FILENAME, planAdrMergeAttribute } from "./adrMergeDriver.js";
 import { sha256 } from "./checksum.js";
 import {
   applyPluginDeclaration,
@@ -295,22 +300,11 @@ export const MIGRATIONS: Migration[] = [
   },
   {
     id: "2026-09-adr-index-merge-driver",
-    description: `bind ${ADR_REGISTRY_PATH} to the ADR index merge driver in ${GITATTRIBUTES_FILENAME}, so parallel branches never conflict on the generated index (2026-09-21-adr-index-merge-driver)`,
-    plan(ctx) {
-      // Only the committed half lives here — the `.gitattributes` line. The
-      // per-clone git config that actually defines the driver is registered by
-      // init / sync / doctor, never behind this lockfile-recorded migration
-      // (which runs once, whereas every clone needs the config). Additive and
-      // idempotent: a repo that already carries the line records the migration
-      // with no change, and a project's own `.gitattributes` rules are kept.
-      const plan = planAdrMergeAttribute(ctx.cwd);
-      if (plan.content === null) return { changes: [], apply: () => {} };
-      return {
-        changes: [`${GITATTRIBUTES_FILENAME} — ${plan.detail}`],
-        apply: () => {
-          applyAdrMergeAttribute(ctx.cwd);
-        },
-      };
+    description: `retired — once bound ${ADR_REGISTRY_PATH} to an ADR index merge driver in ${GITATTRIBUTES_FILENAME}; the index is printed now, never committed, so there is nothing to merge (2026-10-01-adr-index-is-printed-not-committed)`,
+    plan() {
+      // Kept so lockfiles that recorded it stay valid, and a no-op so a repo
+      // that never applied it is not given a line the next migration removes.
+      return { changes: [], apply: () => {} };
     },
   },
   {
@@ -424,6 +418,76 @@ export const MIGRATIONS: Migration[] = [
           writeFileSync(templatePath, ADR_TEMPLATE, "utf8");
           if (templateEntry) ctx.lockfile.files[templateRel] = { class: templateEntry.class, checksum: sha256(ADR_TEMPLATE) };
         });
+      }
+
+      if (changes.length === 0) return { changes: [], apply: () => {} };
+      return {
+        changes,
+        apply: () => {
+          for (const write of writes) write();
+        },
+      };
+    },
+  },
+  {
+    id: "2026-10-adr-index-printed-not-committed",
+    description: `stop committing the ADR index: drop the generated table from ${ADR_REGISTRY_PATH} (it is printed by \`launchrail adr index\` now), its seeded guidance, and the merge-driver line in ${GITATTRIBUTES_FILENAME} — parallel ADR branches no longer share a file to conflict over (2026-10-01-adr-index-is-printed-not-committed)`,
+    plan(ctx) {
+      // Each edit is exact: the rows between the markers (always regenerated
+      // wholesale by Launchrail, never the project's), the one guidance bullet
+      // and template text Launchrail seeded about that table, and the one
+      // .gitattributes line Launchrail added. Everything else in these
+      // project-owned files is left as the project wrote it; an ejected file is
+      // not touched at all.
+      const changes: string[] = [];
+      const writes: Array<() => void> = [];
+
+      const registryEntry = ctx.lockfile.files[ADR_REGISTRY_PATH];
+      const registryPath = join(ctx.cwd, ADR_REGISTRY_PATH);
+      if (existsSync(registryPath) && registryEntry?.class !== "ejected") {
+        let next = readFileSync(registryPath, "utf8");
+        const stripped = withoutCommittedIndex(next);
+        if (stripped !== null) {
+          changes.push(`${ADR_REGISTRY_PATH} — replace the committed index table with a pointer to \`launchrail adr index\``);
+          next = stripped;
+        }
+        const healed = healCommittedIndexBullet(next);
+        if (healed !== null) {
+          changes.push(`${ADR_REGISTRY_PATH} — replace the seeded "regenerate and commit the index" guidance`);
+          next = healed;
+        }
+        if (stripped !== null || healed !== null) {
+          writes.push(() => {
+            writeFileSync(registryPath, next, "utf8");
+            if (registryEntry) ctx.lockfile.files[ADR_REGISTRY_PATH] = { class: registryEntry.class, checksum: sha256(next) };
+          });
+        }
+      }
+
+      const templateRel = `${ADR_DIR}/${ADR_TEMPLATE_FILENAME}`;
+      const templateEntry = ctx.lockfile.files[templateRel];
+      const templatePath = join(ctx.cwd, ADR_DIR, ADR_TEMPLATE_FILENAME);
+      if (
+        existsSync(templatePath) &&
+        templateEntry?.class !== "ejected" &&
+        readFileSync(templatePath, "utf8") === COMMITTED_INDEX_ADR_TEMPLATE
+      ) {
+        changes.push(`${templateRel} — drop the template's pointer to a committed index`);
+        writes.push(() => {
+          writeFileSync(templatePath, ADR_TEMPLATE, "utf8");
+          if (templateEntry) ctx.lockfile.files[templateRel] = { class: templateEntry.class, checksum: sha256(ADR_TEMPLATE) };
+        });
+      }
+
+      const attributes = withoutRetiredMergeAttribute(ctx.cwd);
+      if (attributes !== null) {
+        const path = join(ctx.cwd, GITATTRIBUTES_FILENAME);
+        changes.push(
+          attributes === ""
+            ? `${GITATTRIBUTES_FILENAME} — delete (it held only \`${RETIRED_ADR_MERGE_ATTRIBUTE_LINE}\`)`
+            : `${GITATTRIBUTES_FILENAME} — remove \`${RETIRED_ADR_MERGE_ATTRIBUTE_LINE}\``,
+        );
+        writes.push(() => (attributes === "" ? unlinkSync(path) : writeFileSync(path, attributes, "utf8")));
       }
 
       if (changes.length === 0) return { changes: [], apply: () => {} };

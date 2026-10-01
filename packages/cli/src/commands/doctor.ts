@@ -1,13 +1,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ADR_REGISTRY_PATH, adrDuplicates, scanAdrs, unindexedAdrs, withRegeneratedIndex } from "../lib/adr.js";
 import {
-  adrMergeDriverConfigState,
-  ADR_MERGE_DRIVER_NAME,
+  ADR_REGISTRY_PATH,
+  adrDuplicates,
   GITATTRIBUTES_FILENAME,
-  planAdrMergeAttribute,
-  registerAdrMergeDriver,
-} from "../lib/adrMergeDriver.js";
+  removeRetiredMergeDriverConfig,
+  RETIRED_ADR_MERGE_DRIVER_NAME,
+  scanAdrs,
+  withoutCommittedIndex,
+  withoutRetiredMergeAttribute,
+} from "../lib/adr.js";
 import { BROWSER_DRIVER_PACKAGE, BROWSER_TESTING_MODULE, SEMANTIC_SCRIPTS } from "../lib/browser-testing.js";
 import { sha256 } from "../lib/checksum.js";
 import { missingImports } from "../lib/claudeImports.js";
@@ -129,7 +131,7 @@ export function runDoctor(cwd: string): DoctorOutcome {
   }
 
   // The ADR corpus (ADR-0031, as amended by the dated-identifier ADR):
-  // filename-level invariants plus the generated index — record contents use
+  // filename-level invariants plus the registry — record contents use
   // the project's own format and are none of doctor's business. All are
   // project-doc hygiene, so they warn rather than fail.
   const adrs = scanAdrs(cwd);
@@ -146,54 +148,30 @@ export function runDoctor(cwd: string): DoctorOutcome {
       );
     }
     if (!existsSync(join(cwd, ADR_REGISTRY_PATH))) {
-      add("warn", "adr registry", `${ADR_REGISTRY_PATH} missing — run \`launchrail sync\` to seed the index`);
+      add("warn", "adr registry", `${ADR_REGISTRY_PATH} missing — run \`launchrail sync\` to seed the registry`);
+    } else if (withoutCommittedIndex(readFileSync(join(cwd, ADR_REGISTRY_PATH), "utf8")) !== null) {
+      add(
+        "warn",
+        "adr registry",
+        `${ADR_REGISTRY_PATH} still commits a generated index table — run \`launchrail sync\` to drop it; the index is printed on demand (\`launchrail adr index\`), so parallel branches have no table to conflict over`,
+      );
     } else {
-      const registry = readFileSync(join(cwd, ADR_REGISTRY_PATH), "utf8");
-      const unindexed = unindexedAdrs(registry, adrs);
-      if (unindexed.length > 0) {
-        add(
-          "warn",
-          "adr registry",
-          `${unindexed.length} record(s) missing from the index (${unindexed
-            .slice(0, 3)
-            .map((e) => e.file)
-            .join(", ")}${unindexed.length > 3 ? ", …" : ""}) — run \`launchrail adr index\``,
-        );
-      } else if (withRegeneratedIndex(registry, adrs) !== registry) {
-        add("warn", "adr registry", `index table out of date — run \`launchrail adr index\` and commit ${ADR_REGISTRY_PATH}`);
-      } else {
-        add("pass", "adr registry", "every record indexed, index current");
-      }
+      add("pass", "adr registry", "registry present; the index is printed on demand (`launchrail adr index`)");
     }
   }
 
-  // The ADR index merge driver (2026-09-21-adr-index-merge-driver): the generated
-  // index is the one file parallel branches collide on. The committed
-  // .gitattributes binds it to the driver; the driver itself is per-clone git
-  // config, so a fresh clone carries the binding but not the definition. Doctor
-  // both reports the binding and repairs the config here, so no merge ever depends
-  // on a developer configuring git by hand.
-  if (existsSync(join(cwd, ADR_REGISTRY_PATH))) {
-    if (planAdrMergeAttribute(cwd).content === null) {
-      add("pass", "adr merge driver", `${GITATTRIBUTES_FILENAME} binds ${ADR_REGISTRY_PATH} to ${ADR_MERGE_DRIVER_NAME}`);
-    } else {
-      add(
-        "warn",
-        "adr merge driver",
-        `${GITATTRIBUTES_FILENAME} does not bind ${ADR_REGISTRY_PATH} to the index merge driver — run \`launchrail sync\` so parallel ADRs never conflict on the generated index`,
-      );
-    }
-    if (detection.isGitRepo) {
-      const wasRegistered = adrMergeDriverConfigState(cwd) === "registered";
-      registerAdrMergeDriver(cwd);
-      add(
-        "pass",
-        "adr merge driver config",
-        wasRegistered
-          ? `${ADR_MERGE_DRIVER_NAME} registered in this clone's git config`
-          : `registered ${ADR_MERGE_DRIVER_NAME} in this clone's git config`,
-      );
-    }
+  // The retired index merge driver (2026-10-01-adr-index-is-printed-not-committed):
+  // the migration drops the committed .gitattributes line, and doctor drops the
+  // per-clone config so a stale binding cannot invoke a removed command.
+  if (withoutRetiredMergeAttribute(cwd) !== null) {
+    add(
+      "warn",
+      "adr merge driver",
+      `${GITATTRIBUTES_FILENAME} still binds ${ADR_REGISTRY_PATH} to the retired ${RETIRED_ADR_MERGE_DRIVER_NAME} merge driver — run \`launchrail sync\` to remove the line`,
+    );
+  }
+  if (detection.isGitRepo && removeRetiredMergeDriverConfig(cwd)) {
+    add("pass", "adr merge driver", `removed the retired ${RETIRED_ADR_MERGE_DRIVER_NAME} merge driver from this clone's git config`);
   }
 
   // Skills ship as managed files (ADR-0019/0020), not a plugin. Their exact

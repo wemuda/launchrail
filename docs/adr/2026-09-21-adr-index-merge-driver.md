@@ -1,7 +1,7 @@
 # The generated ADR index auto-resolves parallel merges via a Launchrail-installed git merge driver
 
 ## Status
-Accepted; extends [adr-date-slug-identifiers](2026-09-11-adr-date-slug-identifiers.md): the dated identifiers made the record *files* merge cleanly and made the index a deterministically regenerable artifact; this record makes the *generated index* merge cleanly too, closing the one conflict the dated scheme left behind. The generated table, the scanner, and the `launchrail adr index` command all stand.
+Superseded by [adr-index-is-printed-not-committed](2026-10-01-adr-index-is-printed-not-committed.md): the index is no longer committed, so there is nothing to merge. The driver never ran on GitHub, and its merged-tree read recursed without end; it is removed. The generator and its table format survive as the printed `launchrail adr index`. Originally: extends [adr-date-slug-identifiers](2026-09-11-adr-date-slug-identifiers.md).
 
 ## Context
 [adr-date-slug-identifiers](2026-09-11-adr-date-slug-identifiers.md) gave every record a coordination-free `YYYY-MM-DD-slug` name, so two branches never pick the same filename and the `.md` records merge cleanly. It did **not** solve the file that is regenerated *from* those records: `docs/adr/README.md`. Each branch runs `launchrail adr index`, which appends a row near the bottom of the date-sorted table between `<!-- adr-index:start -->` and `<!-- adr-index:end -->`. Two branches insert different rows at the same anchor with identical surrounding context, so git's line-based 3-way merge cannot order them and emits a textual conflict — every time two branches add an ADR in parallel.

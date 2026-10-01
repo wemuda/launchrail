@@ -83,17 +83,18 @@ describe("launchrail init", () => {
     expect(lock.files["docs/adr/README.md"]).toMatchObject({ class: "seeded" });
   });
 
-  test("prefills the ADR registry from existing decision records when adopting (ADR-0031)", async () => {
-    // A repo adopted mid-life already carries ADRs; the seeded index lists them
-    // as Unclassified — only the project knows which decisions still stand.
+  test("seeds the ADR registry beside existing decision records when adopting, with the index printed, not committed (ADR-0031)", async () => {
+    // A repo adopted mid-life already carries ADRs. The registry points at the
+    // printed index, which lists them as Unclassified — only the project knows
+    // which decisions still stand.
     mkdirSync(join(tmp.root, "docs/adr"), { recursive: true });
     writeFileSync(join(tmp.root, "docs/adr/0001-use-postgres.md"), "# ADR-0001: Use Postgres\n\nBecause.\n");
     writeFileSync(join(tmp.root, "docs/adr/0002-event-bus.md"), "# One event bus\n\nBecause.\n");
     await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     const registry = readFileSync(join(tmp.root, "docs/adr/README.md"), "utf8");
-    expect(registry).toContain("| [0001](0001-use-postgres.md) | — | Use Postgres | Unclassified |");
-    expect(registry).toContain("| [0002](0002-event-bus.md) | — | One event bus | Unclassified |");
-    expect(registry).not.toContain("0000-template.md) |");
+    expect(registry).toContain("npx @wemuda/launchrail adr index");
+    expect(registry).not.toContain("| [0001]");
+    expect(existsSync(join(tmp.root, ".gitattributes"))).toBe(false);
     // Re-running stays idempotent: same records, same content.
     const second = await runInit({ cwd: tmp.root, dryRun: false, yes: true });
     expect(second.actions.find((a) => a.spec.relPath === "docs/adr/README.md")?.kind).toBe("skip-unchanged");
