@@ -43,7 +43,7 @@ TODO: One paragraph on what this project is, who it serves, and what it is not.
 ## Canonical context
 
 1. [docs/vision.md](docs/vision.md) — product vision and non-goals
-2. [docs/adr/README.md](docs/adr/README.md) — the decision registry: read its index first, then only the ADRs touching your area
+2. [docs/adr/README.md](docs/adr/README.md) — the decision registry: print its index first (\`npx @wemuda/launchrail adr index\`), then open only the ADRs touching your area
 3. ${specPointer}
 
 ## Commands
@@ -55,7 +55,7 @@ ${commitSection}
 - Ask, don't guess. On product decisions, data-model or schema changes, security-relevant behaviour, or anything genuinely ambiguous, stop and ask rather than guessing — a wrong guess on these costs more than the question.
 - Do not silently change scope; surface deviations from the spec or ADRs.
 - If implementation invalidates an artifact (vision, spec, ADR, design note), update that artifact in the same change.
-- Decisions that are hard to reverse, surprising without context, and the result of a real trade-off become lightweight ADRs in \`docs/adr/\` using [docs/adr/0000-template.md](docs/adr/0000-template.md), named \`YYYY-MM-DD-short-slug.md\` (the decision date, then a slug unique in the directory — no sequence number to claim), with the registry index regenerated (\`launchrail adr index\`) in the same commit. Prefer amending the ADR that owns an area over minting a sibling; product decisions belong in the spec, not an ADR.
+- Decisions that are hard to reverse, surprising without context, and the result of a real trade-off become lightweight ADRs in \`docs/adr/\` using [docs/adr/0000-template.md](docs/adr/0000-template.md), named \`YYYY-MM-DD-short-slug.md\` (the decision date, then a slug unique in the directory — no sequence number to claim). The registry index is printed from the records (\`launchrail adr index\`), never committed. Prefer amending the ADR that owns an area over minting a sibling; product decisions belong in the spec, not an ADR.
 
 ## Definition of done
 
@@ -111,8 +111,8 @@ function claudeGeneratedMd(ctx: SeedContext): string {
 
 - This project follows the Launchrail rail — six phases: Intent → Exploration → Decisions → Blueprint → Build → Ship. Report position with the rail banner at every transition; the stage detail and the interaction contract live in \`.claude/skills/launch/workflow.md\`.
 - Product knowledge (vision, specs, ADRs, designs, tickets, code) is project-owned; Launchrail never overwrites it.
-- Architecture decisions: read \`docs/adr/README.md\` — the registry index — first, and open only the ADRs touching your area. An ADR records a decision, not the current system; never take one as evidence that a component exists or still works as described — the code is the source of truth.
-- Recording an ADR (the authoritative minting contract — the registry's own guidance summarizes this): copy [docs/adr/0000-template.md](docs/adr/0000-template.md) to \`docs/adr/YYYY-MM-DD-short-slug.md\` — the decision date, then a slug unique in the directory. There is **no sequence number to claim**, so parallel sessions never collide and nothing is renumbered; the slug is the record's handle in prose and links, and titles carry no \`ADR-NNNN:\` prefix. Declare what the record supersedes, amends, or extends in its own \`## Status\` line, linking the earlier record by file — the index derives the reverse links, so amending one never means editing it. Regenerate the index with \`launchrail adr index\` and commit it in the same change. Parallel branches never conflict on that generated index — a Launchrail-installed git merge driver (registered per clone by \`launchrail doctor\`) rebuilds it from the records on merge or rebase; if a clone that has not run doctor ever hits a conflict there, resolve it with \`launchrail adr index && git add docs/adr/README.md\`, never by editing the rows. Records that predate this scheme keep their \`NNNN-\` names and are cited by number.
+- Architecture decisions: print the registry index first — \`npx @wemuda/launchrail adr index\`, every record in date order with its live status — and open only the ADRs touching your area. An ADR records a decision, not the current system; never take one as evidence that a component exists or still works as described — the code is the source of truth.
+- Recording an ADR (the authoritative minting contract — the registry's own guidance summarizes this): copy [docs/adr/0000-template.md](docs/adr/0000-template.md) to \`docs/adr/YYYY-MM-DD-short-slug.md\` — the decision date, then a slug unique in the directory. There is **no sequence number to claim**, so parallel sessions never collide and nothing is renumbered; the slug is the record's handle in prose and links, and titles carry no \`ADR-NNNN:\` prefix. Declare what the record supersedes, amends, or extends in its own \`## Status\` line, linking the earlier record by file — the index derives the reverse links, so amending one never means editing it. The index is printed from the records each time it is read and never committed, so the record is the whole change: there is no table to regenerate, commit, or resolve in a merge. Records that predate this scheme keep their \`NNNN-\` names and are cited by number.
 - \`.launchrail.yml\` is project configuration; \`.launchrail-lock.json\` is machine-managed — do not hand-edit it.
 - The issue-tracker workflow (labels included) and the domain-doc consumer rules live in \`docs/agents/\` — seeded from \`.launchrail.yml\`, yours to edit.
 - Before claiming completion, run the project's deterministic checks. Completion requires evidence, not assertion.
