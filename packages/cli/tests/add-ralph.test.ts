@@ -135,7 +135,7 @@ describe("launchrail add ralph", () => {
     expect(content).toContain("phase: 'Land'");
     expect(content).toContain("git merge --no-ff");
     expect(content).not.toContain("git merge --squash");
-    expect(content).toContain("withLandLock");
+    expect(content).toContain("acquireLandLock");
     expect(content).toContain("checkpointEvery: A.checkpointEvery ?? 5");
     expect(content).toContain("resyncs: A.resyncs ?? 2");
     expect(content).toContain("knownGreen: A.knownGreen ?? ''");
@@ -303,7 +303,7 @@ describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
     stuck: { ticket: number; blockedBy: number[] }[];
     nextStep: string;
   };
-  type Ticket = { number: number; title?: string; blockedByLine?: string; migration?: boolean };
+  type Ticket = { number: number; title?: string; blockedByLine?: string };
 
   // A promise the test resolves by hand — to hold one mock builder open while the pool
   // keeps dispatching and landing the others.
@@ -355,7 +355,7 @@ describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
       if (label.startsWith("read-graph"))
         return {
           tickets: tickets.map((t) => ({
-            number: t.number, title: t.title ?? `T${t.number}`, blockedByLine: t.blockedByLine ?? "", migration: t.migration ?? false,
+            number: t.number, title: t.title ?? `T${t.number}`, blockedByLine: t.blockedByLine ?? "",
           })),
         };
       if (label === "release-verification") return { verified: true, headSha: "final0", summary: "green", failures: [], prunedBranches: [] };
@@ -453,6 +453,7 @@ describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
     expect(resync.prompt).toContain("RE-SYNC, not a failure");
     expect(resync.prompt).toContain("CONFLICT in src/app.ts");
     expect(resync.prompt).toContain("adopt");
+    expect(resync.prompt).toContain("The loop holds master still until your branch lands");
     expect(result.landed.map((l) => l.ticket)).toEqual([1]);
     expect(result.parked).toEqual([]);
   });
@@ -610,18 +611,60 @@ describe("ralph workflow — the lean local-gate loop (ADR-0032)", () => {
     expect(labels.filter((l) => l.startsWith("verify:")).sort()).toEqual(["verify:#1", "verify:#2", "verify:#3"]);
   });
 
-  test("migration-adding tickets run one at a time; others fill the width", async () => {
-    const m = await runRalph({
-      args: { width: 3, target: "" },
-      tickets: [{ number: 1, migration: true }, { number: 2, migration: true }, { number: 3 }],
+  test("a re-sync keeps the land lock: nothing lands until the re-synced branch has, so it cannot lose the race again", async () => {
+    // The field case: a schema ticket's land conflicted on the next migration number, and
+    // while its re-sync renumbered, another ticket landed that number first — three times.
+    const second = deferred<AgentResult>();
+    let resyncing = false;
+    let baseMovedDuringResync = false;
+    const { result, labels, logs } = await runRalph({
+      args: { width: 2, target: "" },
+      tickets: [{ number: 1 }, { number: 2 }],
+      onAgent: (label) => {
+        if (label === "build:#2") return second.promise;
+        if (label === "land:#1") return { status: "conflict", baseMoved: true, summary: "CONFLICT in drizzle/meta/_journal.json" };
+        if (label === "build:#1:resync1") {
+          resyncing = true;
+          // #2 finishes while #1 is re-syncing and asks to land.
+          second.resolve({ status: "ready", branch: "ralph/2-t2", headSha: "h2", commitTitle: "feat: t2", summary: "built" });
+          return new Promise((r) =>
+            setTimeout(() => r({ status: "ready", branch: "ralph/1-t1", headSha: "h1b", commitTitle: "feat: t1", summary: "re-synced" }), 20),
+          );
+        }
+        if (label === "land:#2" && resyncing) baseMovedDuringResync = true;
+        if (label === "land:#1:resync1") {
+          resyncing = false;
+          if (baseMovedDuringResync) return { status: "conflict", baseMoved: true, summary: "CONFLICT in drizzle/meta/_journal.json, again" };
+        }
+        return undefined;
+      },
     });
-    // #1 and #3 start together (one migration ticket in flight); #2 waits for #1 to finish.
-    expect(m.active.get("build:#3")).toEqual(["build:#1"]);
-    expect(m.active.get("build:#2")).not.toContain("build:#1");
-    expect(m.result.landed.map((l) => l.ticket).sort()).toEqual([1, 2, 3]);
+    // #2 waited for the lock; #1's one re-sync was the one that landed.
+    expect(labels.indexOf("land:#2")).toBeGreaterThan(labels.indexOf("land:#1:resync1"));
+    expect(labels.filter((l) => l.startsWith("build:#1"))).toEqual(["build:#1", "build:#1:resync1"]);
+    expect(result.landed.map((l) => l.ticket).sort()).toEqual([1, 2]);
+    expect(logs.join("\n")).toContain("no other branch lands until it re-lands");
+  });
 
-    const plain = await runRalph({ args: { width: 3, target: "" }, tickets: [{ number: 1 }, { number: 2 }, { number: 3 }] });
-    expect(plain.active.get("build:#3")).toEqual(["build:#1", "build:#2"]);
+  test("a re-sync that ends without a branch releases the land lock: the others still land", async () => {
+    const { result, labels } = await runRalph({
+      args: { width: 2, target: "", attempts: 1 },
+      tickets: [{ number: 1 }, { number: 2 }],
+      onAgent: (label) => {
+        if (label === "land:#1") return { status: "conflict", baseMoved: true, summary: "CONFLICT in src/app.ts" };
+        if (label === "build:#1:resync1") return { status: "verify-failed", summary: "fast gate red", failure: "typecheck: 3 errors" };
+        return undefined;
+      },
+    });
+    expect(result.parked.map((p) => p.ticket)).toEqual([1]);
+    expect(result.landed.map((l) => l.ticket)).toEqual([2]);
+    expect(labels.indexOf("land:#2")).toBeGreaterThan(labels.indexOf("build:#1:resync1"));
+  });
+
+  test("schema tickets build at full width: the graph reader predicts no migration flag", async () => {
+    const { active, dispatches } = await runRalph({ args: { width: 3, target: "" }, tickets: [{ number: 1 }, { number: 2 }, { number: 3 }] });
+    expect(active.get("build:#3")).toEqual(["build:#1", "build:#2"]);
+    expect(dispatches.find((d) => d.label === "read-graph")!.prompt).not.toMatch(/migration/i);
   });
 
   test("the frontier respects edges and dispatches the most-depended-on ticket first", async () => {

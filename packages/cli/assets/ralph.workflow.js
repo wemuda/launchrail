@@ -16,7 +16,9 @@
 // gate runs at checkpoints (every N lands) and at release, with one bounded repair
 // when a checkpoint is red. No per-ticket PR, no cloud-CI wait anywhere in the loop:
 // cloud CI runs once, on the release PR the run offers. A work pool keeps `width`
-// builders busy continuously — a slow ticket never holds a round.
+// builders busy continuously — a slow ticket never holds a round. A branch the base
+// moved under is re-synced while the loop holds the base still, so it lands next
+// (ralph-resync-holds-the-land-lock).
 export const meta = {
   name: 'ralph',
   description: 'Autonomous Ralph loop: implement ready tickets with fresh-context subagents, verification-gated',
@@ -68,7 +70,8 @@ const POLICY = {
   // local build concurrency — several implementers share one machine, and fanning out
   // test runs buys backpressure, not speed. Use 1 until a run has landed tickets cleanly
   // on this project — or pass canary: true, which does it for you. Tickets that add DB
-  // migrations are serialized by the loop itself (see the graph's `migration` flag).
+  // migrations need no serializing: parallel builders claim the same migration number,
+  // and that collision is settled at the land, by a re-sync under the land lock.
   width: A.width ?? 3,
   // Integration target. The front door consolidates by DEFAULT (ADR-0026): it resolves a
   // scope-native branch name and passes it here, so the campaign collects on that branch and
@@ -89,8 +92,9 @@ const POLICY = {
   // Land hand-backs that spend no attempt: the base moved under a finished branch and the
   // merge conflicted, or the merged tree failed the loop's gate although the branch
   // was fine on its own. The builder did nothing wrong, so a fresh implementer re-syncs the
-  // pushed branch (minutes, not a rebuild) — up to this many times per ticket before it
-  // counts as a real failure.
+  // pushed branch (minutes, not a rebuild) while the ticket keeps the land lock: nothing else
+  // lands until it re-lands, so the base it merges is the base it lands on. Up to this many
+  // times per ticket before it counts as a real failure.
   resyncs: A.resyncs ?? 2,
   // Run the FULL verification gate on the base after this many lands (0 = only at release).
   // Every land already passed the fast gate on the merged tree; the full suite (e2e
@@ -189,7 +193,7 @@ const GRAPH_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['number', 'title', 'blockedByLine', 'migration'],
+        required: ['number', 'title', 'blockedByLine'],
         properties: {
           number: { type: 'integer' },
           title: { type: 'string' },
@@ -197,11 +201,6 @@ const GRAPH_SCHEMA = {
             type: 'string',
             description:
               'The ticket\'s "Blocked by" line copied VERBATIM (e.g. "**Blocked by:** #11, #9"), or "" if it has none. Do NOT interpret or resolve the edges — copy the characters; the caller parses the #n itself.',
-          },
-          migration: {
-            type: 'boolean',
-            description:
-              'true when the ticket plainly adds or changes a database schema or migration (a new table, column, or migration file); false otherwise or when unsure. Used only to serialize such tickets — never to skip one.',
           },
         },
       },
@@ -335,7 +334,7 @@ The pushed branch (if any) holds the previous attempt's work — adopt it and fi
       : ''
   const resyncNote = resync
     ? `\nThe loop could not land the pushed branch because ${pre.base} moved under it: ${resync}
-This is a RE-SYNC, not a failure: adopt the branch, merge the latest ${pre.base} into it (conflicts are ordinary work — the launch-resolving-merge-conflicts skill; regenerate migrations that now collide), make the fast gate green on the merged result, push, and hand off again.\n`
+This is a RE-SYNC, not a failure: adopt the branch, merge the latest ${pre.base} into it (conflicts are ordinary work — the launch-resolving-merge-conflicts skill; regenerate migrations that now collide), make the fast gate green on the merged result, push, and hand off again. The loop holds ${pre.base} still until your branch lands — nothing else lands meanwhile — so the base you merge now is the base you land on; resolve it once, completely.\n`
     : ''
   const adopt = pushed
     ? `A pushed branch already exists for this ticket: ${pushed.branch} at ${pushed.sha} — a previous session's work. Adopt it (\`git fetch origin ${pushed.branch} && git checkout -b ${pushed.branch} origin/${pushed.branch}\`), read its log and its diff against origin/${pre.base}, and continue from where it stopped — never start over.`
@@ -441,8 +440,7 @@ Tracker access: ${pre.trackerAccess}
 Include every open ticket labeled ready-for-agent, excluding any labeled needs-info.
 An open issue wearing ready-for-agent that is plainly not an implementable ticket — a published spec, research notes, an epic — is a labeling error: leave it out of tickets and report its number in notTickets instead. When in doubt, include it as a ticket.
 For each, report its number, its exact title, and its "Blocked by" line copied VERBATIM (the whole line, e.g. "**Blocked by:** #11, #9"), or "" when it has none. If the tracker records blocking through native relations instead of a body line, render those relations as one "Blocked by: #n, #m" line and nothing else.
-Do NOT interpret, resolve, or filter the edges — copy the characters and let the caller parse the #n. Getting a blocker wrong dispatches a ticket before its dependency lands.
-Also flag migration: true for a ticket that plainly adds or changes a database schema or migration (a new table, column, or migration file) — false otherwise or when unsure. The loop only uses it to run such tickets one at a time.`
+Do NOT interpret, resolve, or filter the edges — copy the characters and let the caller parse the #n. Getting a blocker wrong dispatches a ticket before its dependency lands.`
 
 // A non-ticket wearing ready-for-agent (a published spec, research notes) is excluded from
 // the frontier but never silently: the label is the bug, and the supervisor should fix it.
@@ -458,7 +456,6 @@ function parseGraph(graph) {
   return (graph?.tickets ?? []).map((t) => ({
     number: t.number,
     title: t.title,
-    migration: t.migration === true,
     blockedBy: [...(t.blockedByLine ?? '').matchAll(/#(\d+)/g)]
       .map((m) => Number(m[1]))
       .filter((n) => n !== t.number),
@@ -501,16 +498,17 @@ let baseRedReason = ''
 let checkpointRuns = 0
 const checkpoints = [] // every full-gate verdict on the base, repairs included
 
-// The land lock: exactly one land or checkpoint touches the main checkout at a time.
-// A promise chain, so it needs no timers and survives a resumed run unchanged.
+// The land lock: exactly one land or checkpoint touches the main checkout at a time, and
+// nothing lands while a handed-back branch is re-synced. A promise chain, so it needs no
+// timers and survives a resumed run unchanged: acquiring resolves to the release function
+// once every earlier holder has released (releasing twice is harmless).
 let landLock = Promise.resolve()
-function withLandLock(fn) {
-  const run = landLock.then(fn, fn)
-  landLock = run.then(
-    () => {},
-    () => {},
-  )
-  return run
+function acquireLandLock() {
+  let release
+  const released = new Promise((resolve) => (release = resolve))
+  const acquired = landLock.then(() => release)
+  landLock = landLock.then(() => released)
+  return acquired
 }
 
 // ---------------------------------------------------------------------------
@@ -576,115 +574,127 @@ async function checkpoint(pre) {
   log(`base RED at ${cp.headSha} and the repair did not land (${baseRedReason}) — no further lands; finished tickets stay on their pushed branches as held`)
 }
 
-// Land a finished branch: one at a time, in the main checkout, under the fast gate.
-function landTicket(pre, ticket, build) {
-  return withLandLock(async () => {
-    if (baseRed) return { status: 'held', summary: baseRedReason }
-    const land = await agent(landPrompt(pre, { number: ticket.number, title: ticket.title, ...build }, false), {
-      label: `land:#${ticket.number}${build.resyncLabel ?? ''}`,
-      phase: 'Land',
-      schema: LAND_SCHEMA,
-      effort: 'low',
-    })
-    if (land && land.status === 'landed') {
-      baseTip = land.mergeCommit
-      sinceCheckpoint += 1
-      landedSinceGreen.push({ number: ticket.number, title: ticket.title, mergeCommit: land.mergeCommit })
-      if (POLICY.checkpointEvery > 0 && sinceCheckpoint >= POLICY.checkpointEvery) await checkpoint(pre)
-    }
-    return land
+// Land a finished branch in the main checkout, under the fast gate. The caller holds the
+// land lock.
+async function landTicket(pre, ticket, build) {
+  if (baseRed) return { status: 'held', summary: baseRedReason }
+  const land = await agent(landPrompt(pre, { number: ticket.number, title: ticket.title, ...build }, false), {
+    label: `land:#${ticket.number}${build.resyncLabel ?? ''}`,
+    phase: 'Land',
+    schema: LAND_SCHEMA,
+    effort: 'low',
   })
+  if (land && land.status === 'landed') {
+    baseTip = land.mergeCommit
+    sinceCheckpoint += 1
+    landedSinceGreen.push({ number: ticket.number, title: ticket.title, mergeCommit: land.mergeCommit })
+    if (POLICY.checkpointEvery > 0 && sinceCheckpoint >= POLICY.checkpointEvery) await checkpoint(pre)
+  }
+  return land
 }
 
 async function drive(pre, ticket, pushed) {
   const s = entry(ticket)
   let resync = null
-  for (;;) {
-    s.attempts += 1
-    builds += 1
-    const label = `build:#${ticket.number}${s.attempts > 1 ? ':retry' : ''}${resync ? `:resync${s.resyncs}` : ''}`
-    const build = await agent(buildPrompt(pre, ticket, s, pushed, resync), {
-      label,
-      phase: 'Build',
-      schema: BUILD_SCHEMA,
-      isolation: 'worktree', // parallel implementers must never fight over one checkout
-    })
-    if (!build) {
-      s.failures.push('implementer died (infrastructure)')
-      return { ticket, ok: false, dead: true }
-    }
-    s.punted.push(...(build.punted ?? []))
-    if (build.branch) s.branch = build.branch
-    if (build.status === 'already-done') {
-      s.status = 'done-before'
-      return { ticket, ok: false, doneBefore: true }
-    }
-    if (build.status === 'blocked') {
-      // A declared blocker had not actually landed — the frontier's view was stale, or the
-      // blocker is open but outside the ready set. Hand the attempt back: a deferral is not
-      // a failure. Capped so a permanently missing dependency still parks eventually.
-      s.defers += 1
-      if (s.defers <= POLICY.attempts) {
-        s.attempts -= 1
-        return { ticket, ok: false, deferred: true, why: build.failure ?? build.summary }
-      }
-      s.failures.push(`still blocked after ${s.defers} deferrals: ${build.failure ?? build.summary}`)
-      return { ticket, ok: false }
-    }
-    if (build.status !== 'ready') {
-      s.failures.push(`[attempt ${s.attempts}] ${build.status}: ${build.failure ?? build.summary}`)
-      return { ticket, ok: false }
-    }
-    if (!build.branch) {
-      s.failures.push(`[attempt ${s.attempts}] reported ready but returned no branch`)
-      return { ticket, ok: false }
-    }
-    // The loop owns the landing (ADR-0022, ADR-0032): a local merge onto the base
-    // under the fast gate, one at a time. No PR, no CI wait — the builder's branch is
-    // pushed, so nothing is lost whatever happens next.
-    const land = await landTicket(pre, ticket, { ...build, resyncLabel: resync ? `:resync${s.resyncs}` : '' })
-    if (!land) {
-      s.failures.push('lander died (infrastructure)')
-      return { ticket, ok: false, dead: true }
-    }
-    if (land.status === 'held') {
-      s.status = 'held'
-      return { ticket, ok: false, held: true }
-    }
-    if (land.status === 'landed') {
-      // Nothing is trusted from a report — a claimed land is checked against the remote
-      // by a separate, cheap agent with tracker access only.
-      const verdict = await agent(verifyPrompt(pre, ticket, land), {
-        label: `verify:#${ticket.number}`,
-        phase: 'Verify',
-        schema: VERIFY_SCHEMA,
-        model: 'haiku',
-        effort: 'low',
+  // The land lock, once this ticket holds it: kept from an integration hand-back through the
+  // re-sync to the re-land, and released whichever way the ticket leaves.
+  let releaseLand = null
+  try {
+    for (;;) {
+      s.attempts += 1
+      builds += 1
+      const label = `build:#${ticket.number}${s.attempts > 1 ? ':retry' : ''}${resync ? `:resync${s.resyncs}` : ''}`
+      const build = await agent(buildPrompt(pre, ticket, s, pushed, resync), {
+        label,
+        phase: 'Build',
+        schema: BUILD_SCHEMA,
+        isolation: 'worktree', // parallel implementers must never fight over one checkout
       })
-      if (verdict?.landed && verdict.issueClosed) {
-        s.status = 'landed'
-        s.mergeCommit = verdict.mergeCommit || land.mergeCommit
-        return { ticket, ok: true }
+      if (!build) {
+        s.failures.push('implementer died (infrastructure)')
+        return { ticket, ok: false, dead: true }
       }
-      // Landed-but-issue-open fails verification too: the retry finds the ticket's work on
-      // the base (already merged) or the issue open, finishes the bookkeeping, and settles.
-      s.failures.push(`[attempt ${s.attempts}] claimed landed, remote disagrees: ${verdict ? verdict.evidence : 'verifier died'}`)
+      s.punted.push(...(build.punted ?? []))
+      if (build.branch) s.branch = build.branch
+      if (build.status === 'already-done') {
+        s.status = 'done-before'
+        return { ticket, ok: false, doneBefore: true }
+      }
+      if (build.status === 'blocked') {
+        // A declared blocker had not actually landed — the frontier's view was stale, or the
+        // blocker is open but outside the ready set. Hand the attempt back: a deferral is not
+        // a failure. Capped so a permanently missing dependency still parks eventually.
+        s.defers += 1
+        if (s.defers <= POLICY.attempts) {
+          s.attempts -= 1
+          return { ticket, ok: false, deferred: true, why: build.failure ?? build.summary }
+        }
+        s.failures.push(`still blocked after ${s.defers} deferrals: ${build.failure ?? build.summary}`)
+        return { ticket, ok: false }
+      }
+      if (build.status !== 'ready') {
+        s.failures.push(`[attempt ${s.attempts}] ${build.status}: ${build.failure ?? build.summary}`)
+        return { ticket, ok: false }
+      }
+      if (!build.branch) {
+        s.failures.push(`[attempt ${s.attempts}] reported ready but returned no branch`)
+        return { ticket, ok: false }
+      }
+      // The loop owns the landing (ADR-0022, ADR-0032): a local merge onto the base
+      // under the fast gate, one at a time. No PR, no CI wait — the builder's branch is
+      // pushed, so nothing is lost whatever happens next. A re-sync already holds the lock.
+      releaseLand ??= await acquireLandLock()
+      const land = await landTicket(pre, ticket, { ...build, resyncLabel: resync ? `:resync${s.resyncs}` : '' })
+      if (!land) {
+        s.failures.push('lander died (infrastructure)')
+        return { ticket, ok: false, dead: true }
+      }
+      if (land.status === 'held') {
+        s.status = 'held'
+        return { ticket, ok: false, held: true }
+      }
+      // The base moved under a finished branch: a conflict, a gate that only fails on the
+      // merged tree, or a remote that kept moving. The builder did nothing wrong — hand the
+      // pushed branch to a fresh implementer to re-sync, without spending an attempt, and keep
+      // the land lock until it re-lands. Nothing lands in between, so the re-sync cannot lose
+      // the same race again: two schema tickets claiming one migration number, two branches
+      // appending to one shared file.
+      const integration = land.status === 'conflict' || land.status === 'stale' || (land.status === 'gate-failed' && land.baseMoved === true)
+      if (integration && s.resyncs < POLICY.resyncs) {
+        s.resyncs += 1
+        s.attempts -= 1
+        resync = `${land.status}: ${land.summary}`
+        log(`#${ticket.number}: land hand-back (${land.status}) — re-syncing the pushed branch (${s.resyncs}/${POLICY.resyncs}), no attempt spent; no other branch lands until it re-lands`)
+        pushed = { branch: build.branch, sha: build.headSha ?? '' }
+        continue
+      }
+      releaseLand()
+      releaseLand = null
+      if (land.status === 'landed') {
+        // Nothing is trusted from a report — a claimed land is checked against the remote
+        // by a separate, cheap agent with tracker access only.
+        const verdict = await agent(verifyPrompt(pre, ticket, land), {
+          label: `verify:#${ticket.number}`,
+          phase: 'Verify',
+          schema: VERIFY_SCHEMA,
+          model: 'haiku',
+          effort: 'low',
+        })
+        if (verdict?.landed && verdict.issueClosed) {
+          s.status = 'landed'
+          s.mergeCommit = verdict.mergeCommit || land.mergeCommit
+          return { ticket, ok: true }
+        }
+        // Landed-but-issue-open fails verification too: the retry finds the ticket's work on
+        // the base (already merged) or the issue open, finishes the bookkeeping, and settles.
+        s.failures.push(`[attempt ${s.attempts}] claimed landed, remote disagrees: ${verdict ? verdict.evidence : 'verifier died'}`)
+        return { ticket, ok: false }
+      }
+      s.failures.push(`[attempt ${s.attempts}] land ${land.status}: ${land.summary}`)
       return { ticket, ok: false }
     }
-    // The base moved under a finished branch: a conflict, a gate that only fails on the
-    // merged tree, or a remote that kept moving. The builder did nothing wrong — hand the
-    // pushed branch to a fresh implementer to re-sync, without spending an attempt.
-    const integration = land.status === 'conflict' || land.status === 'stale' || (land.status === 'gate-failed' && land.baseMoved === true)
-    if (integration && s.resyncs < POLICY.resyncs) {
-      s.resyncs += 1
-      s.attempts -= 1
-      resync = `${land.status}: ${land.summary}`
-      log(`#${ticket.number}: land hand-back (${land.status}) — re-syncing the pushed branch (${s.resyncs}/${POLICY.resyncs}), no attempt spent`)
-      pushed = { branch: build.branch, sha: build.headSha ?? '' }
-      continue
-    }
-    s.failures.push(`[attempt ${s.attempts}] land ${land.status}: ${land.summary}`)
-    return { ticket, ok: false }
+  } finally {
+    releaseLand?.()
   }
 }
 
@@ -850,12 +860,9 @@ for (;;) {
   // Canary: the first verified land proves the plumbing end to end (branch, push, land,
   // gate, explicit close); until it does, one ticket at a time.
   const width = POLICY.canary && landedCount === 0 ? 1 : POLICY.width
-  const migrationInFlight = () => [...inFlight.keys()].some((n) => tickets.find((t) => t.number === n)?.migration)
   while (!baseRed && !budgetLow && inFlight.size < width && builds < POLICY.maxBuilds) {
     const ready = frontier()
-    // Migration-adding tickets collide on the next migration number when built in
-    // parallel — the loop keeps one such ticket in flight at a time.
-    const next = ready.find((t) => !t.migration || !migrationInFlight())
+    const next = ready[0]
     if (!next) break
     // The cap counts verified lands; in-flight tickets reserve their share so even a
     // fully successful pool cannot overshoot.
