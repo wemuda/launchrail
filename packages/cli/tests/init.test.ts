@@ -245,6 +245,7 @@ describe("launchrail init", () => {
     }
     const output = lines.join("\n");
     expect(output).toContain("aligning your code with Launchrail's artifacts");
+    expect(output).toContain("Claude Design prototype for");
   });
 
   test("ends with the Claude Code handoff (vendored skills + /launch)", async () => {
@@ -261,6 +262,9 @@ describe("launchrail init", () => {
     const output = lines.join("\n");
     expect(output).toContain(".claude/skills/");
     expect(output).toContain("Run /launch");
+    // /launch asks for brought material at the stage-1 fork (intake-onramp ADR); init says so.
+    expect(output).toContain("asks whether you already have material");
+    expect(output).toContain("/launch is the only command to know");
     // The plugin is retired (ADR-0019) — no marketplace/install handoff on the golden path.
     expect(output).not.toContain("claude plugin marketplace add wemuda/launchrail");
     expect(output).not.toContain("fill in the TODO");

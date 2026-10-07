@@ -57,7 +57,7 @@ A planning session (a grill, a wayfinder ticket, an interview) closes with the b
 
 | # | Stage | Tool | Input | Committed artifact |
 |---|---|---|---|---|
-| 1 | Vision | Launchrail `vision-creation` skill | The idea, the user | `docs/vision.md` |
+| 1 | Vision | Launchrail `vision-creation` skill | The idea, the user — or the material they brought (see *Starting from material you already have*) | `docs/vision.md` |
 | 2 | Visual exploration | Claude Design | Vision | Exploration artifacts (linked from the vision) |
 | 3 | Discovery research | Launchrail `discovery` skill (composes `launch-research`) | Vision + intended stack | Landscape/options map in `docs/research/` (`discovery-*.md`) |
 | 4 | Complexity grill | `launch-grill` | Vision + exploration + discovery | Grill constraints in `docs/research/` |
@@ -104,6 +104,21 @@ When the prototype *is* the spec — a redesign of an existing page, or a new pa
 
 When `.launchrail.yml` records `origin: existing`, stage 1 is reached through the Launchrail `project-alignment` skill: it inventories what the codebase already has, infers a draft vision from the code, interviews only the gaps, and detects the existing design system as the baseline for stages 2 and 8, then hands to `vision-creation` to commit ([ADR-0013](https://github.com/wemuda/launchrail/blob/master/docs/adr/0013-existing-project-alignment.md)). Alignment is an on-ramp onto the same rail, not a second workflow.
 
+## Starting from material you already have
+
+A project can also arrive with its thinking done before any code exists: a thorough specification document, a clickable Claude Design prototype, or both. The user never has to know this path exists: `/launch` treats stage 1 as a fork and asks whether there is material before it routes, so attaching a spec or an export at that question (or with the first `/launch`) is all it takes. Stage 1 is then reached through the Launchrail `intake` skill ([intake-onramp](https://github.com/wemuda/launchrail/blob/master/docs/adr/2026-10-07-intake-onramp.md)). It files the material as the project's input of record — the spec verbatim under `docs/brief/`, the prototype as a design package under `docs/design/<slug>/` (made by `design-handoff`, which returns to it) — then reads the spec against what every later stage needs, corroborates it against the prototype (the prototype governs look and layout, the spec governs behavior and rules; a conflict over what the product does is the grill's), drafts the vision from the material with every line cited, interviews only the gaps, and hands the draft to `vision-creation` to commit. Its one artifact, `docs/brief/intake.md`, records the spec's verdict (build-ready, or the areas that need grilling) and triages everything the material leaves open into the agenda the later stages pick up.
+
+The rail after that is the same rail, shortened by what the material decided rather than skipped:
+
+- A design package linked from the vision satisfies **visual exploration**; without a prototype, Claude Design takes the brief as its input.
+- **Discovery** still maps the option space — bounded by the stack the material or the user fixed, its areas the stack questions the material left open. A prototype's own code is never read as a stack decision.
+- The **grill** takes the intake agenda — the spec's gaps and its contradictions with the prototype — alongside its risk cut. What the brief decides has the same authority as an approved prototype; the grill attacks the brief's load-bearing assumptions, not its decisions. A build-ready brief makes for a short grill.
+- **Research** and **ADRs** run as always.
+- The **spec** (stage 7) is written *from* the brief, keeping what it decided, with the prototype's prototype-only behaviors as stories. The brief is the spec's input, never its artifact — filed as stage 7, it would skip the decisions the rail exists to make.
+- **Design validation** is usually a recorded skip citing the package when the spec was written from a corroborated prototype.
+
+On `origin: existing`, alignment stays the on-ramp and composes intake for material describing what comes next. Either way, intake is an on-ramp onto the same rail, not a second workflow.
+
 ## The interaction contract
 
 How every stage spends the user's attention ([ADR-0029](https://github.com/wemuda/launchrail/blob/master/docs/adr/0029-planning-interaction-contract.md)). The grill carries the detailed mechanics, but these rules bind *any* stage that interviews, proposes, or checkpoints — the human in the loop must mean meaningful control, not procedural approval of an unmanageable working set.
@@ -114,7 +129,7 @@ How every stage spends the user's attention ([ADR-0029](https://github.com/wemud
 - **Sessions are budgeted.** About **six user decisions per session**. When the budget is spent, close: write the artifact, summarize Locked / Provisional / Deferred, hand over the next command. Pressing on past the budget converts the decision-maker into an approval machine.
 - **Checkpoint every two rounds.** Offer the explicit choice: **continue** grilling, **prototype** to raise fidelity, **defer** the rest, or **go build**. The user steers the process, not just the answers.
 - **Stop at build-safety.** Planning stops when the next vertical slice can be built safely — not when the frontier is empty. Questions beyond that line get labeled and parked, and the slice's feedback reopens them cheaper than speculation ever could.
-- **Approved prototypes have authority.** Behavior shown in an approved prototype or design package is *presumed in scope*. Proposing to cut it requires a concrete safety, infrastructure, or measured-cost reason — "the spec would be simpler" is not one. A prototype is a decision record, not a feature inventory to re-litigate.
+- **Approved prototypes have authority.** Behavior shown in an approved prototype or design package is *presumed in scope*, and so is what a brief the user brought decides (`docs/brief/`). Proposing to cut it requires a concrete safety, infrastructure, or measured-cost reason — "the spec would be simpler" is not one. A prototype is a decision record, not a feature inventory to re-litigate.
 - **Planning must keep touching ground.** Never more than **two consecutive planning sessions or planning tickets without a runnable or visual checkpoint** — a prototype, a spike, or building the slice that's already safe. Planning that only produces more planning has left the rail.
 
 ## Conductor rules

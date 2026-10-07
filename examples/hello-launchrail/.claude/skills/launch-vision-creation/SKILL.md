@@ -17,7 +17,7 @@ Produce `docs/vision.md`: a short, honest statement of what this product is, who
 
 ## Process
 
-1. **Read what exists.** Check for `docs/vision.md`, a README, and any notes the user points at. Do not ask questions the repository already answers.
+1. **Read what exists.** Check for `docs/vision.md`, a README, and any notes the user points at. Do not ask questions the repository already answers. When an on-ramp hands you a drafted vision with its gap interview already done — `launch-project-alignment` from the code, `launch-intake` from a brought spec or prototype — skip to step 4: keep its citations and its inferred-vs-stated marks, confirm, and commit. Don't re-interview what it settled. If the user mentions or drops a spec, PRD, or prototype partway through your interview, stop and route to `launch-intake` — the material answers more than the interview would.
 2. **Interview the user** — briefly, in their language, at most three questions per round with your recommended answer where you have one (the interaction contract in [`workflow.md`](../launch/workflow.md) applies here as everywhere):
    - What problem hurts, and for whom? How do those people cope today?
    - Why this, why now — what is the bet that makes this worth building?
@@ -30,7 +30,7 @@ Produce `docs/vision.md`: a short, honest statement of what this product is, who
 5. **Present and iterate** until the user approves.
 6. **Sync the agent contract.** If the seeded `AGENTS.md` still carries the TODO under `## Project purpose`, replace it with a one-paragraph distillation of the approved vision — what this is, who it serves, what it is not. Touch only that section: `AGENTS.md` belongs to the project, and the rest of it is not this skill's business.
 7. **Commit** `docs/vision.md` and the `AGENTS.md` update together (respect the project's commit conventions).
-8. **Hand off with the rail banner.** Close with the banner from [`workflow.md`](../launch/workflow.md)'s phase view — the committed vision under Done, visual exploration (Claude Design, to make the intent concrete) as Now, discovery research (`launch-discovery`, mapping the real options for the vision's hard parts) as Next, and the grill on the Later arc — so the user sees exactly where they are and what one thing comes next.
+8. **Hand off with the rail banner.** Close with the banner from [`workflow.md`](../launch/workflow.md)'s phase view — the committed vision under Done, visual exploration (Claude Design, to make the intent concrete) as Now, discovery research (`launch-discovery`, mapping the real options for the vision's hard parts) as Next, and the grill on the Later arc — so the user sees exactly where they are and what one thing comes next. When the vision already links a design package under `docs/design/` (an intake's prototype), visual exploration is done: put it under Done and discovery as Now.
 
 ## Template
 
@@ -57,4 +57,7 @@ What this product deliberately does not do, and for how long that holds.
 
 ## Success signals
 Observable signals that the bet is working — and the signal that would call it failed.
+
+## References
+Where this vision comes from and what it is made concrete by: a brief under `docs/brief/`, design packages under `docs/design/`, exploration artifacts. Omit when there are none.
 ```

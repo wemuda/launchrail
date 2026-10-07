@@ -20,7 +20,7 @@
     },
     ".claude/skills/launch-design-handoff/SKILL.md": {
       "class": "managed",
-      "checksum": "04196a5649c5bef811f26e47986df0a5b5279a860a1653dd9e5ddbe4ff112126"
+      "checksum": "7b42037ecac9cca02480e5522758a9a95d8d668d65fe38a5d06cc3cb067ceb6c"
     },
     ".claude/skills/launch-design-implement/fidelity.md": {
       "class": "managed",
@@ -32,11 +32,11 @@
     },
     ".claude/skills/launch-design-validation/SKILL.md": {
       "class": "managed",
-      "checksum": "03932ee03a54aa739f65ee44ac566839ffda780c613517355f4b6537204289ba"
+      "checksum": "62d05bf8047eb4e566ef2973bf74962caa2fee2f53f10bb4adaa91b20e852458"
     },
     ".claude/skills/launch-discovery/SKILL.md": {
       "class": "managed",
-      "checksum": "51db5d1e7f7f5b282fb68aaf7af53fe7558388cf3a84d590960e82eb5921fd4b"
+      "checksum": "7bd07ddd2766ee8da9a7d63e176ecfaa878491bed9c876793bd86421cdbc753e"
     },
     ".claude/skills/launch-grill/CONTEXT-FORMAT.md": {
       "class": "managed",
@@ -48,11 +48,15 @@
     },
     ".claude/skills/launch-grill/SKILL.md": {
       "class": "managed",
-      "checksum": "cbefcb3045c2152f096da0034e27018b84cc2de69e8e477250a86d3676a3eb55"
+      "checksum": "37205f1e3617503110da47a19976c9d1566555504b48893808e352e3fe5b991e"
     },
     ".claude/skills/launch-implement/SKILL.md": {
       "class": "managed",
       "checksum": "2609a807c9f4c8c1660c9de85b498011252d7f35bcff3b47f6aece4dfb9b2e13"
+    },
+    ".claude/skills/launch-intake/SKILL.md": {
+      "class": "managed",
+      "checksum": "15020d4d101b688c0ec3b6d34030378fe0085865f377b9d930df79fe62b1ebdd"
     },
     ".claude/skills/launch-loop-readiness/SKILL.md": {
       "class": "managed",
@@ -60,7 +64,7 @@
     },
     ".claude/skills/launch-project-alignment/SKILL.md": {
       "class": "managed",
-      "checksum": "91a09b8046a49cc1bc91e05e7fbd34f60530ed4694f48b89d06cfe7a39f4c485"
+      "checksum": "96d094c101a6471fd4dd05b315318d6e4315f9c6966e012923f85f5563be6bed"
     },
     ".claude/skills/launch-ralph-implement/SKILL.md": {
       "class": "managed",
@@ -80,7 +84,7 @@
     },
     ".claude/skills/launch-spec/SKILL.md": {
       "class": "managed",
-      "checksum": "30cc2196967c2806eeb2365aff1dbe7352a6bb654a37c10611a04f78a3758eea"
+      "checksum": "c3e059f2ec261e1077d50e0e4e1c3804abcedfdece6cc425833ed510cafdbb8d"
     },
     ".claude/skills/launch-tickets/SKILL.md": {
       "class": "managed",
@@ -88,7 +92,7 @@
     },
     ".claude/skills/launch-vision-creation/SKILL.md": {
       "class": "managed",
-      "checksum": "34bc66f92e2b3b51d6fdff4ec37992cfc7c94306364225e3e002a610c2f14245"
+      "checksum": "48df13e8a9a366466f26eea0a314d3f9a6ed897dc12e546fd9f574b1597692dd"
     },
     ".claude/skills/launch-wayfinder/SKILL.md": {
       "class": "managed",
@@ -96,11 +100,11 @@
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "14661ddb76ccf58ae707c9f68234baac2021ccbde9c5db4889ccca65b76180f7"
+      "checksum": "b79396be62d934bd4a66e22e0bc2bbef731bd68d57c3b9fe3672d6d3e1b586f7"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "47a6ac4850559660a0d05e4e006812e194448261064da620a6f76872cd5e6be6"
+      "checksum": "395f43fcb7859ab16f4293a83c8e24a518ddf085f0f486dbc9a5d910ad41aedb"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",

@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 <!-- Contains text derived from Matt Pocock's skills (https://github.com/mattpocock/skills), MIT — see ../NOTICE.md -->
 
-This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user — just synthesize what you already know: the vision, the grill's surviving constraints, the research notes, and the ADRs are the inputs; a conductor handing off this stage names them.
+This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user — just synthesize what you already know: the vision, the grill's surviving constraints, the research notes, and the ADRs are the inputs; a conductor handing off this stage names them. When the project came through intake, the brief under `docs/brief/` and its intake record are inputs too: write the spec *from* the brief — keep what it decided and the detail it carries, cite it rather than paraphrase it thin, and turn the intake's prototype-only behaviors into stories; where the grill or an ADR revised the brief, the later decision wins.
 
 Synthesis preserves the grill's labels ([ADR-0029](https://github.com/wemuda/launchrail/blob/master/docs/adr/0029-planning-interaction-contract.md)): **Locked** decisions are stated as decisions; **Provisional** agent-defaults stay marked provisional in the spec (changeable without re-planning); **Deferred** questions land in Out of Scope with the trigger that reopens them — never silently dropped, never silently promoted into scope.
 
