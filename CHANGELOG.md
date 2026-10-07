@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.21.0](https://github.com/wemuda/launchrail/compare/v1.20.1...v1.21.0) (2026-10-07)
+
+
+### Features
+
+* **cli:** /launch asks for brought material at the stage-1 fork ([ef6284c](https://github.com/wemuda/launchrail/commit/ef6284c7fcafb697f994bad6bc1d1e01ec0dbe1e))
+* **cli:** add `launchrail uninstall` to take Launchrail back out ([36cf7d2](https://github.com/wemuda/launchrail/commit/36cf7d2fb94cb4b7487c39b0063ea447aafb4720))
+* **cli:** add `launchrail uninstall` to take Launchrail back out ([662c64c](https://github.com/wemuda/launchrail/commit/662c64cb8f2a21044a74ed176bbbce42c94224aa))
+* **cli:** an intake on-ramp for projects that arrive with a spec or prototype in hand ([5072842](https://github.com/wemuda/launchrail/commit/5072842d74eb2d5e9fa519966598659d30a722d2))
+* **cli:** an intake on-ramp for projects that arrive with a spec or prototype in hand ([3306a40](https://github.com/wemuda/launchrail/commit/3306a4054d4050e2be01fca11c47fce6600ce20e))
+
 ## [1.20.1](https://github.com/wemuda/launchrail/compare/v1.20.0...v1.20.1) (2026-10-01)
 
 
