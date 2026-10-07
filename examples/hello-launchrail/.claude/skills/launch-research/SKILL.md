@@ -7,10 +7,12 @@ description: Investigate a question against high-trust primary sources and commi
 
 Spin up a **background agent** to do the research, so you keep working while it reads.
 
+**The research agent is a leaf.** If you *are* that agent — a session or skill dispatched you to research — do the research yourself, in your own context, and start no agents of your own. Every brief that starts a research agent says so in plain words: a dispatched agent that loads this skill otherwise reads the line above as its own order, and one fan-out becomes a fan-out of fan-outs.
+
 Its job:
 
 1. Investigate the question against **primary sources** — official docs, source code, specs, first-party APIs — not a secondary write-up of them. Follow every claim back to the source that owns it.
 2. Write the findings to a single Markdown file, citing each claim's source.
 3. Commit it where the repo keeps such notes. On the rail that is `docs/research/` — stage-5 notes sit beside the grill constraints and the `discovery-*.md` landscape maps, and everything there is project-owned. Match a different convention only if the repo clearly has one, and say where the file landed.
 
-When this runs as **stage 5**, its brief is the grill's surviving constraints: de-risk the decisions the grill made — verify the chosen option really does what the decision assumes — don't reopen them. When `launch-discovery` drives it, the brief is one divergent thread: real capabilities, maintenance and community health, license, and concrete integration cost on this stack.
+When this runs as **stage 5**, its brief is the grill's surviving constraints: de-risk the decisions the grill made — verify the chosen option really does what the decision assumes — don't reopen them. When `launch-discovery` drives it, the brief is one area's divergent threads, worked in sequence: real capabilities, maintenance and community health, license, and concrete integration cost on this stack.

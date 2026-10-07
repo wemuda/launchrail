@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "launchrailVersion": "1.19.0",
+  "launchrailVersion": "1.21.0",
   "files": {
     ".claude/hooks/ralph-permission-guard.py": {
       "class": "managed",
@@ -36,7 +36,7 @@
     },
     ".claude/skills/launch-discovery/SKILL.md": {
       "class": "managed",
-      "checksum": "7bd07ddd2766ee8da9a7d63e176ecfaa878491bed9c876793bd86421cdbc753e"
+      "checksum": "699889066a23537c2c3ef5747a32e3921e1569254e1acb9dc6bde8a2f2467592"
     },
     ".claude/skills/launch-grill/CONTEXT-FORMAT.md": {
       "class": "managed",
@@ -76,7 +76,7 @@
     },
     ".claude/skills/launch-research/SKILL.md": {
       "class": "managed",
-      "checksum": "d31ae1922720e1f7f3c02dc2058fcc3567d95e5b905eda537730e2ae784584ae"
+      "checksum": "6cd83dc76e19051bd7cf63b1a0ebf887ae28d6d9d6ebf2c1763b7903d6959c96"
     },
     ".claude/skills/launch-resolving-merge-conflicts/SKILL.md": {
       "class": "managed",
