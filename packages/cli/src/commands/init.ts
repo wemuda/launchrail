@@ -312,6 +312,8 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     console.log("     On a fresh project that starts with vision creation, which also replaces the seeded");
     console.log("     AGENTS.md project-purpose TODO.");
   }
+  console.log("     Already have a spec document or a Claude Design prototype? Bring it to /launch: it files");
+  console.log("     your material, drafts the vision from it, and asks only about what it leaves open.");
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
   return { code: 0, actions, ralphHook, claudeImports };
 }

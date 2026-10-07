@@ -261,6 +261,8 @@ describe("launchrail init", () => {
     const output = lines.join("\n");
     expect(output).toContain(".claude/skills/");
     expect(output).toContain("Run /launch");
+    // Brought material has its own on-ramp (intake-onramp ADR), advertised whatever the origin.
+    expect(output).toContain("Already have a spec document or a Claude Design prototype?");
     // The plugin is retired (ADR-0019) — no marketplace/install handoff on the golden path.
     expect(output).not.toContain("claude plugin marketplace add wemuda/launchrail");
     expect(output).not.toContain("fill in the TODO");
