@@ -75,6 +75,22 @@ export function planClaudeImports(root: string): ClaudeImportsPlan {
   };
 }
 
+/**
+ * `content` without the given import lines — the inverse of the merge above,
+ * for `uninstall`. When the file opened with a removed import, the blank line
+ * that separated the import block from the prose goes with it, so a CLAUDE.md
+ * that init wired gets back exactly the bytes it had.
+ */
+export function withoutImports(content: string, imports: readonly string[]): string {
+  const lines = content.split("\n");
+  const kept = lines.filter((line) => !imports.includes(line.trim()));
+  if (kept.length === lines.length) return content;
+  if (imports.includes(lines[0]!.trim())) {
+    while (kept.length > 0 && kept[0]!.trim() === "") kept.shift();
+  }
+  return kept.join("\n");
+}
+
 /** Execute a plan. Returns true when CLAUDE.md was written. */
 export function applyClaudeImports(root: string, plan: ClaudeImportsPlan): boolean {
   if (plan.content === null) return false;
