@@ -326,3 +326,51 @@ export function applyRalphGuardHook(root: string, plan: HookPlan): boolean {
   writeFileSync(abs, plan.content, "utf8");
   return true;
 }
+
+/**
+ * The inverse of planRalphGuardHook, for `uninstall`: drop every PreToolUse
+ * hook that runs the guard script, then the matcher entries and containers that
+ * leaves empty — every other setting and hook is preserved. When the
+ * registration was all the file held, `content` is `""`: delete the file.
+ */
+export function planUnregisterRalphGuardHook(root: string): SettingsRemovalPlan {
+  const path = join(root, CLAUDE_SETTINGS_PATH);
+  if (!existsSync(path)) return { kind: "skip-no-file", detail: "no .claude/settings.json", content: null };
+  let data: unknown;
+  try {
+    data = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return { kind: "skip-invalid", detail: "unparseable JSON — not touching it", content: null };
+  }
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return { kind: "skip-invalid", detail: "unparseable JSON — not touching it", content: null };
+  }
+  const settings = data as Settings;
+  if (!guardRegistered(settings)) {
+    return { kind: "skip-absent", detail: "Ralph guard hook not registered", content: null };
+  }
+
+  const preToolUse: HookMatcher[] = [];
+  for (const entry of settings.hooks!.PreToolUse!) {
+    if (!Array.isArray(entry?.hooks) || !entry.hooks.some(isGuardCommand)) {
+      preToolUse.push(entry);
+      continue;
+    }
+    const kept = entry.hooks.filter((hook) => !isGuardCommand(hook));
+    if (kept.length > 0) preToolUse.push({ ...entry, hooks: kept });
+  }
+  const hooks = { ...settings.hooks };
+  if (preToolUse.length > 0) hooks.PreToolUse = preToolUse;
+  else delete hooks.PreToolUse;
+  const remaining: Settings = { ...settings, hooks };
+  if (Object.keys(hooks).length === 0) delete remaining.hooks;
+
+  const empty = Object.keys(remaining).length === 0;
+  return {
+    kind: "remove",
+    detail: empty
+      ? "held only the Ralph guard hook registration"
+      : "unregistering the Ralph guard hook, keeping other settings",
+    content: empty ? "" : JSON.stringify(remaining, null, 2) + "\n",
+  };
+}

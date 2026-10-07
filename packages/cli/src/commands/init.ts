@@ -165,8 +165,9 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   // Launchrail relies on git history for safe writes — a missing repository is
   // something init fixes, not something it lectures about. `git init` never
   // fires inside an existing repository (detection walks up the tree).
+  let gitInitialized = false;
   if (!detection.isGitRepo && !opts.dryRun) {
-    const gitInitialized = spawnSync("git", ["init", "-q"], { cwd: opts.cwd, encoding: "utf8" }).status === 0;
+    gitInitialized = spawnSync("git", ["init", "-q"], { cwd: opts.cwd, encoding: "utf8" }).status === 0;
     if (gitInitialized) {
       console.log("Initialized a git repository (`git init`) — Launchrail relies on git history for safe writes.");
       detection.isGitRepo = true;
@@ -281,6 +282,9 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
     issueTracker: manifest.issueTracker,
     conventionalCommits: manifest.conventions.conventionalCommits,
     unitCommand: manifest.testing.unitCommand,
+    // Recorded so `uninstall` can tell the repository is Launchrail's own to
+    // remove (while nothing has been committed to it).
+    ...(gitInitialized ? { gitInitialized: true } : {}),
   };
   if (JSON.stringify(lockfile) !== lockBefore || !existing.lockfile) {
     writeLockfile(opts.cwd, lockfile);

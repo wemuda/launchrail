@@ -8,6 +8,7 @@ import {
   planPluginDeclaration,
   planRalphGuardHook,
   planRemovePluginDeclaration,
+  planUnregisterRalphGuardHook,
   RALPH_GUARD_HOOK_COMMAND,
   ralphGuardHookState,
   RETIRED_PLUGIN_DECLARATIONS,
@@ -201,6 +202,53 @@ describe("registering the Ralph guard hook in .claude/settings.json (ADR-0021)",
     expect(ralphGuardHookState(tmp.root)).toBe("no-file");
     writeSettings({ permissions: { allow: [] } });
     expect(ralphGuardHookState(tmp.root)).toBe("unregistered");
+  });
+});
+
+describe("unregistering the Ralph guard hook on uninstall", () => {
+  const guard = { type: "command", command: RALPH_GUARD_HOOK_COMMAND };
+
+  test("drops the guard and the containers it empties, keeping everything else", () => {
+    writeSettings({
+      permissions: { allow: ["Bash(pnpm test)"] },
+      hooks: {
+        PreToolUse: [
+          { matcher: "Write", hooks: [{ type: "command", command: "echo hi" }] },
+          { matcher: "Workflow", hooks: [guard] },
+        ],
+        PostToolUse: [{ matcher: "Edit", hooks: [{ type: "command", command: "echo bye" }] }],
+      },
+    });
+    const plan = planUnregisterRalphGuardHook(tmp.root);
+    expect(plan.kind).toBe("remove");
+    expect(JSON.parse(plan.content!)).toEqual({
+      permissions: { allow: ["Bash(pnpm test)"] },
+      hooks: {
+        PreToolUse: [{ matcher: "Write", hooks: [{ type: "command", command: "echo hi" }] }],
+        PostToolUse: [{ matcher: "Edit", hooks: [{ type: "command", command: "echo bye" }] }],
+      },
+    });
+  });
+
+  test("keeps a project hook that shares the guard's matcher entry", () => {
+    const own = { type: "command", command: "echo mine" };
+    writeSettings({ hooks: { PreToolUse: [{ matcher: "Workflow", hooks: [guard, own] }] } });
+    const plan = planUnregisterRalphGuardHook(tmp.root);
+    expect(JSON.parse(plan.content!)).toEqual({ hooks: { PreToolUse: [{ matcher: "Workflow", hooks: [own] }] } });
+  });
+
+  test("a file that held only the registration plans its deletion", () => {
+    applyRalphGuardHook(tmp.root, planRalphGuardHook(tmp.root));
+    const plan = planUnregisterRalphGuardHook(tmp.root);
+    expect(plan.kind).toBe("remove");
+    expect(plan.content).toBe("");
+  });
+
+  test("leaves a file without the registration, and invalid JSON, alone", () => {
+    writeSettings({ permissions: {} });
+    expect(planUnregisterRalphGuardHook(tmp.root)).toMatchObject({ kind: "skip-absent", content: null });
+    writeSettings("{ not json");
+    expect(planUnregisterRalphGuardHook(tmp.root)).toMatchObject({ kind: "skip-invalid", content: null });
   });
 });
 

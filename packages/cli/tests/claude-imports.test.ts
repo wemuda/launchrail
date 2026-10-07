@@ -7,6 +7,7 @@ import {
   missingImports,
   planClaudeImports,
   REQUIRED_CLAUDE_IMPORTS,
+  withoutImports,
 } from "../src/lib/claudeImports.js";
 import { makeTmpDir, type TmpRepo } from "./helpers.js";
 
@@ -87,5 +88,23 @@ describe("applyClaudeImports", () => {
     const before = readFileSync(join(tmp.root, "CLAUDE.md"), "utf8");
     expect(applyClaudeImports(tmp.root, planClaudeImports(tmp.root))).toBe(false);
     expect(readFileSync(join(tmp.root, "CLAUDE.md"), "utf8")).toBe(before);
+  });
+});
+
+describe("withoutImports (the inverse, for uninstall)", () => {
+  test("restores the exact bytes of a CLAUDE.md init wired", () => {
+    for (const original of ["# Ours\n\nRules.\n", "", "@other.md\nstuff\n", "@AGENTS.md\n# Ours\n"]) {
+      writeClaude(original);
+      const plan = planClaudeImports(tmp.root);
+      expect(withoutImports(plan.content!, plan.added)).toBe(original);
+    }
+  });
+
+  test("removes only whole import lines, never prose mentions", () => {
+    const content = "@AGENTS.md\n@.launchrail/CLAUDE.generated.md\n\nRead @.launchrail/CLAUDE.generated.md first.\n";
+    expect(withoutImports(content, ["@.launchrail/CLAUDE.generated.md"])).toBe(
+      "@AGENTS.md\n\nRead @.launchrail/CLAUDE.generated.md first.\n",
+    );
+    expect(withoutImports("# nothing\n", REQUIRED_CLAUDE_IMPORTS)).toBe("# nothing\n");
   });
 });

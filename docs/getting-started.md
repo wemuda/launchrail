@@ -129,6 +129,24 @@ npx -y @wemuda/launchrail@latest sync --dry-run # the full plan, migrations incl
 
 The whole update travels through git — the skills are managed files, so teammates just `git pull`.
 
+## Removing Launchrail
+
+Ran `init` in the wrong folder, or taking a project off the rail? From the project root:
+
+```bash
+npx @wemuda/launchrail uninstall --dry-run   # print what would go, remove nothing
+npx @wemuda/launchrail uninstall             # confirm, then remove (--yes skips the prompt)
+```
+
+([uninstall-removes-only-unedited-files](adr/2026-10-07-uninstall-removes-only-unedited-files.md))
+
+- **Removed:** every file Launchrail wrote that is still exactly as written (skills, `AGENTS.md`, `CLAUDE.md`, the ADR scaffolding, module files), plus `.launchrail.yml`, `.launchrail-lock.json`, `.launchrail/state/`, and the directories this leaves empty.
+- **Kept:** files you've edited since Launchrail wrote them, ejected files, and everything Launchrail never wrote. The command lists what it kept.
+- **Shared files:** Launchrail's `@`-imports come out of your `CLAUDE.md` and its guard-hook registration comes out of `.claude/settings.json`. Only those lines change. A file that held nothing else is deleted.
+- **The git repository:** if `init` ran `git init` and nothing has been committed since, `.git` is removed too, so the folder ends up exactly as it was. Once it has commits, it stays.
+
+A background stack from `launchrail dev` has to be stopped first (`launchrail dev --stop`). If a run is interrupted, run `uninstall` again; the lockfile is removed last, so the second run finishes the job.
+
 ## The workflow
 
 With the skills in `.claude/skills/`, the development loop runs six phases — **Intent → Exploration → Decisions → Blueprint → Build → Ship** — over the underlying stages (vision → discovery → grill → research → ADRs → spec → design validation → tickets → bounded implementation → verification → release). The stage contract, the phase view, and the interaction contract that governs how planning spends your attention ([ADR-0029](adr/0029-planning-interaction-contract.md)) live in the [workflow doc](../packages/cli/assets/skills/launchrail/launch/workflow.md) (written into projects as `.claude/skills/launch/workflow.md`).

@@ -75,6 +75,7 @@ npx @wemuda/launchrail doctor                # repository and environment checks
 npx @wemuda/launchrail verify                # deterministic verification gate
 npx @wemuda/launchrail dev --background      # start the smokeable stack from the manifest; --check proves the contract
 npx @wemuda/launchrail eject <module|file>   # opt out of management (vendor mode: --all)
+npx @wemuda/launchrail uninstall             # take Launchrail back out (--dry-run to preview)
 npx @wemuda/launchrail adr index             # print the ADR index from the records (never committed, so ADR branches never conflict on it)
 ```
 
@@ -108,7 +109,7 @@ Every file Launchrail touches in a consuming project belongs to exactly one clas
 | **Seeded** | The project, after creation | Create it once, then never touch it |
 | **Project-owned** | The project, always | Nothing |
 
-Every write supports dry-run, is checksum-aware, and is idempotent: re-running `init` or `sync` never duplicates blocks or destroys local work. A managed file you edit locally keeps your edits — `sync` reports the conflict instead of overwriting — and `launchrail eject` permanently opts a file or module out of management ([ADR-0006](docs/adr/0006-sync-engine.md)).
+Every write supports dry-run, is checksum-aware, and is idempotent: re-running `init` or `sync` never duplicates blocks or destroys local work. A managed file you edit locally keeps your edits — `sync` reports the conflict instead of overwriting — and `launchrail eject` permanently opts a file or module out of management ([ADR-0006](docs/adr/0006-sync-engine.md)). `launchrail uninstall` takes Launchrail back out. It removes the files Launchrail wrote that nobody has edited, its lines in your `CLAUDE.md` and `.claude/settings.json`, and the manifest and lockfile. Anything you've edited stays ([uninstall-removes-only-unedited-files](docs/adr/2026-10-07-uninstall-removes-only-unedited-files.md)).
 
 ## Repository layout
 
