@@ -274,6 +274,9 @@ describe("launchrail init", () => {
       const outcome = await runInit({ cwd: plain.root, dryRun: false, yes: true });
       expect(outcome.code).toBe(0);
       expect(existsSync(join(plain.root, ".git"))).toBe(true);
+      // Recorded so uninstall knows the repository is Launchrail's to remove.
+      const lock = JSON.parse(readFileSync(join(plain.root, ".launchrail-lock.json"), "utf8"));
+      expect(lock.decisions.gitInitialized).toBe(true);
     } finally {
       plain.cleanup();
     }

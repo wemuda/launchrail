@@ -75,6 +75,12 @@ function alive(pid: number): boolean {
   }
 }
 
+/** The pid of the background stack `dev` recorded, when that process is still alive. */
+export function runningStackPid(cwd: string): number | null {
+  const pid = readPid(cwd);
+  return pid !== null && alive(pid) ? pid : null;
+}
+
 /** Stop the detached stack: the whole process group when the platform has one, the pid otherwise. */
 export async function stopStack(cwd: string): Promise<{ code: number; pid: number | null }> {
   const pid = readPid(cwd);

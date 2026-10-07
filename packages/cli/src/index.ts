@@ -9,6 +9,7 @@ import { runEject } from "./commands/eject.js";
 import { runInit } from "./commands/init.js";
 import { printStatus, runStatus } from "./commands/status.js";
 import { runSync } from "./commands/sync.js";
+import { runUninstall } from "./commands/uninstall.js";
 import { runVerify } from "./commands/verify.js";
 import { VERSION } from "./version.js";
 
@@ -26,6 +27,7 @@ Commands:
   diff      Preview upstream changes
   sync      Synchronize managed capabilities and run migrations
   eject     Stop managing a selected module or file
+  uninstall Remove Launchrail from this repository (what it wrote and nobody edited)
   adr       Print the decision-record index (adr index)
   promote   Inspect potential reusable local improvements
 
@@ -53,6 +55,10 @@ sync options:
 eject usage:
   launchrail eject <module|file> [--dry-run]   Stop managing a module's files or one file
   launchrail eject --all [--dry-run]           Vendor mode: eject everything
+
+uninstall usage:
+  launchrail uninstall [--dry-run] [-y|--yes]  Remove what Launchrail wrote that nobody has edited since
+                                               (edited files are kept); --yes skips the confirmation
 
 adr usage:
   launchrail adr index                         Print the ADR index from the records in docs/adr/ (never written to a file)`;
@@ -145,6 +151,15 @@ if (command === "eject") {
     target,
     all: flags.has("--all"),
     dryRun: flags.has("--dry-run"),
+  });
+  process.exit(outcome.code);
+}
+
+if (command === "uninstall") {
+  const outcome = await runUninstall({
+    cwd: process.cwd(),
+    dryRun: flags.has("--dry-run"),
+    yes: flags.has("--yes") || flags.has("-y"),
   });
   process.exit(outcome.code);
 }
