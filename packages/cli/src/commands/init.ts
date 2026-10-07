@@ -311,13 +311,13 @@ export async function runInit(opts: InitOptions): Promise<InitOutcome> {
   if (manifest.origin === "existing") {
     console.log("     For an existing project it starts by aligning your code with Launchrail's artifacts:");
     console.log("     it infers a vision from what you already have, asks about the gaps, and inventories your");
-    console.log("     design system — rather than a blank vision.");
+    console.log("     design system — rather than a blank vision. Have a spec or a Claude Design prototype for");
+    console.log("     what comes next? It asks — attach it then.");
   } else {
-    console.log("     On a fresh project that starts with vision creation, which also replaces the seeded");
-    console.log("     AGENTS.md project-purpose TODO.");
+    console.log("     On a fresh project it first asks whether you already have material — a spec document or a");
+    console.log("     Claude Design prototype. Attach it and the vision is drafted from it, asking only what it");
+    console.log("     leaves open; otherwise it interviews you from the idea. /launch is the only command to know.");
   }
-  console.log("     Already have a spec document or a Claude Design prototype? Bring it to /launch: it files");
-  console.log("     your material, drafts the vision from it, and asks only about what it leaves open.");
   console.log("\nRun `npx @wemuda/launchrail doctor` any time to validate the setup.");
   return { code: 0, actions, ralphHook, claudeImports };
 }

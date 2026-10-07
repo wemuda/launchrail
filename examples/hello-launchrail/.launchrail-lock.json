@@ -92,7 +92,7 @@
     },
     ".claude/skills/launch-vision-creation/SKILL.md": {
       "class": "managed",
-      "checksum": "6487e5c72d7629328468897970f1b9efc3fdb385cd4a44059f0e4d65324102e8"
+      "checksum": "48df13e8a9a366466f26eea0a314d3f9a6ed897dc12e546fd9f574b1597692dd"
     },
     ".claude/skills/launch-wayfinder/SKILL.md": {
       "class": "managed",
@@ -100,11 +100,11 @@
     },
     ".claude/skills/launch/SKILL.md": {
       "class": "managed",
-      "checksum": "e9db876290d0d366460bd4825ae2a7e5705806ca822dd78b2353de8a54808e9c"
+      "checksum": "b79396be62d934bd4a66e22e0bc2bbef731bd68d57c3b9fe3672d6d3e1b586f7"
     },
     ".claude/skills/launch/workflow.md": {
       "class": "managed",
-      "checksum": "ee0ac4ddab96e5a9368d84db6416ce31d3d121f97c4661ace3f68a8fca15a9b3"
+      "checksum": "395f43fcb7859ab16f4293a83c8e24a518ddf085f0f486dbc9a5d910ad41aedb"
     },
     ".claude/skills/NOTICE.md": {
       "class": "managed",

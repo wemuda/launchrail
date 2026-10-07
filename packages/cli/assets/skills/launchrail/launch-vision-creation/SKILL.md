@@ -17,7 +17,7 @@ Produce `docs/vision.md`: a short, honest statement of what this product is, who
 
 ## Process
 
-1. **Read what exists.** Check for `docs/vision.md`, a README, and any notes the user points at. Do not ask questions the repository already answers. When an on-ramp hands you a drafted vision with its gap interview already done — `launch-project-alignment` from the code, `launch-intake` from a brought spec or prototype — skip to step 4: keep its citations and its inferred-vs-stated marks, confirm, and commit. Don't re-interview what it settled.
+1. **Read what exists.** Check for `docs/vision.md`, a README, and any notes the user points at. Do not ask questions the repository already answers. When an on-ramp hands you a drafted vision with its gap interview already done — `launch-project-alignment` from the code, `launch-intake` from a brought spec or prototype — skip to step 4: keep its citations and its inferred-vs-stated marks, confirm, and commit. Don't re-interview what it settled. If the user mentions or drops a spec, PRD, or prototype partway through your interview, stop and route to `launch-intake` — the material answers more than the interview would.
 2. **Interview the user** — briefly, in their language, at most three questions per round with your recommended answer where you have one (the interaction contract in [`workflow.md`](../launch/workflow.md) applies here as everywhere):
    - What problem hurts, and for whom? How do those people cope today?
    - Why this, why now — what is the bet that makes this worth building?
