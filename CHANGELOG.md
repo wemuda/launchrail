@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.21.1](https://github.com/wemuda/launchrail/compare/v1.21.0...v1.21.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **cli:** cap research fan-out at one layer, five agents in discovery ([41ca8b0](https://github.com/wemuda/launchrail/commit/41ca8b099bc00787b2cc73ded5e5c1b55d4ed10e))
+* **cli:** cap research fan-out at one layer, five agents in discovery ([962c5e4](https://github.com/wemuda/launchrail/commit/962c5e40a4d97183fad341d9b0caaf9054656328))
+
 ## [1.21.0](https://github.com/wemuda/launchrail/compare/v1.20.1...v1.21.0) (2026-10-07)
 
 
