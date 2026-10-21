@@ -7,6 +7,7 @@ import { runDev } from "./commands/dev.js";
 import { runDoctor, printDoctor } from "./commands/doctor.js";
 import { runEject } from "./commands/eject.js";
 import { runInit } from "./commands/init.js";
+import { LAND_USAGE, parseLandArgs, printLand, runLand } from "./commands/land.js";
 import { printStatus, runStatus } from "./commands/status.js";
 import { runSync } from "./commands/sync.js";
 import { runUninstall } from "./commands/uninstall.js";
@@ -22,6 +23,7 @@ Commands:
   doctor    Validate the repository and environment
   add       Add a module to the project (available: ${AVAILABLE_MODULES.join(", ")})
   verify    Run the deterministic verification contract
+  land      Land a pushed branch on an integration base: merge, gate, push, confirm
   dev       Start the smokeable stack from the manifest and record its state
   status    Inspect versions, enabled modules, drift, and missing requirements
   diff      Preview upstream changes
@@ -41,6 +43,16 @@ init / add options:
 
 verify options:
   --fast           Run only the fast gate (testing.checkCommand, else unitCommand; never e2e)
+
+land usage:
+  ${LAND_USAGE}
+      Merges the pushed branch onto the base (--no-ff, its commits kept), installs when
+      dependency files changed, runs the fast gate on the merged tree (--full: the whole
+      contract), pushes, and confirms the remote. A conflict, a red gate, or a moving
+      remote leaves the base at the remote tip; nothing is stashed, discarded, or pushed
+      red. Refuses the remote's default branch without --trunk. --dry-run predicts the
+      merge without checking out, merging, gating, or pushing. Gate output goes to
+      .launchrail/state/land/; --json prints the verdict as one object.
 
 dev options:
   --background     Start detached, wait for every origin to answer, leave it running
@@ -111,6 +123,17 @@ if (command === "add") {
 
 if (command === "verify") {
   process.exit(runVerify(process.cwd(), { fast: flags.has("--fast") }).code);
+}
+
+if (command === "land") {
+  const parsed = parseLandArgs(args.slice(1));
+  if ("error" in parsed) {
+    console.error(`launchrail: ${parsed.error}\nusage: ${LAND_USAGE}`);
+    process.exit(1);
+  }
+  const outcome = runLand({ cwd: process.cwd(), ...parsed.options });
+  printLand(outcome.result, parsed.json);
+  process.exit(outcome.code);
 }
 
 if (command === "dev") {

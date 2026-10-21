@@ -63,6 +63,7 @@ From there, the day-to-day driver is not the CLI — it's the **`launch` skill**
 - **`launch-browser-smoke`** — drives the running app in a real browser to see a just-built change working — one-off, from the shell with `agent-browser` against a stack `launchrail dev` started, no test suite and no evidence bundle ([ADR-0034](docs/adr/0034-browser-smoke-one-off-driving.md), [ADR-0036](docs/adr/0036-cli-owned-stack-start.md); with the browser-testing module)
 - **`launch-implement`** — the one door to building: `/launch-implement` drives ready tickets to verified merges through the Ralph loop (a ticket number builds just that one; "the next 5 of spec #2" scopes and caps a run)
 - **`launch-ralph`**, **`launch-ralph-implement`**, **`launch-code-review`**, **`launch-resolving-merge-conflicts`** — the verification-gated loop engine behind that door, installed by `init`
+- **`launch-orchestrate`** — *trial*: the same loop orchestrated from the session instead of the `ralph` workflow, so a cloud session isn't held to the workflow runtime's CPU-bound agent cap — every ready ticket builds at once in a background worktree subagent, `launchrail land` lands each finished branch, and an on-disk ledger survives compaction; user-typed, and it ends with a trial report to compare against `/launch-implement` runs ([session-orchestrator-trial](docs/adr/2026-10-21-session-orchestrator-trial.md))
 - **`launch-loop-readiness`** — checks and tunes a repo for the loop: measures the gates, sets the fast per-land gate, parallelizes the e2e specs, shares caches for parallel builders, narrows CI triggers, creates the tracker labels, adds hosted-session setup ([ADR-0033](docs/adr/0033-loop-readiness.md)); `doctor` shows the same findings as warn-only readiness lines
 
 The CLI is the maintenance surface you return to between sessions:
@@ -74,6 +75,7 @@ npx @wemuda/launchrail sync                  # apply managed updates + run migra
 npx @wemuda/launchrail add browser-testing   # enable a module
 npx @wemuda/launchrail doctor                # repository and environment checks
 npx @wemuda/launchrail verify                # deterministic verification gate
+npx @wemuda/launchrail land <branch> --base <target>  # land a pushed branch: merge (commits kept), fast gate, push, confirm — the loop's lander as code
 npx @wemuda/launchrail dev --background      # start the smokeable stack from the manifest; --check proves the contract
 npx @wemuda/launchrail eject <module|file>   # opt out of management (vendor mode: --all)
 npx @wemuda/launchrail uninstall             # take Launchrail back out (--dry-run to preview)

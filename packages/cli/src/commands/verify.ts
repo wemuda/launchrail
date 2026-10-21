@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { BROWSER_TESTING_MODULE } from "../lib/browser-testing.js";
 import { MANIFEST_FILENAME, parseManifest } from "../lib/manifest.js";
@@ -27,6 +27,12 @@ export interface VerifyOptions {
    * every land and saves the full contract for its checkpoints and the release.
    */
   fast?: boolean;
+  /**
+   * Write everything verify prints, the steps' own output included, to this
+   * file descriptor instead of the terminal. `launchrail land` keeps the gate's
+   * output in a log and reports only the verdict.
+   */
+  outputFd?: number;
 }
 
 /**
@@ -37,22 +43,25 @@ export interface VerifyOptions {
  * cheap tier only (see VerifyOptions).
  */
 export function runVerify(cwd: string, options: VerifyOptions = {}): VerifyOutcome {
+  const fd = options.outputFd;
+  const out = (line: string) => (fd === undefined ? console.log(line) : writeSync(fd, `${line}\n`));
+  const err = (line: string) => (fd === undefined ? console.error(line) : writeSync(fd, `${line}\n`));
   const manifestPath = join(cwd, MANIFEST_FILENAME);
   if (!existsSync(manifestPath)) {
-    console.error(`launchrail: ${MANIFEST_FILENAME} not found — run \`launchrail init\` first.`);
+    err(`launchrail: ${MANIFEST_FILENAME} not found — run \`launchrail init\` first.`);
     return { code: 1, results: [] };
   }
   const parsed = parseManifest(readFileSync(manifestPath, "utf8"));
   if (!parsed.manifest) {
-    console.error(`launchrail: ${MANIFEST_FILENAME} is invalid:`);
-    for (const error of parsed.errors) console.error(`  - ${error}`);
+    err(`launchrail: ${MANIFEST_FILENAME} is invalid:`);
+    for (const error of parsed.errors) err(`  - ${error}`);
     return { code: 1, results: [] };
   }
 
   // A fresh clone (every hosted session) has no node_modules: the failure to
   // name is the missing install, not "turbo: not found" from the first step.
   if (missingDependencies(cwd)) {
-    console.error(`launchrail: dependencies are not installed (no node_modules) — ${INSTALL_HINT}.`);
+    err(`launchrail: dependencies are not installed (no node_modules) — ${INSTALL_HINT}.`);
     return { code: 1, results: [] };
   }
 
@@ -69,14 +78,14 @@ export function runVerify(cwd: string, options: VerifyOptions = {}): VerifyOutco
   }
 
   if (steps.length === 0) {
-    console.error(
+    err(
       "launchrail: no verification commands configured — set testing.unitCommand (and testing.e2eCommand) in " +
         `${MANIFEST_FILENAME}. An empty verification contract cannot pass.`,
     );
     return { code: 1, results: [] };
   }
   if (options.fast) {
-    console.log(
+    out(
       testing.checkCommand
         ? "Fast gate (testing.checkCommand) — the full contract runs with plain `verify`."
         : "Fast gate — no testing.checkCommand configured, running testing.unitCommand; set checkCommand in " +
@@ -86,17 +95,17 @@ export function runVerify(cwd: string, options: VerifyOptions = {}): VerifyOutco
 
   const results: VerifyResult[] = [];
   for (const step of steps) {
-    console.log(`\n→ ${step.name}: ${step.command}`);
-    const run = spawnSync(step.command, { cwd, shell: true, stdio: "inherit" });
+    out(`\n→ ${step.name}: ${step.command}`);
+    const run = spawnSync(step.command, { cwd, shell: true, stdio: fd === undefined ? "inherit" : ["ignore", fd, fd] });
     results.push({ step, status: run.status ?? 1 });
   }
 
-  console.log("");
+  out("");
   for (const { step, status } of results) {
-    console.log(`  ${status === 0 ? "✓" : "✗"} ${step.name} (${step.command})`);
+    out(`  ${status === 0 ? "✓" : "✗"} ${step.name} (${step.command})`);
   }
   const failed = results.filter((r) => r.status !== 0).length;
   const tier = options.fast ? "Fast gate" : "Verification";
-  console.log(failed === 0 ? `\n${tier} passed.` : `\n${tier} failed: ${failed} of ${results.length} step(s).`);
+  out(failed === 0 ? `\n${tier} passed.` : `\n${tier} failed: ${failed} of ${results.length} step(s).`);
   return { code: failed === 0 ? 0 : 1, results };
 }
